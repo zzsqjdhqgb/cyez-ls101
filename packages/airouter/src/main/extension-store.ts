@@ -140,6 +140,15 @@ export class AIRouterExtensionStore {
     )
   }
 
+  deletePackage(extensionId: string, version: string): Promise<void> {
+    return rm(this.packageDir(extensionId, version), {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100
+    })
+  }
+
   private packageDir(extensionId: string, version: string): string {
     validateSegment(extensionId)
     validateSegment(version)

@@ -39,3 +39,20 @@ docs/product/**/*.product-docs-backup
 
 # Local TextPA environment overrides
 /textpa/.env.local
+
+# DeepSeek 本地代理的审计数据与统计日志（含完整对话明文，不入库）
+proxy-captures/
+proxy-usage.jsonl
+usage.jsonl
+
+# Windows 目录索引文件
+desktop.ini
+Thumbs.db
+
+# 本地作答包（仓库内的研究样例仅在 textpa/benchmark-data 下显式跟踪）
+*.lssubmission
+
+# 本地 Python 工具链缓存
+__pycache__/
+*.pyc
+

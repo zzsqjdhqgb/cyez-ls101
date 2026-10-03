@@ -14,6 +14,7 @@ export default defineConfig(
   {
     ignores: [
       '**/node_modules',
+      '**/.gop-research/**',
       '**/.cache/**',
       '**/dist',
       '**/out',

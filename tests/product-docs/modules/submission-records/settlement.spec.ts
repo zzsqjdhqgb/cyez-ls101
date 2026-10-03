@@ -1,9 +1,9 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import type { SchemaDefinition, SubmissionPackage } from '@ls101/core-types'
 import { encodeSubmissionPackage } from '@ls101/exam-package'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
+import { createTemporaryDirectory } from '../../../support/temporary-directory'
 import { launchProductDocsApp } from '../../support/product-app'
 import { evidence, prepareProductPage, productTest } from '../../support/product-test'
 
@@ -16,7 +16,7 @@ let pageErrors: string[] = []
 
 test.beforeEach(async () => {
   pageErrors = []
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-product-docs-settlement-'))
+  userDataDir = await createTemporaryDirectory('ls101-product-docs-settlement-')
   objectivePath = path.join(userDataDir, 'objective.lssubmission')
   readingPath = path.join(userDataDir, 'reading.lssubmission')
   await writeFile(objectivePath, await encodeSubmissionPackage(objectiveSubmission(), {}))

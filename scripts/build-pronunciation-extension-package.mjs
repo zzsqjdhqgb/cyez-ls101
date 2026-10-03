@@ -2,20 +2,18 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
 import { mkdir, rename, rm, stat } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import process from 'node:process'
 import { once } from 'node:events'
 import { Zip, ZipPassThrough, strToU8 } from 'fflate'
 
+const require = createRequire(import.meta.url)
+const { PINNED_MANIFEST, resolveModelRoot } = require('./download-pronunciation-model.js')
+
 const root = path.resolve(import.meta.dirname, '..')
-const sourceRoot = path.join(
-  root,
-  'externals',
-  'ai',
-  'pronunciation',
-  'model',
-  'facebook-wav2vec2-lv-60-espeak-cv-ft-int8'
-)
+// 默认使用 externals/ai/pronunciation/model，可用 LS101_PRONUNCIATION_MODEL_ROOT 覆盖。
+const sourceRoot = path.join(resolveModelRoot(), PINNED_MANIFEST.runtimeDirectory)
 const files = [
   ['config.json', 'model/config.json', 'model-config'],
   ['preprocessor_config.json', 'model/preprocessor_config.json', 'model-config'],
@@ -27,7 +25,7 @@ export async function buildPronunciationExtensionPackage({
   sourceDir = sourceRoot,
   output = process.env.LS101_PRONUNCIATION_EXTENSION_OUTPUT
     ? path.resolve(process.env.LS101_PRONUNCIATION_EXTENSION_OUTPUT)
-    : path.join(root, 'dist', 'facebook-wav2vec2-pronunciation-1.0.0.zip')
+    : path.join(root, 'dist', 'charsiu-en-w2v2-pronunciation-1.0.0.zip')
 } = {}) {
   await mkdir(path.dirname(output), { recursive: true })
   const temporaryOutput = `${output}.${process.pid}.${randomUUID()}.part`
@@ -45,10 +43,10 @@ export async function buildPronunciationExtensionPackage({
       format: 'ls101.extension-package',
       formatVersion: 1,
       extension: {
-        id: 'facebook-wav2vec2-pronunciation',
+        id: 'charsiu-en-w2v2-pronunciation',
         version: '1.0.0',
         name: 'AI 语音评测',
-        description: 'Facebook Wav2Vec2 phoneme assessment extension.'
+        description: 'Charsiu English CMU-phone Wav2Vec2 pronunciation assessment extension.'
       },
       assets
     }

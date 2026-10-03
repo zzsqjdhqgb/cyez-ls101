@@ -1,0 +1,240 @@
+name: Pronunciation Model Assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run the export in verify mode or publish a new release
+        required: true
+        default: verify
+        type: choice
+        options:
+          - verify
+          - publish
+  # workflow_dispatch only becomes available once this file is on the default branch, so a push
+  # that touches the export pipeline runs the same job in verify mode (push can never publish).
+  push:
+    paths:
+      - .github/workflows/pronunciation-model.yml
+      - scripts/export-pronunciation-model.py
+      - scripts/pronunciation-model-assets.json
+      - scripts/pronunciation-model-requirements.txt
+      - scripts/download-pronunciation-model.js
+      - scripts/publish-pronunciation-model.mjs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pronunciation-model-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    name: Read pronunciation model configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.config.outputs.mode }}
+      version: ${{ steps.config.outputs.version }}
+      tag: ${{ steps.config.outputs.tag }}
+      prerelease: ${{ steps.config.outputs.prerelease }}
+      repository: ${{ steps.config.outputs.repository }}
+      runtime_directory: ${{ steps.config.outputs.runtime_directory }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      # scripts/download-pronunciation-model.js validates the pinned manifest at load time
+      # (schema version, release tag pattern, asset names, sizes and SHA-256), so the workflow
+      # only has to add the repository check and publish what that manifest pins.
+      - name: Validate asset manifest
+        id: config
+        env:
+          CURRENT_REPOSITORY: ${{ github.repository }}
+          REQUESTED_MODE: ${{ inputs.mode }}
+        run: |
+          node <<'NODE'
+          const { appendFileSync } = require('node:fs')
+          const path = require('node:path')
+
+          const file = 'scripts/pronunciation-model-assets.json'
+          const { PINNED_MANIFEST } = require(path.resolve('scripts/download-pronunciation-model.js'))
+          const { release, runtimeDirectory } = PINNED_MANIFEST
+          const fail = (message) => {
+            throw new Error(`Invalid ${file}: ${message}`)
+          }
+          if (release.repository !== process.env.CURRENT_REPOSITORY) {
+            fail(`release.repository must be ${process.env.CURRENT_REPOSITORY}`)
+          }
+          const mode = process.env.REQUESTED_MODE || 'verify'
+          if (!['verify', 'publish'].includes(mode)) {
+            fail(`unsupported mode: ${process.env.REQUESTED_MODE}`)
+          }
+          if (mode === 'publish' && process.env.GITHUB_EVENT_NAME !== 'workflow_dispatch') {
+            fail(`publish is only allowed through workflow_dispatch`)
+          }
+          const outputs = {
+            mode,
+            version: release.version,
+            tag: release.tag,
+            prerelease: String(release.prerelease),
+            repository: release.repository,
+            runtime_directory: runtimeDirectory
+          }
+          for (const [name, value] of Object.entries(outputs)) {
+            if (typeof value !== 'string' || !value || value.includes('\n')) {
+              fail(`${name} is invalid`)
+            }
+            appendFileSync(process.env.GITHUB_OUTPUT, `${name}=${value}\n`)
+          }
+          console.log(`${release.tag} configuration is valid (${release.assets.length} assets)`)
+          NODE
+
+      - name: Require an unused release tag
+        if: steps.config.outputs.mode == 'publish'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.config.outputs.tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
+            gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "::error::Tag or release $RELEASE_TAG already exists; bump release.version in scripts/pronunciation-model-assets.json"
+            exit 1
+          fi
+
+  export:
+    name: Export ONNX runtime assets
+    needs: metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: scripts/pronunciation-model-requirements.txt
+
+      # The exporter runs torch.onnx.export plus MatMul-only INT8 quantization, so the
+      # toolchain is pinned: a different torch / onnxruntime build can change the bytes
+      # (and therefore the SHA-256) of onnx/model_quantized.onnx.
+      - name: Install export toolchain
+        run: python -m pip install --disable-pip-version-check -r scripts/pronunciation-model-requirements.txt
+
+      - name: Restore upstream sources
+        id: sources
+        uses: actions/cache/restore@v5
+        with:
+          path: externals/ai/.model-sources/pronunciation
+          key: pronunciation-model-sources-${{ hashFiles('scripts/pronunciation-model-assets.json') }}
+
+      # Downloads both pinned Hugging Face sources with SHA-256 verification, checks their
+      # upstream metadata, then exports config.json / vocab.json / preprocessor_config.json
+      # and onnx/model_quantized.onnx into the runtime directory.
+      - name: Export runtime assets
+        env:
+          LS101_PYTHON: python
+        run: node scripts/download-pronunciation-model.js --export --verify-upstream
+
+      - name: Save upstream sources
+        if: steps.sources.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: externals/ai/.model-sources/pronunciation
+          key: pronunciation-model-sources-${{ hashFiles('scripts/pronunciation-model-assets.json') }}
+
+      # --update-manifest rewrites scripts/pronunciation-model-assets.json when the exported
+      # bytes drift from the pinned size/SHA-256 (toolchain or upstream change). Publishing
+      # with a stale manifest would break the install path, so the run stops here and the
+      # manifest is uploaded for the maintainer to commit before re-running in publish mode.
+      - name: Compare exported assets with the pinned manifest
+        run: |
+          node scripts/publish-pronunciation-model.mjs --update-manifest
+          if git diff --quiet -- scripts/pronunciation-model-assets.json; then
+            echo "Exported assets match the pinned manifest for ${{ needs.metadata.outputs.tag }}"
+          else
+            echo "::error::Exported assets differ from scripts/pronunciation-model-assets.json; download the pronunciation-model-manifest artifact, commit it, then re-run in publish mode"
+            exit 1
+          fi
+
+      - name: Upload refreshed manifest
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: pronunciation-model-manifest
+          path: scripts/pronunciation-model-assets.json
+          retention-days: 7
+
+      - name: Upload runtime assets
+        if: needs.metadata.outputs.mode == 'publish'
+        uses: actions/upload-artifact@v6
+        with:
+          name: pronunciation-model-runtime
+          path: externals/ai/pronunciation/model/${{ needs.metadata.outputs.runtime_directory }}
+          retention-days: 1
+          compression-level: 0
+
+  release:
+    name: Publish pronunciation model release
+    needs: [metadata, export]
+    if: needs.metadata.outputs.mode == 'publish'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download runtime assets
+        uses: actions/download-artifact@v7
+        with:
+          name: pronunciation-model-runtime
+          path: pronunciation-runtime
+
+      - name: Restore runtime assets
+        run: |
+          target="externals/ai/pronunciation/model/${{ needs.metadata.outputs.runtime_directory }}"
+          mkdir -p "$target"
+          cp -R pronunciation-runtime/. "$target/"
+          find "$target" -type f -printf '%s\t%p\n' | sort -k2
+
+      - name: Require an unused release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
+            gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "::error::Tag or release $RELEASE_TAG already exists; bump release.version in scripts/pronunciation-model-assets.json"
+            exit 1
+          fi
+
+      # Re-verifies the local assets, creates the release with the provenance body from
+      # releaseNotes(), uploads every pinned asset and re-checks size and digest afterwards.
+      - name: Publish release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/publish-pronunciation-model.mjs --publish
+
+      # End-to-end check of the install path: delete the exported files, download them again
+      # from the release and verify SHA-256 against the manifest plus the release metadata.
+      - name: Re-download published assets
+        run: |
+          rm -rf "externals/ai/pronunciation/model/${{ needs.metadata.outputs.runtime_directory }}"
+          node scripts/download-pronunciation-model.js --verify-upstream

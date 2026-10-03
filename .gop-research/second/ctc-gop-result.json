@@ -1,0 +1,1731 @@
+{
+  "source": "frank613/CTC-based-GOP@ffc4823330efe2c836691931a456ea9e3360871e",
+  "model": "/workspace/.gop-research/model",
+  "audio": "/workspace/.gop-research/second/06128238-26e2-4ffc-b124-a44c27aade61---5e1919a8-72ea-4585-935a-270bdc9c490.wav",
+  "reference": "Yes, because my girlfriend likes to take photos. So if I have a chance, I need to improve it for my girlfriend.",
+  "ctc_frames": 677,
+  "phone_count": 72,
+  "decode": "Y EH S B IH K AA Z M AY G UH D F R EH N Z ER L AY K T UW T EY K F OW T OW Z S OW AA IH F AY HH AE V CH AE N S AA N IY T UW IH M P R UW V Z F AO R M AY G UH F R EH N D",
+  "words": [
+    "yes",
+    "because",
+    "my",
+    "girlfriend",
+    "likes",
+    "to",
+    "take",
+    "photos",
+    "so",
+    "if",
+    "i",
+    "have",
+    "a",
+    "chance",
+    "i",
+    "need",
+    "to",
+    "improve",
+    "it",
+    "for",
+    "my",
+    "girlfriend"
+  ],
+  "word_phones": {
+    "yes": [
+      "Y",
+      "EH",
+      "S"
+    ],
+    "because": [
+      "B",
+      "IH",
+      "K",
+      "AO",
+      "Z"
+    ],
+    "my": [
+      "M",
+      "AY"
+    ],
+    "girlfriend": [
+      "G",
+      "ER",
+      "L",
+      "F",
+      "R",
+      "EH",
+      "N",
+      "D"
+    ],
+    "likes": [
+      "L",
+      "AY",
+      "K",
+      "S"
+    ],
+    "to": [
+      "T",
+      "UW"
+    ],
+    "take": [
+      "T",
+      "EY",
+      "K"
+    ],
+    "photos": [
+      "F",
+      "OW",
+      "T",
+      "OW",
+      "Z"
+    ],
+    "so": [
+      "S",
+      "OW"
+    ],
+    "if": [
+      "IH",
+      "F"
+    ],
+    "i": [
+      "AY"
+    ],
+    "have": [
+      "HH",
+      "AE",
+      "V"
+    ],
+    "a": [
+      "AH"
+    ],
+    "chance": [
+      "CH",
+      "AE",
+      "N",
+      "S"
+    ],
+    "need": [
+      "N",
+      "IY",
+      "D"
+    ],
+    "improve": [
+      "IH",
+      "M",
+      "P",
+      "R",
+      "UW",
+      "V"
+    ],
+    "it": [
+      "IH",
+      "T"
+    ],
+    "for": [
+      "F",
+      "AO",
+      "R"
+    ]
+  },
+  "s": {
+    "algorithm": "s",
+    "canonical_log_likelihood_loss": 56.80692094555466,
+    "phones": [
+      {
+        "index": 0,
+        "word": "yes",
+        "phone": "Y",
+        "token_id": 37,
+        "gop": -0.00022691479293968086
+      },
+      {
+        "index": 1,
+        "word": "yes",
+        "phone": "EH",
+        "token_id": 11,
+        "gop": -0.0017566083964553059
+      },
+      {
+        "index": 2,
+        "word": "yes",
+        "phone": "S",
+        "token_id": 29,
+        "gop": -0.0005587934550490559
+      },
+      {
+        "index": 3,
+        "word": "because",
+        "phone": "B",
+        "token_id": 7,
+        "gop": -0.00013536205856468086
+      },
+      {
+        "index": 4,
+        "word": "because",
+        "phone": "IH",
+        "token_id": 17,
+        "gop": -0.002103745847627181
+      },
+      {
+        "index": 5,
+        "word": "because",
+        "phone": "K",
+        "token_id": 20,
+        "gop": -7.432690231468086e-05
+      },
+      {
+        "index": 6,
+        "word": "because",
+        "phone": "AO",
+        "token_id": 4,
+        "gop": -4.321359574705049
+      },
+      {
+        "index": 7,
+        "word": "because",
+        "phone": "Z",
+        "token_id": 38,
+        "gop": -0.0012950300273146809
+      },
+      {
+        "index": 8,
+        "word": "my",
+        "phone": "M",
+        "token_id": 22,
+        "gop": -0.00017350903122093086
+      },
+      {
+        "index": 9,
+        "word": "my",
+        "phone": "AY",
+        "token_id": 6,
+        "gop": -0.00038713207809593086
+      },
+      {
+        "index": 10,
+        "word": "girlfriend",
+        "phone": "G",
+        "token_id": 15,
+        "gop": -0.002534806638642806
+      },
+      {
+        "index": 11,
+        "word": "girlfriend",
+        "phone": "ER",
+        "token_id": 12,
+        "gop": -4.756166398435518
+      },
+      {
+        "index": 12,
+        "word": "girlfriend",
+        "phone": "L",
+        "token_id": 21,
+        "gop": -1.549203812986299
+      },
+      {
+        "index": 13,
+        "word": "girlfriend",
+        "phone": "F",
+        "token_id": 14,
+        "gop": -0.0006999372538771809
+      },
+      {
+        "index": 14,
+        "word": "girlfriend",
+        "phone": "R",
+        "token_id": 28,
+        "gop": -0.00018113842575218086
+      },
+      {
+        "index": 15,
+        "word": "girlfriend",
+        "phone": "EH",
+        "token_id": 11,
+        "gop": -0.0006808637675490559
+      },
+      {
+        "index": 16,
+        "word": "girlfriend",
+        "phone": "N",
+        "token_id": 23,
+        "gop": -1.3291746064680865e-05
+      },
+      {
+        "index": 17,
+        "word": "girlfriend",
+        "phone": "D",
+        "token_id": 9,
+        "gop": -6.9331302045878616
+      },
+      {
+        "index": 18,
+        "word": "likes",
+        "phone": "L",
+        "token_id": 21,
+        "gop": -0.038934647947236556
+      },
+      {
+        "index": 19,
+        "word": "likes",
+        "phone": "AY",
+        "token_id": 6,
+        "gop": -0.009271562009736556
+      },
+      {
+        "index": 20,
+        "word": "likes",
+        "phone": "K",
+        "token_id": 20,
+        "gop": -0.002347886472627181
+      },
+      {
+        "index": 21,
+        "word": "likes",
+        "phone": "S",
+        "token_id": 29,
+        "gop": -2.182393968015596
+      },
+      {
+        "index": 22,
+        "word": "to",
+        "phone": "T",
+        "token_id": 31,
+        "gop": -0.01872819653122093
+      },
+      {
+        "index": 23,
+        "word": "to",
+        "phone": "UW",
+        "token_id": 34,
+        "gop": -0.0017260908183303059
+      },
+      {
+        "index": 24,
+        "word": "take",
+        "phone": "T",
+        "token_id": 31,
+        "gop": -0.00034135571090843086
+      },
+      {
+        "index": 25,
+        "word": "take",
+        "phone": "EY",
+        "token_id": 13,
+        "gop": -0.0014361738261428059
+      },
+      {
+        "index": 26,
+        "word": "take",
+        "phone": "K",
+        "token_id": 20,
+        "gop": -0.00025743237106468086
+      },
+      {
+        "index": 27,
+        "word": "photos",
+        "phone": "F",
+        "token_id": 14,
+        "gop": -0.02198594799606468
+      },
+      {
+        "index": 28,
+        "word": "photos",
+        "phone": "OW",
+        "token_id": 25,
+        "gop": -0.004777848630830306
+      },
+      {
+        "index": 29,
+        "word": "photos",
+        "phone": "T",
+        "token_id": 31,
+        "gop": -0.00023454418747093086
+      },
+      {
+        "index": 30,
+        "word": "photos",
+        "phone": "OW",
+        "token_id": 25,
+        "gop": -0.0017451643046584309
+      },
+      {
+        "index": 31,
+        "word": "photos",
+        "phone": "Z",
+        "token_id": 38,
+        "gop": -0.0012797712382521809
+      },
+      {
+        "index": 32,
+        "word": "so",
+        "phone": "S",
+        "token_id": 29,
+        "gop": -0.00032991161911155586
+      },
+      {
+        "index": 33,
+        "word": "so",
+        "phone": "OW",
+        "token_id": 25,
+        "gop": -0.029138505369111556
+      },
+      {
+        "index": 34,
+        "word": "if",
+        "phone": "IH",
+        "token_id": 17,
+        "gop": -0.03307145824997093
+      },
+      {
+        "index": 35,
+        "word": "if",
+        "phone": "F",
+        "token_id": 14,
+        "gop": -0.00039857616989280586
+      },
+      {
+        "index": 36,
+        "word": "i",
+        "phone": "AY",
+        "token_id": 6,
+        "gop": -0.0016764997538771809
+      },
+      {
+        "index": 37,
+        "word": "have",
+        "phone": "HH",
+        "token_id": 16,
+        "gop": -0.00010484448043968086
+      },
+      {
+        "index": 38,
+        "word": "have",
+        "phone": "AE",
+        "token_id": 2,
+        "gop": -0.003560960203095931
+      },
+      {
+        "index": 39,
+        "word": "have",
+        "phone": "V",
+        "token_id": 35,
+        "gop": -0.0011004804667678059
+      },
+      {
+        "index": 40,
+        "word": "a",
+        "phone": "AH",
+        "token_id": 3,
+        "gop": -0.16351121655075218
+      },
+      {
+        "index": 41,
+        "word": "chance",
+        "phone": "CH",
+        "token_id": 8,
+        "gop": -0.002279221921845931
+      },
+      {
+        "index": 42,
+        "word": "chance",
+        "phone": "AE",
+        "token_id": 2,
+        "gop": -0.10436052074997093
+      },
+      {
+        "index": 43,
+        "word": "chance",
+        "phone": "N",
+        "token_id": 23,
+        "gop": -0.0011042951640334309
+      },
+      {
+        "index": 44,
+        "word": "chance",
+        "phone": "S",
+        "token_id": 29,
+        "gop": -0.002016007810517806
+      },
+      {
+        "index": 45,
+        "word": "i",
+        "phone": "AY",
+        "token_id": 6,
+        "gop": -2.8855418561991897
+      },
+      {
+        "index": 46,
+        "word": "need",
+        "phone": "N",
+        "token_id": 23,
+        "gop": -0.00786393871872093
+      },
+      {
+        "index": 47,
+        "word": "need",
+        "phone": "IY",
+        "token_id": 18,
+        "gop": -0.07013505688278343
+      },
+      {
+        "index": 48,
+        "word": "need",
+        "phone": "D",
+        "token_id": 9,
+        "gop": -0.07529634228317406
+      },
+      {
+        "index": 49,
+        "word": "to",
+        "phone": "T",
+        "token_id": 31,
+        "gop": -0.00805467358200218
+      },
+      {
+        "index": 50,
+        "word": "to",
+        "phone": "UW",
+        "token_id": 34,
+        "gop": -0.0010127424296584309
+      },
+      {
+        "index": 51,
+        "word": "improve",
+        "phone": "IH",
+        "token_id": 17,
+        "gop": -0.01172441235153343
+      },
+      {
+        "index": 52,
+        "word": "improve",
+        "phone": "M",
+        "token_id": 22,
+        "gop": -0.003889024167939681
+      },
+      {
+        "index": 53,
+        "word": "improve",
+        "phone": "P",
+        "token_id": 27,
+        "gop": -0.00044053783981468086
+      },
+      {
+        "index": 54,
+        "word": "improve",
+        "phone": "R",
+        "token_id": 28,
+        "gop": -0.00016206493942405586
+      },
+      {
+        "index": 55,
+        "word": "improve",
+        "phone": "UW",
+        "token_id": 34,
+        "gop": -0.03983873119918968
+      },
+      {
+        "index": 56,
+        "word": "improve",
+        "phone": "V",
+        "token_id": 35,
+        "gop": -0.018358170896455306
+      },
+      {
+        "index": 57,
+        "word": "it",
+        "phone": "IH",
+        "token_id": 17,
+        "gop": -2.1868342756327834
+      },
+      {
+        "index": 58,
+        "word": "it",
+        "phone": "T",
+        "token_id": 31,
+        "gop": -5.660222947507783
+      },
+      {
+        "index": 59,
+        "word": "for",
+        "phone": "F",
+        "token_id": 14,
+        "gop": -0.004934251218720931
+      },
+      {
+        "index": 60,
+        "word": "for",
+        "phone": "AO",
+        "token_id": 4,
+        "gop": -0.07256883373825218
+      },
+      {
+        "index": 61,
+        "word": "for",
+        "phone": "R",
+        "token_id": 28,
+        "gop": -0.03365129223434593
+      },
+      {
+        "index": 62,
+        "word": "my",
+        "phone": "M",
+        "token_id": 22,
+        "gop": -0.00027269116012718086
+      },
+      {
+        "index": 63,
+        "word": "my",
+        "phone": "AY",
+        "token_id": 6,
+        "gop": -0.0006846784648146809
+      },
+      {
+        "index": 64,
+        "word": "girlfriend",
+        "phone": "G",
+        "token_id": 15,
+        "gop": -0.002778947263642806
+      },
+      {
+        "index": 65,
+        "word": "girlfriend",
+        "phone": "ER",
+        "token_id": 12,
+        "gop": -4.236448228269502
+      },
+      {
+        "index": 66,
+        "word": "girlfriend",
+        "phone": "L",
+        "token_id": 21,
+        "gop": -2.573240220457002
+      },
+      {
+        "index": 67,
+        "word": "girlfriend",
+        "phone": "F",
+        "token_id": 14,
+        "gop": -0.003362595945283431
+      },
+      {
+        "index": 68,
+        "word": "girlfriend",
+        "phone": "R",
+        "token_id": 28,
+        "gop": -0.0005931257304396809
+      },
+      {
+        "index": 69,
+        "word": "girlfriend",
+        "phone": "EH",
+        "token_id": 11,
+        "gop": -0.002939164548799056
+      },
+      {
+        "index": 70,
+        "word": "girlfriend",
+        "phone": "N",
+        "token_id": 23,
+        "gop": -0.00011247387497093086
+      },
+      {
+        "index": 71,
+        "word": "girlfriend",
+        "phone": "D",
+        "token_id": 9,
+        "gop": -0.00829881420700218
+      }
+    ]
+  },
+  "sd": {
+    "algorithm": "sd",
+    "canonical_log_likelihood_loss": 56.80692094555466,
+    "phones": [
+      {
+        "index": 0,
+        "word": "yes",
+        "phone": "Y",
+        "token_id": 37,
+        "gop": -0.0010446859955521859
+      },
+      {
+        "index": 1,
+        "word": "yes",
+        "phone": "EH",
+        "token_id": 11,
+        "gop": -0.0019010376528925121
+      },
+      {
+        "index": 2,
+        "word": "yes",
+        "phone": "S",
+        "token_id": 29,
+        "gop": -0.0013183825822835615
+      },
+      {
+        "index": 3,
+        "word": "because",
+        "phone": "B",
+        "token_id": 7,
+        "gop": -0.00018768703841232082
+      },
+      {
+        "index": 4,
+        "word": "because",
+        "phone": "IH",
+        "token_id": 17,
+        "gop": -0.002170135016214658
+      },
+      {
+        "index": 5,
+        "word": "because",
+        "phone": "K",
+        "token_id": 20,
+        "gop": -8.305517250306593e-05
+      },
+      {
+        "index": 6,
+        "word": "because",
+        "phone": "AO",
+        "token_id": 4,
+        "gop": -4.321382178514945
+      },
+      {
+        "index": 7,
+        "word": "because",
+        "phone": "Z",
+        "token_id": 38,
+        "gop": -0.0013870335659689204
+      },
+      {
+        "index": 8,
+        "word": "my",
+        "phone": "M",
+        "token_id": 22,
+        "gop": -0.0002063968763437174
+      },
+      {
+        "index": 9,
+        "word": "my",
+        "phone": "AY",
+        "token_id": 6,
+        "gop": -0.0004162098114051105
+      },
+      {
+        "index": 10,
+        "word": "girlfriend",
+        "phone": "G",
+        "token_id": 15,
+        "gop": -0.00549362881744031
+      },
+      {
+        "index": 11,
+        "word": "girlfriend",
+        "phone": "ER",
+        "token_id": 12,
+        "gop": -4.760872004870279
+      },
+      {
+        "index": 12,
+        "word": "girlfriend",
+        "phone": "L",
+        "token_id": 21,
+        "gop": -1.5789514965528682
+      },
+      {
+        "index": 13,
+        "word": "girlfriend",
+        "phone": "F",
+        "token_id": 14,
+        "gop": -0.000985717967267874
+      },
+      {
+        "index": 14,
+        "word": "girlfriend",
+        "phone": "R",
+        "token_id": 28,
+        "gop": -0.0005973712297304701
+      },
+      {
+        "index": 15,
+        "word": "girlfriend",
+        "phone": "EH",
+        "token_id": 11,
+        "gop": -0.0006991645236169575
+      },
+      {
+        "index": 16,
+        "word": "girlfriend",
+        "phone": "N",
+        "token_id": 23,
+        "gop": -2.395355075890393e-05
+      },
+      {
+        "index": 17,
+        "word": "girlfriend",
+        "phone": "D",
+        "token_id": 9,
+        "gop": -6.93828654565106
+      },
+      {
+        "index": 18,
+        "word": "likes",
+        "phone": "L",
+        "token_id": 21,
+        "gop": -0.03936105845362903
+      },
+      {
+        "index": 19,
+        "word": "likes",
+        "phone": "AY",
+        "token_id": 6,
+        "gop": -0.00947351436014543
+      },
+      {
+        "index": 20,
+        "word": "likes",
+        "phone": "K",
+        "token_id": 20,
+        "gop": -0.035606243165517526
+      },
+      {
+        "index": 21,
+        "word": "likes",
+        "phone": "S",
+        "token_id": 29,
+        "gop": -5.363206787648473
+      },
+      {
+        "index": 22,
+        "word": "to",
+        "phone": "T",
+        "token_id": 31,
+        "gop": -0.05366201804400106
+      },
+      {
+        "index": 23,
+        "word": "to",
+        "phone": "UW",
+        "token_id": 34,
+        "gop": -0.002255014250877707
+      },
+      {
+        "index": 24,
+        "word": "take",
+        "phone": "T",
+        "token_id": 31,
+        "gop": -0.0007551953446309767
+      },
+      {
+        "index": 25,
+        "word": "take",
+        "phone": "EY",
+        "token_id": 13,
+        "gop": -0.0014560866514301551
+      },
+      {
+        "index": 26,
+        "word": "take",
+        "phone": "K",
+        "token_id": 20,
+        "gop": -0.00040843732352158213
+      },
+      {
+        "index": 27,
+        "word": "photos",
+        "phone": "F",
+        "token_id": 14,
+        "gop": -0.022290177204304484
+      },
+      {
+        "index": 28,
+        "word": "photos",
+        "phone": "OW",
+        "token_id": 25,
+        "gop": -0.0048242963417308715
+      },
+      {
+        "index": 29,
+        "word": "photos",
+        "phone": "T",
+        "token_id": 31,
+        "gop": -0.0003504575040267355
+      },
+      {
+        "index": 30,
+        "word": "photos",
+        "phone": "OW",
+        "token_id": 25,
+        "gop": -0.001855123047754148
+      },
+      {
+        "index": 31,
+        "word": "photos",
+        "phone": "Z",
+        "token_id": 38,
+        "gop": -0.004811098063285613
+      },
+      {
+        "index": 32,
+        "word": "so",
+        "phone": "S",
+        "token_id": 29,
+        "gop": -0.00045453805433481875
+      },
+      {
+        "index": 33,
+        "word": "so",
+        "phone": "OW",
+        "token_id": 25,
+        "gop": -0.029396042986952864
+      },
+      {
+        "index": 34,
+        "word": "if",
+        "phone": "IH",
+        "token_id": 17,
+        "gop": -0.03601491038183724
+      },
+      {
+        "index": 35,
+        "word": "if",
+        "phone": "F",
+        "token_id": 14,
+        "gop": -0.0007210696082680101
+      },
+      {
+        "index": 36,
+        "word": "i",
+        "phone": "AY",
+        "token_id": 6,
+        "gop": -0.0019072502699231109
+      },
+      {
+        "index": 37,
+        "word": "have",
+        "phone": "HH",
+        "token_id": 16,
+        "gop": -0.0019264665311098383
+      },
+      {
+        "index": 38,
+        "word": "have",
+        "phone": "AE",
+        "token_id": 2,
+        "gop": -0.004405590148969907
+      },
+      {
+        "index": 39,
+        "word": "have",
+        "phone": "V",
+        "token_id": 35,
+        "gop": -0.0063762240590250485
+      },
+      {
+        "index": 40,
+        "word": "a",
+        "phone": "AH",
+        "token_id": 3,
+        "gop": -4.290107559532927
+      },
+      {
+        "index": 41,
+        "word": "chance",
+        "phone": "CH",
+        "token_id": 8,
+        "gop": -0.002995907547607146
+      },
+      {
+        "index": 42,
+        "word": "chance",
+        "phone": "AE",
+        "token_id": 2,
+        "gop": -0.10662841072042539
+      },
+      {
+        "index": 43,
+        "word": "chance",
+        "phone": "N",
+        "token_id": 23,
+        "gop": -0.0033969962370790086
+      },
+      {
+        "index": 44,
+        "word": "chance",
+        "phone": "S",
+        "token_id": 29,
+        "gop": -0.002636091740946256
+      },
+      {
+        "index": 45,
+        "word": "i",
+        "phone": "AY",
+        "token_id": 6,
+        "gop": -2.9093716397521803
+      },
+      {
+        "index": 46,
+        "word": "need",
+        "phone": "N",
+        "token_id": 23,
+        "gop": -0.013328838853020386
+      },
+      {
+        "index": 47,
+        "word": "need",
+        "phone": "IY",
+        "token_id": 18,
+        "gop": -0.0895162989559779
+      },
+      {
+        "index": 48,
+        "word": "need",
+        "phone": "D",
+        "token_id": 9,
+        "gop": -1.3457545796224366
+      },
+      {
+        "index": 49,
+        "word": "to",
+        "phone": "T",
+        "token_id": 31,
+        "gop": -0.019280089062220895
+      },
+      {
+        "index": 50,
+        "word": "to",
+        "phone": "UW",
+        "token_id": 34,
+        "gop": -0.0011454470753449186
+      },
+      {
+        "index": 51,
+        "word": "improve",
+        "phone": "IH",
+        "token_id": 17,
+        "gop": -0.015253240029224457
+      },
+      {
+        "index": 52,
+        "word": "improve",
+        "phone": "M",
+        "token_id": 22,
+        "gop": -0.012898394191438456
+      },
+      {
+        "index": 53,
+        "word": "improve",
+        "phone": "P",
+        "token_id": 27,
+        "gop": -0.0019159270514350624
+      },
+      {
+        "index": 54,
+        "word": "improve",
+        "phone": "R",
+        "token_id": 28,
+        "gop": -0.0035431016825100414
+      },
+      {
+        "index": 55,
+        "word": "improve",
+        "phone": "UW",
+        "token_id": 34,
+        "gop": -0.04130280508500306
+      },
+      {
+        "index": 56,
+        "word": "improve",
+        "phone": "V",
+        "token_id": 35,
+        "gop": -0.02310637628357881
+      },
+      {
+        "index": 57,
+        "word": "it",
+        "phone": "IH",
+        "token_id": 17,
+        "gop": -2.3560130822347887
+      },
+      {
+        "index": 58,
+        "word": "it",
+        "phone": "T",
+        "token_id": 31,
+        "gop": -5.781321395213766
+      },
+      {
+        "index": 59,
+        "word": "for",
+        "phone": "F",
+        "token_id": 14,
+        "gop": -0.009988155439451418
+      },
+      {
+        "index": 60,
+        "word": "for",
+        "phone": "AO",
+        "token_id": 4,
+        "gop": -0.07419523402345618
+      },
+      {
+        "index": 61,
+        "word": "for",
+        "phone": "R",
+        "token_id": 28,
+        "gop": -0.16919702396741343
+      },
+      {
+        "index": 62,
+        "word": "my",
+        "phone": "M",
+        "token_id": 22,
+        "gop": -0.0008096277272500174
+      },
+      {
+        "index": 63,
+        "word": "my",
+        "phone": "AY",
+        "token_id": 6,
+        "gop": -0.0007291868548264802
+      },
+      {
+        "index": 64,
+        "word": "girlfriend",
+        "phone": "G",
+        "token_id": 15,
+        "gop": -0.011653188404807224
+      },
+      {
+        "index": 65,
+        "word": "girlfriend",
+        "phone": "ER",
+        "token_id": 12,
+        "gop": -4.250437187849371
+      },
+      {
+        "index": 66,
+        "word": "girlfriend",
+        "phone": "L",
+        "token_id": 21,
+        "gop": -3.202201078742128
+      },
+      {
+        "index": 67,
+        "word": "girlfriend",
+        "phone": "F",
+        "token_id": 14,
+        "gop": -0.01280396007503981
+      },
+      {
+        "index": 68,
+        "word": "girlfriend",
+        "phone": "R",
+        "token_id": 28,
+        "gop": -0.0015398380531053135
+      },
+      {
+        "index": 69,
+        "word": "girlfriend",
+        "phone": "EH",
+        "token_id": 11,
+        "gop": -0.003410821212973758
+      },
+      {
+        "index": 70,
+        "word": "girlfriend",
+        "phone": "N",
+        "token_id": 23,
+        "gop": -0.0018301974306922375
+      },
+      {
+        "index": 71,
+        "word": "girlfriend",
+        "phone": "D",
+        "token_id": 9,
+        "gop": -0.03631230959899767
+      }
+    ]
+  },
+  "viterbi": {
+    "algorithm": "viterbi",
+    "rows": [
+      {
+        "index": 0,
+        "phone": "Y",
+        "start_frame": 2,
+        "end_frame": 3,
+        "gop_log_p": -0.0018021600246881963,
+        "word": "yes"
+      },
+      {
+        "index": 1,
+        "phone": "EH",
+        "start_frame": 9,
+        "end_frame": 10,
+        "gop_log_p": -0.001900988530767361,
+        "word": "yes"
+      },
+      {
+        "index": 2,
+        "phone": "S",
+        "start_frame": 27,
+        "end_frame": 28,
+        "gop_log_p": -0.0013175938534043803,
+        "word": "yes"
+      },
+      {
+        "index": 3,
+        "phone": "B",
+        "start_frame": 50,
+        "end_frame": 51,
+        "gop_log_p": -0.0001875934116519779,
+        "word": "because"
+      },
+      {
+        "index": 4,
+        "phone": "IH",
+        "start_frame": 53,
+        "end_frame": 54,
+        "gop_log_p": -0.0021701143215227753,
+        "word": "because"
+      },
+      {
+        "index": 5,
+        "phone": "K",
+        "start_frame": 55,
+        "end_frame": 56,
+        "gop_log_p": -8.30923268886742e-05,
+        "word": "because"
+      },
+      {
+        "index": 6,
+        "phone": "AO",
+        "start_frame": 62,
+        "end_frame": 63,
+        "gop_log_p": -4.321381298704849,
+        "word": "because"
+      },
+      {
+        "index": 7,
+        "phone": "Z",
+        "start_frame": 70,
+        "end_frame": 71,
+        "gop_log_p": -0.0013870078604447376,
+        "word": "because"
+      },
+      {
+        "index": 8,
+        "phone": "M",
+        "start_frame": 76,
+        "end_frame": 77,
+        "gop_log_p": -0.00020631295662211778,
+        "word": "my"
+      },
+      {
+        "index": 9,
+        "phone": "AY",
+        "start_frame": 82,
+        "end_frame": 83,
+        "gop_log_p": -0.0004163058777346866,
+        "word": "my"
+      },
+      {
+        "index": 10,
+        "phone": "G",
+        "start_frame": 88,
+        "end_frame": 89,
+        "gop_log_p": -0.005456345652187514,
+        "word": "girlfriend"
+      },
+      {
+        "index": 11,
+        "phone": "ER",
+        "start_frame": 92,
+        "end_frame": 93,
+        "gop_log_p": -4.76087935092934,
+        "word": "girlfriend"
+      },
+      {
+        "index": 12,
+        "phone": "L",
+        "start_frame": 94,
+        "end_frame": 95,
+        "gop_log_p": -1.93065752942858,
+        "word": "girlfriend"
+      },
+      {
+        "index": 13,
+        "phone": "F",
+        "start_frame": 98,
+        "end_frame": 99,
+        "gop_log_p": -0.0003988942259164792,
+        "word": "girlfriend"
+      },
+      {
+        "index": 14,
+        "phone": "R",
+        "start_frame": 101,
+        "end_frame": 102,
+        "gop_log_p": -0.0005977748002783624,
+        "word": "girlfriend"
+      },
+      {
+        "index": 15,
+        "phone": "EH",
+        "start_frame": 106,
+        "end_frame": 107,
+        "gop_log_p": -0.0006991684259269194,
+        "word": "girlfriend"
+      },
+      {
+        "index": 16,
+        "phone": "N",
+        "start_frame": 109,
+        "end_frame": 111,
+        "gop_log_p": -0.006911413816454967,
+        "word": "girlfriend"
+      },
+      {
+        "index": 17,
+        "phone": "D",
+        "start_frame": 113,
+        "end_frame": 114,
+        "gop_log_p": -7.446345375660671,
+        "word": "girlfriend"
+      },
+      {
+        "index": 18,
+        "phone": "L",
+        "start_frame": 119,
+        "end_frame": 120,
+        "gop_log_p": -0.0005124928285074881,
+        "word": "likes"
+      },
+      {
+        "index": 19,
+        "phone": "AY",
+        "start_frame": 125,
+        "end_frame": 126,
+        "gop_log_p": -0.00947256893241053,
+        "word": "likes"
+      },
+      {
+        "index": 20,
+        "phone": "K",
+        "start_frame": 131,
+        "end_frame": 132,
+        "gop_log_p": -0.004638984531556602,
+        "word": "likes"
+      },
+      {
+        "index": 21,
+        "phone": "S",
+        "start_frame": 139,
+        "end_frame": 140,
+        "gop_log_p": -7.443561409220031,
+        "word": "likes"
+      },
+      {
+        "index": 22,
+        "phone": "T",
+        "start_frame": 161,
+        "end_frame": 162,
+        "gop_log_p": -0.021981886955454912,
+        "word": "to"
+      },
+      {
+        "index": 23,
+        "phone": "UW",
+        "start_frame": 169,
+        "end_frame": 170,
+        "gop_log_p": -0.0022078072705235107,
+        "word": "to"
+      },
+      {
+        "index": 24,
+        "phone": "T",
+        "start_frame": 197,
+        "end_frame": 198,
+        "gop_log_p": -0.0007459918935592086,
+        "word": "take"
+      },
+      {
+        "index": 25,
+        "phone": "EY",
+        "start_frame": 202,
+        "end_frame": 203,
+        "gop_log_p": -0.0014561282285794027,
+        "word": "take"
+      },
+      {
+        "index": 26,
+        "phone": "K",
+        "start_frame": 205,
+        "end_frame": 206,
+        "gop_log_p": -0.00040807704560031125,
+        "word": "take"
+      },
+      {
+        "index": 27,
+        "phone": "F",
+        "start_frame": 210,
+        "end_frame": 211,
+        "gop_log_p": -0.022290176174864253,
+        "word": "photos"
+      },
+      {
+        "index": 28,
+        "phone": "OW",
+        "start_frame": 216,
+        "end_frame": 217,
+        "gop_log_p": -0.004824994676772409,
+        "word": "photos"
+      },
+      {
+        "index": 29,
+        "phone": "T",
+        "start_frame": 219,
+        "end_frame": 220,
+        "gop_log_p": -0.0003504174910279483,
+        "word": "photos"
+      },
+      {
+        "index": 30,
+        "phone": "OW",
+        "start_frame": 226,
+        "end_frame": 227,
+        "gop_log_p": -0.0018549469662143137,
+        "word": "photos"
+      },
+      {
+        "index": 31,
+        "phone": "Z",
+        "start_frame": 236,
+        "end_frame": 237,
+        "gop_log_p": -0.00480463128729511,
+        "word": "photos"
+      },
+      {
+        "index": 32,
+        "phone": "S",
+        "start_frame": 258,
+        "end_frame": 260,
+        "gop_log_p": -0.10568315466045491,
+        "word": "so"
+      },
+      {
+        "index": 33,
+        "phone": "OW",
+        "start_frame": 266,
+        "end_frame": 267,
+        "gop_log_p": -0.027133429363673526,
+        "word": "so"
+      },
+      {
+        "index": 34,
+        "phone": "IH",
+        "start_frame": 346,
+        "end_frame": 347,
+        "gop_log_p": -0.005211798136228591,
+        "word": "if"
+      },
+      {
+        "index": 35,
+        "phone": "F",
+        "start_frame": 349,
+        "end_frame": 350,
+        "gop_log_p": -0.0007054909572155671,
+        "word": "if"
+      },
+      {
+        "index": 36,
+        "phone": "AY",
+        "start_frame": 357,
+        "end_frame": 358,
+        "gop_log_p": -0.0019071992283236686,
+        "word": "i"
+      },
+      {
+        "index": 37,
+        "phone": "HH",
+        "start_frame": 362,
+        "end_frame": 363,
+        "gop_log_p": -0.0026784017566661906,
+        "word": "have"
+      },
+      {
+        "index": 38,
+        "phone": "AE",
+        "start_frame": 366,
+        "end_frame": 367,
+        "gop_log_p": -0.004405532675989601,
+        "word": "have"
+      },
+      {
+        "index": 39,
+        "phone": "V",
+        "start_frame": 368,
+        "end_frame": 369,
+        "gop_log_p": -0.0036544737224161344,
+        "word": "have"
+      },
+      {
+        "index": 40,
+        "phone": "AH",
+        "start_frame": 370,
+        "end_frame": 371,
+        "gop_log_p": -4.615774111847363,
+        "word": "a"
+      },
+      {
+        "index": 41,
+        "phone": "CH",
+        "start_frame": 373,
+        "end_frame": 374,
+        "gop_log_p": -0.0025640190380610763,
+        "word": "chance"
+      },
+      {
+        "index": 42,
+        "phone": "AE",
+        "start_frame": 382,
+        "end_frame": 383,
+        "gop_log_p": -0.10662310297931549,
+        "word": "chance"
+      },
+      {
+        "index": 43,
+        "phone": "N",
+        "start_frame": 386,
+        "end_frame": 387,
+        "gop_log_p": -0.003380642133112895,
+        "word": "chance"
+      },
+      {
+        "index": 44,
+        "phone": "S",
+        "start_frame": 393,
+        "end_frame": 394,
+        "gop_log_p": -0.0026284398794804986,
+        "word": "chance"
+      },
+      {
+        "index": 45,
+        "phone": "AY",
+        "start_frame": 404,
+        "end_frame": 405,
+        "gop_log_p": -2.9059802751157955,
+        "word": "i"
+      },
+      {
+        "index": 46,
+        "phone": "N",
+        "start_frame": 409,
+        "end_frame": 411,
+        "gop_log_p": -0.1228092908355453,
+        "word": "need"
+      },
+      {
+        "index": 47,
+        "phone": "IY",
+        "start_frame": 416,
+        "end_frame": 417,
+        "gop_log_p": -0.06593516656581873,
+        "word": "need"
+      },
+      {
+        "index": 48,
+        "phone": "D",
+        "start_frame": 419,
+        "end_frame": 420,
+        "gop_log_p": -1.5875490545712514,
+        "word": "need"
+      },
+      {
+        "index": 49,
+        "phone": "T",
+        "start_frame": 423,
+        "end_frame": 424,
+        "gop_log_p": -0.011358268907300956,
+        "word": "to"
+      },
+      {
+        "index": 50,
+        "phone": "UW",
+        "start_frame": 431,
+        "end_frame": 432,
+        "gop_log_p": -0.0011432743294538252,
+        "word": "to"
+      },
+      {
+        "index": 51,
+        "phone": "IH",
+        "start_frame": 460,
+        "end_frame": 461,
+        "gop_log_p": -0.015234171111740247,
+        "word": "improve"
+      },
+      {
+        "index": 52,
+        "phone": "M",
+        "start_frame": 461,
+        "end_frame": 462,
+        "gop_log_p": -0.012895645424983252,
+        "word": "improve"
+      },
+      {
+        "index": 53,
+        "phone": "P",
+        "start_frame": 465,
+        "end_frame": 466,
+        "gop_log_p": -0.0019157390004461718,
+        "word": "improve"
+      },
+      {
+        "index": 54,
+        "phone": "R",
+        "start_frame": 469,
+        "end_frame": 470,
+        "gop_log_p": -0.005597852181517513,
+        "word": "improve"
+      },
+      {
+        "index": 55,
+        "phone": "UW",
+        "start_frame": 474,
+        "end_frame": 475,
+        "gop_log_p": -0.04130076918147674,
+        "word": "improve"
+      },
+      {
+        "index": 56,
+        "phone": "V",
+        "start_frame": 481,
+        "end_frame": 482,
+        "gop_log_p": -0.008768384068235968,
+        "word": "improve"
+      },
+      {
+        "index": 57,
+        "phone": "IH",
+        "start_frame": 499,
+        "end_frame": 500,
+        "gop_log_p": -1.5376735141036375,
+        "word": "it"
+      },
+      {
+        "index": 58,
+        "phone": "T",
+        "start_frame": 514,
+        "end_frame": 515,
+        "gop_log_p": -6.056233228263816,
+        "word": "it"
+      },
+      {
+        "index": 59,
+        "phone": "F",
+        "start_frame": 578,
+        "end_frame": 579,
+        "gop_log_p": -0.002866079909507734,
+        "word": "for"
+      },
+      {
+        "index": 60,
+        "phone": "AO",
+        "start_frame": 583,
+        "end_frame": 584,
+        "gop_log_p": -0.07424402671793785,
+        "word": "for"
+      },
+      {
+        "index": 61,
+        "phone": "R",
+        "start_frame": 584,
+        "end_frame": 585,
+        "gop_log_p": -0.1697993651360824,
+        "word": "for"
+      },
+      {
+        "index": 62,
+        "phone": "M",
+        "start_frame": 587,
+        "end_frame": 588,
+        "gop_log_p": -0.0008086254372424224,
+        "word": "my"
+      },
+      {
+        "index": 63,
+        "phone": "AY",
+        "start_frame": 594,
+        "end_frame": 595,
+        "gop_log_p": -0.0007286937966476805,
+        "word": "my"
+      },
+      {
+        "index": 64,
+        "phone": "G",
+        "start_frame": 614,
+        "end_frame": 615,
+        "gop_log_p": -0.011517314729171493,
+        "word": "girlfriend"
+      },
+      {
+        "index": 65,
+        "phone": "ER",
+        "start_frame": 618,
+        "end_frame": 619,
+        "gop_log_p": -4.247526487765242,
+        "word": "girlfriend"
+      },
+      {
+        "index": 66,
+        "phone": "L",
+        "start_frame": 620,
+        "end_frame": 621,
+        "gop_log_p": -3.540834517837127,
+        "word": "girlfriend"
+      },
+      {
+        "index": 67,
+        "phone": "F",
+        "start_frame": 625,
+        "end_frame": 626,
+        "gop_log_p": -0.00965496670538868,
+        "word": "girlfriend"
+      },
+      {
+        "index": 68,
+        "phone": "R",
+        "start_frame": 629,
+        "end_frame": 630,
+        "gop_log_p": -0.0015402967856558867,
+        "word": "girlfriend"
+      },
+      {
+        "index": 69,
+        "phone": "EH",
+        "start_frame": 635,
+        "end_frame": 636,
+        "gop_log_p": -0.0034108448655175167,
+        "word": "girlfriend"
+      },
+      {
+        "index": 70,
+        "phone": "N",
+        "start_frame": 643,
+        "end_frame": 644,
+        "gop_log_p": -0.0018296279949466497,
+        "word": "girlfriend"
+      },
+      {
+        "index": 71,
+        "phone": "D",
+        "start_frame": 648,
+        "end_frame": 649,
+        "gop_log_p": -0.03610366134716381,
+        "word": "girlfriend"
+      }
+    ]
+  }
+}

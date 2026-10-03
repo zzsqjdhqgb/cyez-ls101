@@ -1,0 +1,396 @@
+{
+  "schema_version": 1,
+  "input": "/workspace/.gop-research/exam/stable-gop-demo/result.json",
+  "input_sha256": "8a45d99d30395cbec63936b92682bdc55f7264279807c2f7326202249ddd6321",
+  "selection_policy": {
+    "gop_log_ratio_lte": -0.35,
+    "selected_count": 15,
+    "meaning": "Every phone row at or below the threshold is included. No consonant, word-position, acoustic-winner, or hand-written diagnostic filter was applied."
+  },
+  "evidence": [
+    {
+      "evidence_id": "GOP-0267",
+      "index": 267,
+      "word_index": 71,
+      "phone_index": 0,
+      "word": "advantages",
+      "expected": "AE",
+      "expected_ipa": "æ",
+      "acoustic_winner": "AH",
+      "acoustic_winner_ipa": "ʌ",
+      "best_alternative": "AH",
+      "best_alternative_ipa": "ʌ",
+      "gop_log_ratio": -7.631584,
+      "confidence": 1.0,
+      "start_ms": 38673,
+      "end_ms": 38693
+    },
+    {
+      "evidence_id": "GOP-0261",
+      "index": 261,
+      "word_index": 68,
+      "phone_index": 1,
+      "word": "to",
+      "expected": "UW",
+      "expected_ipa": "uː",
+      "acoustic_winner": "EY",
+      "acoustic_winner_ipa": "eɪ",
+      "best_alternative": "EY",
+      "best_alternative_ipa": "eɪ",
+      "gop_log_ratio": -6.839405,
+      "confidence": 1.0,
+      "start_ms": 37873,
+      "end_ms": 37893
+    },
+    {
+      "evidence_id": "GOP-0080",
+      "index": 80,
+      "word_index": 23,
+      "phone_index": 0,
+      "word": "books",
+      "expected": "B",
+      "expected_ipa": "b",
+      "acoustic_winner": "P",
+      "acoustic_winner_ipa": "p",
+      "best_alternative": "P",
+      "best_alternative_ipa": "p",
+      "gop_log_ratio": -6.508749,
+      "confidence": 1.0,
+      "start_ms": 13825,
+      "end_ms": 13845
+    },
+    {
+      "evidence_id": "GOP-0102",
+      "index": 102,
+      "word_index": 27,
+      "phone_index": 4,
+      "word": "storage",
+      "expected": "AH",
+      "expected_ipa": "ʌ",
+      "acoustic_winner": "IY",
+      "acoustic_winner_ipa": "iː",
+      "best_alternative": "IY",
+      "best_alternative_ipa": "iː",
+      "gop_log_ratio": -6.198464,
+      "confidence": 1.0,
+      "start_ms": 16405,
+      "end_ms": 16425
+    },
+    {
+      "evidence_id": "GOP-0268",
+      "index": 268,
+      "word_index": 71,
+      "phone_index": 1,
+      "word": "advantages",
+      "expected": "D",
+      "expected_ipa": "d",
+      "acoustic_winner": "DH",
+      "acoustic_winner_ipa": "ð",
+      "best_alternative": "DH",
+      "best_alternative_ipa": "ð",
+      "gop_log_ratio": -3.973322,
+      "confidence": 0.993,
+      "start_ms": 38713,
+      "end_ms": 38733
+    },
+    {
+      "evidence_id": "GOP-0257",
+      "index": 257,
+      "word_index": 66,
+      "phone_index": 3,
+      "word": "want",
+      "expected": "T",
+      "expected_ipa": "t",
+      "acoustic_winner": "L",
+      "acoustic_winner_ipa": "l",
+      "best_alternative": "L",
+      "best_alternative_ipa": "l",
+      "gop_log_ratio": -3.342875,
+      "confidence": 0.836,
+      "start_ms": 37392,
+      "end_ms": 37412
+    },
+    {
+      "evidence_id": "GOP-0210",
+      "index": 210,
+      "word_index": 54,
+      "phone_index": 1,
+      "word": "best",
+      "expected": "EH",
+      "expected_ipa": "ɛ",
+      "acoustic_winner": "AE",
+      "acoustic_winner_ipa": "æ",
+      "best_alternative": "AE",
+      "best_alternative_ipa": "æ",
+      "gop_log_ratio": -3.273624,
+      "confidence": 0.818,
+      "start_ms": 31691,
+      "end_ms": 31711
+    },
+    {
+      "evidence_id": "GOP-0256",
+      "index": 256,
+      "word_index": 66,
+      "phone_index": 2,
+      "word": "want",
+      "expected": "N",
+      "expected_ipa": "n",
+      "acoustic_winner": "L",
+      "acoustic_winner_ipa": "l",
+      "best_alternative": "L",
+      "best_alternative_ipa": "l",
+      "gop_log_ratio": -3.113698,
+      "confidence": 0.778,
+      "start_ms": 37372,
+      "end_ms": 37392
+    },
+    {
+      "evidence_id": "GOP-0212",
+      "index": 212,
+      "word_index": 54,
+      "phone_index": 3,
+      "word": "best",
+      "expected": "T",
+      "expected_ipa": "t",
+      "acoustic_winner": "S",
+      "acoustic_winner_ipa": "s",
+      "best_alternative": "S",
+      "best_alternative_ipa": "s",
+      "gop_log_ratio": -2.644525,
+      "confidence": 0.661,
+      "start_ms": 31771,
+      "end_ms": 31791
+    },
+    {
+      "evidence_id": "GOP-0137",
+      "index": 137,
+      "word_index": 36,
+      "phone_index": 0,
+      "word": "any",
+      "expected": "EH",
+      "expected_ipa": "ɛ",
+      "acoustic_winner": "AE",
+      "acoustic_winner_ipa": "æ",
+      "best_alternative": "AE",
+      "best_alternative_ipa": "æ",
+      "gop_log_ratio": -2.311043,
+      "confidence": 0.578,
+      "start_ms": 21467,
+      "end_ms": 21487
+    },
+    {
+      "evidence_id": "GOP-0012",
+      "index": 12,
+      "word_index": 5,
+      "phone_index": 0,
+      "word": "books",
+      "expected": "B",
+      "expected_ipa": "b",
+      "acoustic_winner": "P",
+      "acoustic_winner_ipa": "p",
+      "best_alternative": "P",
+      "best_alternative_ipa": "p",
+      "gop_log_ratio": -2.277763,
+      "confidence": 0.569,
+      "start_ms": 2561,
+      "end_ms": 2581
+    },
+    {
+      "evidence_id": "GOP-0255",
+      "index": 255,
+      "word_index": 66,
+      "phone_index": 1,
+      "word": "want",
+      "expected": "AA",
+      "expected_ipa": "ɑː",
+      "acoustic_winner": "AH",
+      "acoustic_winner_ipa": "ʌ",
+      "best_alternative": "AH",
+      "best_alternative_ipa": "ʌ",
+      "gop_log_ratio": -2.226473,
+      "confidence": 0.557,
+      "start_ms": 37352,
+      "end_ms": 37372
+    },
+    {
+      "evidence_id": "GOP-0211",
+      "index": 211,
+      "word_index": 54,
+      "phone_index": 2,
+      "word": "best",
+      "expected": "S",
+      "expected_ipa": "s",
+      "acoustic_winner": "T",
+      "acoustic_winner_ipa": "t",
+      "best_alternative": "T",
+      "best_alternative_ipa": "t",
+      "gop_log_ratio": -1.434262,
+      "confidence": 0.359,
+      "start_ms": 31751,
+      "end_ms": 31771
+    },
+    {
+      "evidence_id": "GOP-0259",
+      "index": 259,
+      "word_index": 67,
+      "phone_index": 1,
+      "word": "me",
+      "expected": "IY",
+      "expected_ipa": "iː",
+      "acoustic_winner": "EY",
+      "acoustic_winner_ipa": "eɪ",
+      "best_alternative": "EY",
+      "best_alternative_ipa": "eɪ",
+      "gop_log_ratio": -1.187054,
+      "confidence": 0.297,
+      "start_ms": 37553,
+      "end_ms": 37573
+    },
+    {
+      "evidence_id": "GOP-0081",
+      "index": 81,
+      "word_index": 23,
+      "phone_index": 1,
+      "word": "books",
+      "expected": "UH",
+      "expected_ipa": "ʊ",
+      "acoustic_winner": "AH",
+      "acoustic_winner_ipa": "ʌ",
+      "best_alternative": "AH",
+      "best_alternative_ipa": "ʌ",
+      "gop_log_ratio": -0.97684,
+      "confidence": 0.244,
+      "start_ms": 13925,
+      "end_ms": 13945
+    }
+  ],
+  "feedback": {
+    "summary_zh": "低 GOP 证据提示若干可关注的音素模式，主要涉及元音前移、清浊对立弱化及 /n/、/t/ 向 /l/ 的替换倾向，但部分证据存在对齐或自然变体可能，需结合复听确认。",
+    "feedback_items": [
+      {
+        "evidence_ids": [
+          "GOP-0080",
+          "GOP-0012"
+        ],
+        "decision": "likely_issue",
+        "finding_zh": "\"books\" 的声母 /b/（AE 预期）在两次出现中均被声学模型更倾向于识别为清音 /p/，GOP 分别为 -6.51 与 -2.28，呈现一致的清化模式。",
+        "rationale_zh": "两条证据同词同位、同向偏移，且 GOP-0080 差距较大（-6.51），说明 /b/ 的浊音特征在该语境下较弱，值得针对声母清浊对立的发声练习。",
+        "practice_zh": "朗读 \"books\" 时特意保持声带振动感，可在手触喉部时确认 /b/ 起始即有振颤，再逐步过渡到完整词中。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0267"
+        ],
+        "decision": "likely_issue",
+        "finding_zh": "\"advantages\" 首音节 /æ/ 被识别为 /ʌ/（GOP = -7.63），元音开口度低于模型预期。",
+        "rationale_zh": "GOP 差距显著，且 /æ/→/ʌ/ 是低频学习者常见迁移模式；同词另一音素 GOP-0268 也显示次低分（-3.97），提示该词整体元音空间可能偏紧。",
+        "practice_zh": "在镜子前练习 \"ah\" 音（如 cat、bad），把下颌明显下落、口腔开大；对比 \"advantages\" /ədˈvɑːntɪdʒɪz/ 首音的开口幅度。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0261"
+        ],
+        "decision": "needs_listening",
+        "finding_zh": "\"to\" 的元音预期为 /uː/，但声学Winner为 /eɪ/（GOP = -6.84）。",
+        "rationale_zh": "差距很大，但 \"to\" 在非重读语境下常弱化为 [tə] 或 [də]，属合法语音变体；需人工复听以区分弱化现象与真实发音偏差。",
+        "practice_zh": "先用重读形式 [tuː] 清晰读出 \"to\"，确保唇形圆拢、舌位靠后；再与弱化形式 [də] 对比，体会同义词在不同位置的实际读音差异。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0102"
+        ],
+        "decision": "likely_issue",
+        "finding_zh": "\"storage\" 第二音节 /ɒ/（转写为 AH）被识别为 /iː/（GOP = -6.20），元音空间严重前移。",
+        "rationale_zh": "GOP 差距明确，且 /ɒ/→/iː/ 属于跨度很大的元音替换，可能反映学习者在非重读音节中对元音区分敏感度不足。",
+        "practice_zh": "对比练习 \"store\" /stɔː/ 与 \"steer\" /stɪər/，把 /ɒ/ 的圆唇后舌位固定住；再读 \"storage\" 时把注意力集中在第二音节的后元音开口上。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0257",
+          "GOP-0256"
+        ],
+        "decision": "likely_issue",
+        "finding_zh": "\"want\" 中 /t/→/l/（GOP=-3.34）与 /n/→/l/（GOP=-3.11）两处证据同时出现，提示 /n/ 与 /t/ 都可能被侧音化替代。",
+        "rationale_zh": "同词内两个相邻音段都指向 /l/，形成重复模式；虽 GOP 未达极深，但一致性较高，值得人工复听并结合发音动作判断。",
+        "practice_zh": "分开练习 \"wan\"（注意 /n/ 舌尖抵上齿龈的鼻音终点）和 \"watch\"（/t/ 的清晰塞音释放），再合并为 \"want\"；用最小对立体区分 /n/、/l/、/t/。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0210",
+          "GOP-0137"
+        ],
+        "decision": "likely_issue",
+        "finding_zh": "\"best\" 与 \"any\" 中的 /ɛ/ 均被识别为更开的 /æ/（GOP 分别为 -3.27、-2.31），呈现一致的元音前移方向。",
+        "rationale_zh": "两条证据同向偏移、同属 /ɛ/ 类元音，提示学习者可能在 /ɛ/–/æ/ 区分上存在系统性紧张，值得针对性反馈。",
+        "practice_zh": "朗读最小对立体 \"bed–bad\"、\"let–lat\"，放慢速度，刻意在 /ɛ/ 时保持口腔比 /æ/ 更闭合；然后代入 \"best\" 与 \"any\" 进行迁移练习。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0255"
+        ],
+        "decision": "needs_listening",
+        "finding_zh": "\"want\" 的元音 /ɑː/ 被识别为 /ʌ/（GOP = -2.23），开口度略高于预期。",
+        "rationale_zh": "GOP 处于中等偏低，且同词的其他证据（GOP-0256、GOP-0257）已占用，该元音差异可能受到相邻音段影响；需复听确认是否独立错误。",
+        "practice_zh": "练习 \"father\" /ˈfɑːðər/ 与 \"luck\" /lʌk/ 的对比，体会 /ɑː/ 的深后开口；再以 \"want\" 为目标，先单独拉长 /ɑː/ 再与 /w/、/nt/ 组合。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0212"
+        ],
+        "decision": "needs_listening",
+        "finding_zh": "\"best\" 词尾 /t/ 被识别为 /s/（GOP = -2.64），可能是 /t/ 的擦化或语流弱读。",
+        "rationale_zh": "GOP 中等偏低，且 /t/ 在词尾非重读位置上擦化为 [s] 在多种方言和速语中均存在，不能直接判定为错误。",
+        "practice_zh": "单独朗读 \"best\" 并保持词尾 /t/ 清晰的爆破释放（轻促的 [t] 而非 [s]）；与 fast、cast 等词尾同样是 /t/ 的词一起做对比朗读。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0268"
+        ],
+        "decision": "needs_listening",
+        "finding_zh": "\"advantages\" 第二音节的 /d/ 被识别为 /ð/（GOP = -3.97）。",
+        "rationale_zh": "GOP 中等偏低，/d/ 与 /ð/ 在某些语流连接中听觉相近，且同词 GOP-0267 已作为元音问题被单独处理；需复听确认是否为持续偏误。",
+        "practice_zh": "对比朗读 \"day\" /deɪ/ 与 \"the\" /ðiː/，把 /d/ 的舌尖抵上齿龈塞音动作做清晰，再代入 \"advantages\" 的第二音节重复练习。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0259"
+        ],
+        "decision": "needs_listening",
+        "finding_zh": "\"me\" 的元音 /iː/ 被识别为 /eɪ/（GOP = -1.19），差距较小。",
+        "rationale_zh": "GOP 仅 -1.19，处于模型不确定区间；同词前文语境或其他因素（连读、语速）可能导致此偏移，不宜直接作为发音错误反馈。",
+        "practice_zh": "单独拉长发 \"me\" [miː]，确保双唇放松、舌面前部高抬；再与 \"may\" [meɪ] 做对比朗读，巩固 /iː/ 与 /eɪ/ 的差别。"
+      }
+    ],
+    "withheld_differences": [
+      {
+        "evidence_ids": [
+          "GOP-0211"
+        ],
+        "reason_zh": "\"best\" 中 /s/→/t/ 仅 GOP=-1.43，处于模型置信边界；该偏移可能与 GOP-0212 的对齐边界重叠，且 /s/ 与 /t/ 在快速语流中频谱相近，无法独立判定为发音偏误。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0081"
+        ],
+        "reason_zh": "\"books\" 中 /ʊ/→/ʌ/ 仅 GOP=-0.98，属弱信号；英式英语中 book 的元音本就接近 [ʊ]，与 /ʌ/ 的听觉差别有限，且同词 GOP-0080 已处理声母问题，不宜重复报错。"
+      }
+    ],
+    "limitations_zh": [
+      "所有证据均为 GOP 声学偏好信号，不代表已确认的发音错误。",
+      "无法听到音频，不能验证连读、弱读、方言变体或 ASR 对齐偏差的真实来源。",
+      "\"to\" 的 UW→EY 大 GOP 可能是非重读弱化而非发音错误。",
+      "\"books\" 的 B→P 清化在非重读词首位置存在自然语音学上的合法性。",
+      "部分证据间隔很近（如 want、best 的多条）可能共享同一段声学片段，独立性受限。",
+      "本反馈未考虑音高、重音、语调、语速等超音段维度。"
+    ]
+  },
+  "llm": {
+    "input": "/workspace/.gop-research/exam/stable-gop-demo/result.json",
+    "output_dir": "/workspace/.gop-research/exam/stable-gop-demo-llm",
+    "endpoint": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "model": "agnes-2.5-flash",
+    "threshold": -0.35,
+    "temperature": 0.0,
+    "thinking": true
+  }
+}

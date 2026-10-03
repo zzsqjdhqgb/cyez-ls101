@@ -1,0 +1,374 @@
+{
+  "audioPath": "/workspace/.gop-research/exam/recording-11.webm",
+  "referenceText": "I do believe that e-books over weigh paper books when, in terms of the preferences for reading. The three reasons include: the e-books large capacity of storage, its convenience, and also its easy access to any material worldwide, including both the latest papers in the top notch journals and also some of the best sellers. That hasn't been printed in paper books. But if you want me to say some advantages of paper books, I do believe that reading paper books is like sipping a cup of tea. Because if you have the leisure, if you have the convenience, and if you do have time, or if you just want to read one book, then you can take one and sit by the window and read it, enjoy it.",
+  "source": {
+    "asr": "local Qwen3 ASR（仅用于定位词段）",
+    "pronunciationReference": "CMUdict",
+    "acousticModel": "/workspace/externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8/"
+  },
+  "diagnoses": [
+    {
+      "id": "voiced-dental-fricative",
+      "title": "齿间浊擦音 /ð/",
+      "strength": "中等证据，建议复听",
+      "summary": "模型在多个词段把目标 /ð/ 的声学峰值判得更接近 /t/。这可能表示齿间摩擦或声带振动不足，但功能词弱读和模型偏置也会造成相同现象。",
+      "practice": "复听时看舌尖是否轻触上下齿之间；保持声带振动并拉出连续摩擦，再与短促无摩擦的 /t/ 对比。",
+      "evidence": [
+        {
+          "word": "that",
+          "expected": "ð",
+          "observed": "t",
+          "score": 1,
+          "confidence": 1,
+          "startMs": 2041,
+          "endMs": 2061,
+          "time": "00:02.04-00:02.06"
+        },
+        {
+          "word": "the",
+          "expected": "ð",
+          "observed": "t",
+          "score": 12,
+          "confidence": 0.506,
+          "startMs": 7703,
+          "endMs": 7723,
+          "time": "00:07.70-00:07.72"
+        },
+        {
+          "word": "The",
+          "expected": "ð",
+          "observed": "t",
+          "score": 10,
+          "confidence": 0.544,
+          "startMs": 10443,
+          "endMs": 10463,
+          "time": "00:10.44-00:10.46"
+        },
+        {
+          "word": "the",
+          "expected": "ð",
+          "observed": "t",
+          "score": 3,
+          "confidence": 0.829,
+          "startMs": 13424,
+          "endMs": 13444,
+          "time": "00:13.42-00:13.44"
+        },
+        {
+          "word": "the",
+          "expected": "ð",
+          "observed": "t",
+          "score": 2,
+          "confidence": 0.972,
+          "startMs": 25108,
+          "endMs": 25128,
+          "time": "00:25.11-00:25.13"
+        },
+        {
+          "word": "the",
+          "expected": "ð",
+          "observed": "t",
+          "score": 6,
+          "confidence": 0.696,
+          "startMs": 27349,
+          "endMs": 27369,
+          "time": "00:27.35-00:27.37"
+        },
+        {
+          "word": "the",
+          "expected": "ð",
+          "observed": "t",
+          "score": 1,
+          "confidence": 1,
+          "startMs": 31270,
+          "endMs": 31290,
+          "time": "00:31.27-00:31.29"
+        },
+        {
+          "word": "That",
+          "expected": "ð",
+          "observed": "t",
+          "score": 19,
+          "confidence": 0.365,
+          "startMs": 32871,
+          "endMs": 32891,
+          "time": "00:32.87-00:32.89"
+        },
+        {
+          "word": "that",
+          "expected": "ð",
+          "observed": "t",
+          "score": 0,
+          "confidence": 1,
+          "startMs": 41694,
+          "endMs": 41714,
+          "time": "00:41.69-00:41.71"
+        },
+        {
+          "word": "the",
+          "expected": "ð",
+          "observed": "t",
+          "score": 3,
+          "confidence": 0.903,
+          "startMs": 47016,
+          "endMs": 47036,
+          "time": "00:47.02-00:47.04"
+        },
+        {
+          "word": "then",
+          "expected": "ð",
+          "observed": "t",
+          "score": 18,
+          "confidence": 0.384,
+          "startMs": 55158,
+          "endMs": 55178,
+          "time": "00:55.16-00:55.18"
+        },
+        {
+          "word": "the",
+          "expected": "ð",
+          "observed": "t",
+          "score": 3,
+          "confidence": 0.889,
+          "startMs": 57639,
+          "endMs": 57659,
+          "time": "00:57.64-00:57.66"
+        }
+      ]
+    },
+    {
+      "id": "voiceless-dental-fricative",
+      "title": "齿间清擦音 /θ/",
+      "strength": "较强证据，但只有 2 处，建议复听",
+      "summary": "在 three 和 both 中，模型分别更接近 /ts/ 与 /s/，呈现齿间清擦音不充分或塞擦化的可能。",
+      "practice": "舌尖从齿间略露出，持续送气且不振动；不要让气流先变成 /s/，也不要先形成 /t/ 的闭塞。",
+      "evidence": [
+        {
+          "word": "three",
+          "expected": "θ",
+          "observed": "ts",
+          "score": 4,
+          "confidence": 0.776,
+          "startMs": 10604,
+          "endMs": 10624,
+          "time": "00:10.60-00:10.62"
+        },
+        {
+          "word": "both",
+          "expected": "θ",
+          "observed": "s",
+          "score": 4,
+          "confidence": 0.817,
+          "startMs": 25008,
+          "endMs": 25028,
+          "time": "00:25.01-00:25.03"
+        }
+      ]
+    },
+    {
+      "id": "final-z-devoicing",
+      "title": "词尾浊音 /z/",
+      "strength": "较强的重复模式，建议复听",
+      "summary": "terms、preferences、papers、journals、sellers、advantages、is 的词尾 /z/ 多次被判得更接近 /s/；这符合词尾浊音清化的疑点。",
+      "practice": "在词尾保留声带振动，先延长 /z/ 再收尾；可交替练习 /s/-/z/，用手摸喉部确认是否有振动。",
+      "evidence": [
+        {
+          "word": "terms",
+          "expected": "z",
+          "observed": "s",
+          "score": 3,
+          "confidence": 0.871,
+          "startMs": 6802,
+          "endMs": 6822,
+          "time": "00:06.80-00:06.82"
+        },
+        {
+          "word": "preferences",
+          "expected": "z",
+          "observed": "s",
+          "score": 1,
+          "confidence": 1,
+          "startMs": 8583,
+          "endMs": 8603,
+          "time": "00:08.58-00:08.60"
+        },
+        {
+          "word": "papers",
+          "expected": "z",
+          "observed": "s",
+          "score": 1,
+          "confidence": 1,
+          "startMs": 26969,
+          "endMs": 26989,
+          "time": "00:26.97-00:26.99"
+        },
+        {
+          "word": "journals",
+          "expected": "z",
+          "observed": "s",
+          "score": 2,
+          "confidence": 0.93,
+          "startMs": 29530,
+          "endMs": 29550,
+          "time": "00:29.53-00:29.55"
+        },
+        {
+          "word": "sellers",
+          "expected": "z",
+          "observed": "s",
+          "score": 3,
+          "confidence": 0.883,
+          "startMs": 32371,
+          "endMs": 32391,
+          "time": "00:32.37-00:32.39"
+        },
+        {
+          "word": "advantages",
+          "expected": "z",
+          "observed": "s",
+          "score": 3,
+          "confidence": 0.851,
+          "startMs": 39373,
+          "endMs": 39393,
+          "time": "00:39.37-00:39.39"
+        },
+        {
+          "word": "is",
+          "expected": "z",
+          "observed": "s",
+          "score": 2,
+          "confidence": 0.958,
+          "startMs": 43034,
+          "endMs": 43054,
+          "time": "00:43.03-00:43.05"
+        }
+      ]
+    },
+    {
+      "id": "initial-b-devoicing",
+      "title": "词首浊塞音 /b/",
+      "strength": "较弱证据，仅作待确认复听项",
+      "summary": "believe、books、both、been、But、by 的部分实例被判得更接近 /p/。同一模型对 /b/ 有系统性混淆，且同词并非每次都一致，因此不能直接断言为错误。",
+      "practice": "若复听确有问题，双唇先闭合、随后带声释放；避免像 /p/ 那样出现明显送气。",
+      "evidence": [
+        {
+          "word": "believe",
+          "expected": "b",
+          "observed": "p",
+          "score": 3,
+          "confidence": 0.846,
+          "startMs": 1761,
+          "endMs": 1781,
+          "time": "00:01.76-00:01.78"
+        },
+        {
+          "word": "books",
+          "expected": "b",
+          "observed": "p",
+          "score": 1,
+          "confidence": 1,
+          "startMs": 2561,
+          "endMs": 2581,
+          "time": "00:02.56-00:02.58"
+        },
+        {
+          "word": "books",
+          "expected": "b",
+          "observed": "p",
+          "score": 2,
+          "confidence": 1,
+          "startMs": 4041,
+          "endMs": 4061,
+          "time": "00:04.04-00:04.06"
+        },
+        {
+          "word": "books",
+          "expected": "b",
+          "observed": "p",
+          "score": 1,
+          "confidence": 1,
+          "startMs": 13825,
+          "endMs": 13845,
+          "time": "00:13.82-00:13.85"
+        },
+        {
+          "word": "both",
+          "expected": "b",
+          "observed": "p",
+          "score": 3,
+          "confidence": 0.871,
+          "startMs": 24788,
+          "endMs": 24808,
+          "time": "00:24.79-00:24.81"
+        },
+        {
+          "word": "been",
+          "expected": "b",
+          "observed": "p",
+          "score": 3,
+          "confidence": 0.91,
+          "startMs": 33491,
+          "endMs": 33511,
+          "time": "00:33.49-00:33.51"
+        },
+        {
+          "word": "But",
+          "expected": "b",
+          "observed": "p",
+          "score": 2,
+          "confidence": 0.958,
+          "startMs": 36452,
+          "endMs": 36472,
+          "time": "00:36.45-00:36.47"
+        },
+        {
+          "word": "books",
+          "expected": "b",
+          "observed": "p",
+          "score": 1,
+          "confidence": 1,
+          "startMs": 40113,
+          "endMs": 40133,
+          "time": "00:40.11-00:40.13"
+        },
+        {
+          "word": "believe",
+          "expected": "b",
+          "observed": "p",
+          "score": 1,
+          "confidence": 1,
+          "startMs": 40994,
+          "endMs": 41014,
+          "time": "00:40.99-00:41.01"
+        },
+        {
+          "word": "books",
+          "expected": "b",
+          "observed": "p",
+          "score": 3,
+          "confidence": 0.872,
+          "startMs": 42574,
+          "endMs": 42594,
+          "time": "00:42.57-00:42.59"
+        },
+        {
+          "word": "by",
+          "expected": "b",
+          "observed": "p",
+          "score": 2,
+          "confidence": 0.962,
+          "startMs": 57419,
+          "endMs": 57439,
+          "time": "00:57.42-00:57.44"
+        }
+      ]
+    }
+  ],
+  "exclusions": [
+    "未纳入停顿、流利度、语法、措辞、内容或总分。",
+    "元音、自然弱读（如 the、and、to、of、because）以及 CMUdict 合法变体不直接判错。",
+    "i5、ɑ5、ei5、ts. 等多语声学模型内部 token 不作为英语音素错误。",
+    "ASR 将 overweigh 识别成不稳定词形；该词段不用于发音结论。"
+  ],
+  "feedbackMarkdown": "# 发音纠错（仅音素）\n\n音频：[recording-11.webm](/workspace/.gop-research/exam/recording-11.webm)  ·  [WAV](/workspace/.gop-research/exam/recording-11.wav)\n\n> 这份结果只讨论发音。时间是 CTC 强制对齐的近似位置，所有“错误”都应结合原音频复听；模型证据本身不是人工判定。\n\n## 保留的发音疑点\n\n### 齿间浊擦音 /ð/ · 中等证据，建议复听\n\n模型在多个词段把目标 /ð/ 的声学峰值判得更接近 /t/。这可能表示齿间摩擦或声带振动不足，但功能词弱读和模型偏置也会造成相同现象。\n\n证据：\n- `that` 00:02.04-00:02.06：/ð/ → /t/（模型置信度 1）\n- `the` 00:07.70-00:07.72：/ð/ → /t/（模型置信度 0.506）\n- `The` 00:10.44-00:10.46：/ð/ → /t/（模型置信度 0.544）\n- `the` 00:13.42-00:13.44：/ð/ → /t/（模型置信度 0.829）\n- `the` 00:25.11-00:25.13：/ð/ → /t/（模型置信度 0.972）\n- `the` 00:27.35-00:27.37：/ð/ → /t/（模型置信度 0.696）\n- `the` 00:31.27-00:31.29：/ð/ → /t/（模型置信度 1）\n- `That` 00:32.87-00:32.89：/ð/ → /t/（模型置信度 0.365）\n- `that` 00:41.69-00:41.71：/ð/ → /t/（模型置信度 1）\n- `the` 00:47.02-00:47.04：/ð/ → /t/（模型置信度 0.903）\n- `then` 00:55.16-00:55.18：/ð/ → /t/（模型置信度 0.384）\n- `the` 00:57.64-00:57.66：/ð/ → /t/（模型置信度 0.889）\n\n练习方向：复听时看舌尖是否轻触上下齿之间；保持声带振动并拉出连续摩擦，再与短促无摩擦的 /t/ 对比。\n\n### 齿间清擦音 /θ/ · 较强证据，但只有 2 处，建议复听\n\n在 three 和 both 中，模型分别更接近 /ts/ 与 /s/，呈现齿间清擦音不充分或塞擦化的可能。\n\n证据：\n- `three` 00:10.60-00:10.62：/θ/ → /ts/（模型置信度 0.776）\n- `both` 00:25.01-00:25.03：/θ/ → /s/（模型置信度 0.817）\n\n练习方向：舌尖从齿间略露出，持续送气且不振动；不要让气流先变成 /s/，也不要先形成 /t/ 的闭塞。\n\n### 词尾浊音 /z/ · 较强的重复模式，建议复听\n\nterms、preferences、papers、journals、sellers、advantages、is 的词尾 /z/ 多次被判得更接近 /s/；这符合词尾浊音清化的疑点。\n\n证据：\n- `terms` 00:06.80-00:06.82：/z/ → /s/（模型置信度 0.871）\n- `preferences` 00:08.58-00:08.60：/z/ → /s/（模型置信度 1）\n- `papers` 00:26.97-00:26.99：/z/ → /s/（模型置信度 1）\n- `journals` 00:29.53-00:29.55：/z/ → /s/（模型置信度 0.93）\n- `sellers` 00:32.37-00:32.39：/z/ → /s/（模型置信度 0.883）\n- `advantages` 00:39.37-00:39.39：/z/ → /s/（模型置信度 0.851）\n- `is` 00:43.03-00:43.05：/z/ → /s/（模型置信度 0.958）\n\n练习方向：在词尾保留声带振动，先延长 /z/ 再收尾；可交替练习 /s/-/z/，用手摸喉部确认是否有振动。\n\n### 词首浊塞音 /b/ · 较弱证据，仅作待确认复听项\n\nbelieve、books、both、been、But、by 的部分实例被判得更接近 /p/。同一模型对 /b/ 有系统性混淆，且同词并非每次都一致，因此不能直接断言为错误。\n\n证据：\n- `believe` 00:01.76-00:01.78：/b/ → /p/（模型置信度 0.846）\n- `books` 00:02.56-00:02.58：/b/ → /p/（模型置信度 1）\n- `books` 00:04.04-00:04.06：/b/ → /p/（模型置信度 1）\n- `books` 00:13.82-00:13.85：/b/ → /p/（模型置信度 1）\n- `both` 00:24.79-00:24.81：/b/ → /p/（模型置信度 0.871）\n- `been` 00:33.49-00:33.51：/b/ → /p/（模型置信度 0.91）\n- `But` 00:36.45-00:36.47：/b/ → /p/（模型置信度 0.958）\n- `books` 00:40.11-00:40.13：/b/ → /p/（模型置信度 1）\n- `believe` 00:40.99-00:41.01：/b/ → /p/（模型置信度 1）\n- `books` 00:42.57-00:42.59：/b/ → /p/（模型置信度 0.872）\n- `by` 00:57.42-00:57.44：/b/ → /p/（模型置信度 0.962）\n\n练习方向：若复听确有问题，双唇先闭合、随后带声释放；避免像 /p/ 那样出现明显送气。\n\n## 本次明确不判定的内容\n\n- 未纳入停顿、流利度、语法、措辞、内容或总分。\n- 元音、自然弱读（如 the、and、to、of、because）以及 CMUdict 合法变体不直接判错。\n- i5、ɑ5、ei5、ts. 等多语声学模型内部 token 不作为英语音素错误。\n- ASR 将 overweigh 识别成不稳定词形；该词段不用于发音结论。\n\n## 判断方法\n\n只保留目标音素与常规英语音素之间的替代，要求有重复实例或较高声学置信度；单个低置信度片段、合法读音变体和内部 token 均被过滤。\n"
+}

@@ -1,10 +1,10 @@
+import { airouterClient, type AIRouterClient } from '@ls101/airouter/renderer'
 import {
   BUILTIN_PRONUNCIATION_MODEL_ID,
   BUILTIN_PRONUNCIATION_PROVIDER_ID
 } from '@ls101/airouter/shared'
-import { airouterClient, type AIRouterClient } from '@ls101/airouter/renderer'
 import type {
-  SpeechCorrector,
+  PronunciationAssessor,
   SpeechRecognizer,
   SpeechRecognitionModelSelection,
   TextGradingModel,
@@ -15,32 +15,6 @@ import type { AIModelOption } from '../../components/ai/AIModelSelect'
 export interface SubmissionAIModelOptions {
   speechRecognition: AIModelOption[]
   text: AIModelOption[]
-}
-
-export function createAIRouterSpeechCorrector(
-  client: AIRouterClient = airouterClient
-): SpeechCorrector {
-  return {
-    async correct({ audio, referenceText }, options) {
-      if (!referenceText?.trim()) {
-        return '自由表达没有固定参考文本，本次不执行逐音素发音对齐。'
-      }
-      const result = await client.assessPronunciation(
-        {
-          providerConfigId: BUILTIN_PRONUNCIATION_PROVIDER_ID,
-          modelId: BUILTIN_PRONUNCIATION_MODEL_ID,
-          referenceText,
-          audio: {
-            data: audio.data,
-            mediaType: audio.mediaType ?? 'audio/webm',
-            filename: audio.filename
-          }
-        },
-        options
-      )
-      return result.feedbackMarkdown
-    }
-  }
 }
 
 export async function listSubmissionAIModels(
@@ -93,6 +67,28 @@ export function createAIRouterSpeechRecognizer(
   }
 }
 
+export function createAIRouterPronunciationAssessor(
+  client: AIRouterClient = airouterClient
+): PronunciationAssessor {
+  return {
+    assess({ audio, referenceText }, options) {
+      return client.assessPronunciation(
+        {
+          providerConfigId: BUILTIN_PRONUNCIATION_PROVIDER_ID,
+          modelId: BUILTIN_PRONUNCIATION_MODEL_ID,
+          referenceText,
+          audio: {
+            data: audio.data,
+            mediaType: audio.mediaType ?? 'audio/webm',
+            filename: audio.filename
+          }
+        },
+        options
+      )
+    }
+  }
+}
+
 export function createAIRouterTextGradingModel(
   selection: TextGradingModelSelection,
   client: AIRouterClient = airouterClient
@@ -104,9 +100,14 @@ export function createAIRouterTextGradingModel(
         {
           providerConfigId: selection.providerId,
           modelId: selection.modelId,
-          prompt
+          prompt,
+          ...(options?.systemPrompt === undefined ? {} : { systemPrompt: options.systemPrompt }),
+          ...(options?.temperature === undefined ? {} : { temperature: options.temperature }),
+          ...(options?.maxOutputTokens === undefined
+            ? {}
+            : { maxOutputTokens: options.maxOutputTokens })
         },
-        options
+        { signal: options?.signal }
       )) {
         if (chunk.type === 'output') output += chunk.delta
       }

@@ -1,0 +1,1911 @@
+{
+  "schema_version": 1,
+  "id": "0da366a3-a684-4c34-9109-11fdfc63227c---68bc2586-0cbd-4669-aa68-094aebd76b7.wav",
+  "audio_path": "audio/0da366a3-a684-4c34-9109-11fdfc63227c---68bc2586-0cbd-4669-aa68-094aebd76b7.wav",
+  "audio_sha256": "a6ffdd600a6bf616826f8290eb1bb4751822344b495016112db97c2e97a941d8",
+  "transcript": " depends I mean it depends on what I'm looking for if I'm going to buy like a phone or computer I would definitely choose big ones because the quality of the product is more reliable for sure",
+  "transcript_source": "published MultiPA Whisper large-v3 output",
+  "ctc": {
+    "reference_text": " depends I mean it depends on what I'm looking for if I'm going to buy like a phone or computer I would definitely choose big ones because the quality of the product is more reliable for sure",
+    "reference_source": "published Whisper ASR hypothesis; not a known script",
+    "recognized_phones": [
+      "æ",
+      "i",
+      "k",
+      "æ",
+      "n",
+      "z",
+      "aɪ",
+      "m",
+      "ɪ",
+      "ŋ",
+      "æ",
+      "n",
+      "z",
+      "ɑː",
+      "w",
+      "ʌ",
+      "t",
+      "aɪ",
+      "m",
+      "ð",
+      "ə",
+      "k",
+      "ɪ",
+      "ŋ",
+      "ə",
+      "aɪ",
+      "m",
+      "ɡ",
+      "ŋ",
+      "t",
+      "ə",
+      "b",
+      "aɪ",
+      "l",
+      "aɪ",
+      "k",
+      "ɐ",
+      "k",
+      "ɔːɹ",
+      "n",
+      "ɔː",
+      "ɹ",
+      "k",
+      "ə",
+      "m",
+      "p",
+      "j",
+      "uː",
+      "ɾ",
+      "ɚ",
+      "aʊ",
+      "d",
+      "æ",
+      "f",
+      "n",
+      "ɪ",
+      "tʃ",
+      "uː",
+      "s",
+      "p",
+      "eɪ",
+      "k",
+      "w",
+      "ʌ",
+      "n",
+      "s",
+      "k",
+      "ɪ",
+      "z",
+      "ð",
+      "ə",
+      "ð",
+      "ə",
+      "k",
+      "w",
+      "ɑː",
+      "l",
+      "ɾ",
+      "i",
+      "ʌ",
+      "v",
+      "ð",
+      "ə",
+      "p",
+      "ɹ",
+      "ɑː",
+      "d",
+      "ʌ",
+      "k",
+      "t",
+      "ɪ",
+      "z",
+      "m",
+      "ɔːɹ",
+      "ɹ",
+      "ᵻ",
+      "l",
+      "aɪ",
+      "ə",
+      "b",
+      "əl",
+      "f",
+      "ɜː",
+      "ʃ",
+      "ɚ"
+    ],
+    "overall_score": 64,
+    "alignment_path_score": -0.336634,
+    "frame_count": 836,
+    "duration_ms": 16730,
+    "words": [
+      {
+        "word_index": 0,
+        "text": "depends",
+        "expected_phones": [
+          "d",
+          "ɪ",
+          "p",
+          "ɛ",
+          "n",
+          "d",
+          "z"
+        ],
+        "score": 55,
+        "start_ms": 220,
+        "end_ms": 861,
+        "phones": [
+          {
+            "expected": "d",
+            "score": 62,
+            "confidence": 0.119,
+            "start_ms": 220,
+            "end_ms": 240
+          },
+          {
+            "expected": "ɪ",
+            "observed": "i",
+            "score": 19,
+            "confidence": 0.36,
+            "start_ms": 240,
+            "end_ms": 260
+          },
+          {
+            "expected": "p",
+            "observed": "k",
+            "score": 32,
+            "confidence": 0.191,
+            "start_ms": 440,
+            "end_ms": 460
+          },
+          {
+            "expected": "ɛ",
+            "observed": "æ",
+            "score": 19,
+            "confidence": 0.358,
+            "start_ms": 520,
+            "end_ms": 540
+          },
+          {
+            "expected": "n",
+            "score": 98,
+            "confidence": 0.968,
+            "start_ms": 680,
+            "end_ms": 700
+          },
+          {
+            "expected": "d",
+            "score": 78,
+            "confidence": 0.311,
+            "start_ms": 700,
+            "end_ms": 720
+          },
+          {
+            "expected": "z",
+            "score": 77,
+            "confidence": 0.303,
+            "start_ms": 841,
+            "end_ms": 861
+          }
+        ]
+      },
+      {
+        "word_index": 1,
+        "text": "I",
+        "expected_phones": [
+          "aɪ"
+        ],
+        "score": 75,
+        "start_ms": 1641,
+        "end_ms": 1661,
+        "phones": [
+          {
+            "expected": "aɪ",
+            "score": 75,
+            "confidence": 0.269,
+            "start_ms": 1641,
+            "end_ms": 1661
+          }
+        ]
+      },
+      {
+        "word_index": 2,
+        "text": "mean",
+        "expected_phones": [
+          "m",
+          "iː",
+          "n"
+        ],
+        "score": 36,
+        "start_ms": 1721,
+        "end_ms": 1861,
+        "phones": [
+          {
+            "expected": "m",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 1721,
+            "end_ms": 1741
+          },
+          {
+            "expected": "iː",
+            "observed": "ɪ",
+            "score": 4,
+            "confidence": 0.821,
+            "start_ms": 1761,
+            "end_ms": 1781
+          },
+          {
+            "expected": "n",
+            "observed": "ŋ",
+            "score": 4,
+            "confidence": 0.77,
+            "start_ms": 1841,
+            "end_ms": 1861
+          }
+        ]
+      },
+      {
+        "word_index": 3,
+        "text": "it",
+        "expected_phones": [
+          "ɪ",
+          "t"
+        ],
+        "score": 43,
+        "start_ms": 1861,
+        "end_ms": 1961,
+        "phones": [
+          {
+            "expected": "ɪ",
+            "observed": "d",
+            "score": 24,
+            "confidence": 0.286,
+            "start_ms": 1861,
+            "end_ms": 1881
+          },
+          {
+            "expected": "t",
+            "score": 61,
+            "confidence": 0.11,
+            "start_ms": 1941,
+            "end_ms": 1961
+          }
+        ]
+      },
+      {
+        "word_index": 4,
+        "text": "depends",
+        "expected_phones": [
+          "d",
+          "ɪ",
+          "p",
+          "ɛ",
+          "n",
+          "d",
+          "z"
+        ],
+        "score": 54,
+        "start_ms": 1961,
+        "end_ms": 2582,
+        "phones": [
+          {
+            "expected": "d",
+            "score": 77,
+            "confidence": 0.3,
+            "start_ms": 1961,
+            "end_ms": 1981
+          },
+          {
+            "expected": "ɪ",
+            "score": 65,
+            "confidence": 0.15,
+            "start_ms": 1981,
+            "end_ms": 2001
+          },
+          {
+            "expected": "p",
+            "observed": "k",
+            "score": 17,
+            "confidence": 0.402,
+            "start_ms": 2121,
+            "end_ms": 2141
+          },
+          {
+            "expected": "ɛ",
+            "observed": "æ",
+            "score": 16,
+            "confidence": 0.407,
+            "start_ms": 2241,
+            "end_ms": 2261
+          },
+          {
+            "expected": "n",
+            "score": 93,
+            "confidence": 0.648,
+            "start_ms": 2381,
+            "end_ms": 2401
+          },
+          {
+            "expected": "d",
+            "observed": "n",
+            "score": 14,
+            "confidence": 0.457,
+            "start_ms": 2401,
+            "end_ms": 2421
+          },
+          {
+            "expected": "z",
+            "score": 93,
+            "confidence": 0.64,
+            "start_ms": 2562,
+            "end_ms": 2582
+          }
+        ]
+      },
+      {
+        "word_index": 5,
+        "text": "on",
+        "expected_phones": [
+          "ɑː",
+          "n"
+        ],
+        "score": 37,
+        "start_ms": 2882,
+        "end_ms": 3102,
+        "phones": [
+          {
+            "expected": "ɑː",
+            "score": 58,
+            "confidence": 0.076,
+            "start_ms": 2882,
+            "end_ms": 2902
+          },
+          {
+            "expected": "n",
+            "observed": "ŋ",
+            "score": 15,
+            "confidence": 0.434,
+            "start_ms": 3082,
+            "end_ms": 3102
+          }
+        ]
+      },
+      {
+        "word_index": 6,
+        "text": "what",
+        "expected_phones": [
+          "w",
+          "ʌ",
+          "t"
+        ],
+        "score": 86,
+        "start_ms": 3242,
+        "end_ms": 3462,
+        "phones": [
+          {
+            "expected": "w",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 3242,
+            "end_ms": 3282
+          },
+          {
+            "expected": "ʌ",
+            "score": 90,
+            "confidence": 0.539,
+            "start_ms": 3322,
+            "end_ms": 3342
+          },
+          {
+            "expected": "t",
+            "score": 68,
+            "confidence": 0.191,
+            "start_ms": 3442,
+            "end_ms": 3462
+          }
+        ]
+      },
+      {
+        "word_index": 7,
+        "text": "I'm",
+        "expected_phones": [
+          "aɪ",
+          "m"
+        ],
+        "score": 88,
+        "start_ms": 3502,
+        "end_ms": 3622,
+        "phones": [
+          {
+            "expected": "aɪ",
+            "score": 80,
+            "confidence": 0.339,
+            "start_ms": 3502,
+            "end_ms": 3522
+          },
+          {
+            "expected": "m",
+            "score": 96,
+            "confidence": 0.779,
+            "start_ms": 3602,
+            "end_ms": 3622
+          }
+        ]
+      },
+      {
+        "word_index": 8,
+        "text": "looking",
+        "expected_phones": [
+          "l",
+          "ʊ",
+          "k",
+          "ɪ",
+          "ŋ"
+        ],
+        "score": 59,
+        "start_ms": 3742,
+        "end_ms": 4042,
+        "phones": [
+          {
+            "expected": "l",
+            "observed": "ð",
+            "score": 5,
+            "confidence": 0.748,
+            "start_ms": 3742,
+            "end_ms": 3762
+          },
+          {
+            "expected": "ʊ",
+            "observed": "ə",
+            "score": 0,
+            "confidence": 1.0,
+            "start_ms": 3762,
+            "end_ms": 3782
+          },
+          {
+            "expected": "k",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 3882,
+            "end_ms": 3902
+          },
+          {
+            "expected": "ɪ",
+            "score": 95,
+            "confidence": 0.761,
+            "start_ms": 3962,
+            "end_ms": 3982
+          },
+          {
+            "expected": "ŋ",
+            "score": 97,
+            "confidence": 0.855,
+            "start_ms": 4022,
+            "end_ms": 4042
+          }
+        ]
+      },
+      {
+        "word_index": 9,
+        "text": "for",
+        "expected_phones": [
+          "f",
+          "ɔː",
+          "ɹ"
+        ],
+        "score": 37,
+        "start_ms": 4183,
+        "end_ms": 4383,
+        "phones": [
+          {
+            "expected": "f",
+            "observed": "w",
+            "score": 0,
+            "confidence": 1.0,
+            "start_ms": 4183,
+            "end_ms": 4203
+          },
+          {
+            "expected": "ɔː",
+            "observed": "ɹ",
+            "score": 28,
+            "confidence": 0.232,
+            "start_ms": 4243,
+            "end_ms": 4263
+          },
+          {
+            "expected": "ɹ",
+            "score": 82,
+            "confidence": 0.375,
+            "start_ms": 4363,
+            "end_ms": 4383
+          }
+        ]
+      },
+      {
+        "word_index": 10,
+        "text": "if",
+        "expected_phones": [
+          "ɪ",
+          "f"
+        ],
+        "score": 20,
+        "start_ms": 4903,
+        "end_ms": 5323,
+        "phones": [
+          {
+            "expected": "ɪ",
+            "observed": "ə",
+            "score": 15,
+            "confidence": 0.437,
+            "start_ms": 4903,
+            "end_ms": 4923
+          },
+          {
+            "expected": "f",
+            "observed": "k",
+            "score": 25,
+            "confidence": 0.276,
+            "start_ms": 5303,
+            "end_ms": 5323
+          }
+        ]
+      },
+      {
+        "word_index": 11,
+        "text": "I'm",
+        "expected_phones": [
+          "aɪ",
+          "m"
+        ],
+        "score": 95,
+        "start_ms": 5383,
+        "end_ms": 5523,
+        "phones": [
+          {
+            "expected": "aɪ",
+            "score": 94,
+            "confidence": 0.707,
+            "start_ms": 5383,
+            "end_ms": 5403
+          },
+          {
+            "expected": "m",
+            "score": 96,
+            "confidence": 0.792,
+            "start_ms": 5503,
+            "end_ms": 5523
+          }
+        ]
+      },
+      {
+        "word_index": 12,
+        "text": "going",
+        "expected_phones": [
+          "ɡ",
+          "oʊ",
+          "ɪ",
+          "ŋ"
+        ],
+        "score": 70,
+        "start_ms": 5623,
+        "end_ms": 5803,
+        "phones": [
+          {
+            "expected": "ɡ",
+            "score": 89,
+            "confidence": 0.524,
+            "start_ms": 5623,
+            "end_ms": 5643
+          },
+          {
+            "expected": "oʊ",
+            "observed": "w",
+            "score": 29,
+            "confidence": 0.224,
+            "start_ms": 5683,
+            "end_ms": 5703
+          },
+          {
+            "expected": "ɪ",
+            "score": 74,
+            "confidence": 0.263,
+            "start_ms": 5763,
+            "end_ms": 5783
+          },
+          {
+            "expected": "ŋ",
+            "score": 87,
+            "confidence": 0.479,
+            "start_ms": 5783,
+            "end_ms": 5803
+          }
+        ]
+      },
+      {
+        "word_index": 13,
+        "text": "to",
+        "expected_phones": [
+          "t",
+          "ə"
+        ],
+        "score": 86,
+        "start_ms": 5864,
+        "end_ms": 5944,
+        "phones": [
+          {
+            "expected": "t",
+            "score": 88,
+            "confidence": 0.494,
+            "start_ms": 5864,
+            "end_ms": 5884
+          },
+          {
+            "expected": "ə",
+            "score": 83,
+            "confidence": 0.405,
+            "start_ms": 5924,
+            "end_ms": 5944
+          }
+        ]
+      },
+      {
+        "word_index": 14,
+        "text": "buy",
+        "expected_phones": [
+          "b",
+          "aɪ"
+        ],
+        "score": 97,
+        "start_ms": 6084,
+        "end_ms": 6164,
+        "phones": [
+          {
+            "expected": "b",
+            "score": 97,
+            "confidence": 0.862,
+            "start_ms": 6084,
+            "end_ms": 6104
+          },
+          {
+            "expected": "aɪ",
+            "score": 97,
+            "confidence": 0.879,
+            "start_ms": 6144,
+            "end_ms": 6164
+          }
+        ]
+      },
+      {
+        "word_index": 15,
+        "text": "like",
+        "expected_phones": [
+          "l",
+          "aɪ",
+          "k"
+        ],
+        "score": 92,
+        "start_ms": 7565,
+        "end_ms": 7785,
+        "phones": [
+          {
+            "expected": "l",
+            "score": 80,
+            "confidence": 0.354,
+            "start_ms": 7565,
+            "end_ms": 7585
+          },
+          {
+            "expected": "aɪ",
+            "score": 96,
+            "confidence": 0.766,
+            "start_ms": 7605,
+            "end_ms": 7625
+          },
+          {
+            "expected": "k",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 7765,
+            "end_ms": 7785
+          }
+        ]
+      },
+      {
+        "word_index": 16,
+        "text": "a",
+        "expected_phones": [
+          "ə"
+        ],
+        "score": 37,
+        "start_ms": 7825,
+        "end_ms": 7845,
+        "phones": [
+          {
+            "expected": "ə",
+            "observed": "ɐ",
+            "score": 37,
+            "confidence": 0.133,
+            "start_ms": 7825,
+            "end_ms": 7845
+          }
+        ]
+      },
+      {
+        "word_index": 17,
+        "text": "phone",
+        "expected_phones": [
+          "f",
+          "oʊ",
+          "n"
+        ],
+        "score": 49,
+        "start_ms": 8005,
+        "end_ms": 8385,
+        "phones": [
+          {
+            "expected": "f",
+            "observed": "k",
+            "score": 20,
+            "confidence": 0.352,
+            "start_ms": 8005,
+            "end_ms": 8025
+          },
+          {
+            "expected": "oʊ",
+            "observed": "ɔːɹ",
+            "score": 32,
+            "confidence": 0.186,
+            "start_ms": 8105,
+            "end_ms": 8125
+          },
+          {
+            "expected": "n",
+            "score": 94,
+            "confidence": 0.694,
+            "start_ms": 8365,
+            "end_ms": 8385
+          }
+        ]
+      },
+      {
+        "word_index": 18,
+        "text": "or",
+        "expected_phones": [
+          "ɔː",
+          "ɹ"
+        ],
+        "score": 71,
+        "start_ms": 8565,
+        "end_ms": 8745,
+        "phones": [
+          {
+            "expected": "ɔː",
+            "score": 51,
+            "confidence": 0.006,
+            "start_ms": 8565,
+            "end_ms": 8585
+          },
+          {
+            "expected": "ɹ",
+            "score": 90,
+            "confidence": 0.536,
+            "start_ms": 8725,
+            "end_ms": 8745
+          }
+        ]
+      },
+      {
+        "word_index": 19,
+        "text": "computer",
+        "expected_phones": [
+          "k",
+          "ə",
+          "m",
+          "p",
+          "j",
+          "uː",
+          "t",
+          "ɚ"
+        ],
+        "score": 85,
+        "start_ms": 8845,
+        "end_ms": 9226,
+        "phones": [
+          {
+            "expected": "k",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 8845,
+            "end_ms": 8865
+          },
+          {
+            "expected": "ə",
+            "score": 89,
+            "confidence": 0.523,
+            "start_ms": 8905,
+            "end_ms": 8925
+          },
+          {
+            "expected": "m",
+            "score": 95,
+            "confidence": 0.715,
+            "start_ms": 8945,
+            "end_ms": 8965
+          },
+          {
+            "expected": "p",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 9005,
+            "end_ms": 9025
+          },
+          {
+            "expected": "j",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 9025,
+            "end_ms": 9065
+          },
+          {
+            "expected": "uː",
+            "score": 98,
+            "confidence": 0.968,
+            "start_ms": 9085,
+            "end_ms": 9105
+          },
+          {
+            "expected": "t",
+            "observed": "ɾ",
+            "score": 3,
+            "confidence": 0.885,
+            "start_ms": 9165,
+            "end_ms": 9185
+          },
+          {
+            "expected": "ɚ",
+            "score": 93,
+            "confidence": 0.65,
+            "start_ms": 9206,
+            "end_ms": 9226
+          }
+        ]
+      },
+      {
+        "word_index": 20,
+        "text": "I",
+        "expected_phones": [
+          "aɪ"
+        ],
+        "score": 1,
+        "start_ms": 9586,
+        "end_ms": 9606,
+        "phones": [
+          {
+            "expected": "aɪ",
+            "observed": "aʊ",
+            "score": 1,
+            "confidence": 1.0,
+            "start_ms": 9586,
+            "end_ms": 9606
+          }
+        ]
+      },
+      {
+        "word_index": 21,
+        "text": "would",
+        "expected_phones": [
+          "w",
+          "ʊ",
+          "d"
+        ],
+        "score": 31,
+        "start_ms": 9666,
+        "end_ms": 9746,
+        "phones": [
+          {
+            "expected": "w",
+            "score": 64,
+            "confidence": 0.147,
+            "start_ms": 9666,
+            "end_ms": 9686
+          },
+          {
+            "expected": "ʊ",
+            "observed": "ə",
+            "score": 15,
+            "confidence": 0.435,
+            "start_ms": 9686,
+            "end_ms": 9706
+          },
+          {
+            "expected": "d",
+            "observed": "t",
+            "score": 15,
+            "confidence": 0.428,
+            "start_ms": 9726,
+            "end_ms": 9746
+          }
+        ]
+      },
+      {
+        "word_index": 22,
+        "text": "definitely",
+        "expected_phones": [
+          "d",
+          "ɛ",
+          "f",
+          "ə",
+          "n",
+          "ə",
+          "t",
+          "l",
+          "i"
+        ],
+        "score": 34,
+        "start_ms": 9806,
+        "end_ms": 10246,
+        "phones": [
+          {
+            "expected": "d",
+            "score": 65,
+            "confidence": 0.156,
+            "start_ms": 9806,
+            "end_ms": 9826
+          },
+          {
+            "expected": "ɛ",
+            "observed": "æ",
+            "score": 28,
+            "confidence": 0.238,
+            "start_ms": 9866,
+            "end_ms": 9886
+          },
+          {
+            "expected": "f",
+            "score": 79,
+            "confidence": 0.326,
+            "start_ms": 10006,
+            "end_ms": 10026
+          },
+          {
+            "expected": "ə",
+            "observed": "n",
+            "score": 2,
+            "confidence": 1.0,
+            "start_ms": 10066,
+            "end_ms": 10086
+          },
+          {
+            "expected": "n",
+            "score": 93,
+            "confidence": 0.647,
+            "start_ms": 10086,
+            "end_ms": 10106
+          },
+          {
+            "expected": "ə",
+            "observed": "ɪ",
+            "score": 2,
+            "confidence": 1.0,
+            "start_ms": 10106,
+            "end_ms": 10126
+          },
+          {
+            "expected": "t",
+            "observed": "k",
+            "score": 39,
+            "confidence": 0.115,
+            "start_ms": 10186,
+            "end_ms": 10206
+          },
+          {
+            "expected": "l",
+            "observed": "k",
+            "score": 1,
+            "confidence": 1.0,
+            "start_ms": 10206,
+            "end_ms": 10226
+          },
+          {
+            "expected": "i",
+            "observed": "t",
+            "score": 1,
+            "confidence": 1.0,
+            "start_ms": 10226,
+            "end_ms": 10246
+          }
+        ]
+      },
+      {
+        "word_index": 23,
+        "text": "choose",
+        "expected_phones": [
+          "tʃ",
+          "uː",
+          "z"
+        ],
+        "score": 53,
+        "start_ms": 10266,
+        "end_ms": 10546,
+        "phones": [
+          {
+            "expected": "tʃ",
+            "score": 75,
+            "confidence": 0.269,
+            "start_ms": 10266,
+            "end_ms": 10286
+          },
+          {
+            "expected": "uː",
+            "score": 54,
+            "confidence": 0.04,
+            "start_ms": 10366,
+            "end_ms": 10386
+          },
+          {
+            "expected": "z",
+            "observed": "s",
+            "score": 29,
+            "confidence": 0.224,
+            "start_ms": 10526,
+            "end_ms": 10546
+          }
+        ]
+      },
+      {
+        "word_index": 24,
+        "text": "big",
+        "expected_phones": [
+          "b",
+          "ɪ",
+          "ɡ"
+        ],
+        "score": 17,
+        "start_ms": 10666,
+        "end_ms": 10866,
+        "phones": [
+          {
+            "expected": "b",
+            "observed": "p",
+            "score": 46,
+            "confidence": 0.042,
+            "start_ms": 10666,
+            "end_ms": 10686
+          },
+          {
+            "expected": "ɪ",
+            "observed": "eɪ",
+            "score": 3,
+            "confidence": 0.872,
+            "start_ms": 10706,
+            "end_ms": 10726
+          },
+          {
+            "expected": "ɡ",
+            "observed": "k",
+            "score": 3,
+            "confidence": 0.879,
+            "start_ms": 10846,
+            "end_ms": 10866
+          }
+        ]
+      },
+      {
+        "word_index": 25,
+        "text": "ones",
+        "expected_phones": [
+          "w",
+          "ʌ",
+          "n",
+          "z"
+        ],
+        "score": 79,
+        "start_ms": 10987,
+        "end_ms": 11327,
+        "phones": [
+          {
+            "expected": "w",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 10987,
+            "end_ms": 11027
+          },
+          {
+            "expected": "ʌ",
+            "score": 78,
+            "confidence": 0.312,
+            "start_ms": 11067,
+            "end_ms": 11087
+          },
+          {
+            "expected": "n",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 11207,
+            "end_ms": 11247
+          },
+          {
+            "expected": "z",
+            "observed": "s",
+            "score": 37,
+            "confidence": 0.137,
+            "start_ms": 11307,
+            "end_ms": 11327
+          }
+        ]
+      },
+      {
+        "word_index": 26,
+        "text": "because",
+        "expected_phones": [
+          "b",
+          "ɪ",
+          "k",
+          "ɔː",
+          "z"
+        ],
+        "score": 45,
+        "start_ms": 11387,
+        "end_ms": 11927,
+        "phones": [
+          {
+            "expected": "b",
+            "observed": "s",
+            "score": 0,
+            "confidence": 1.0,
+            "start_ms": 11387,
+            "end_ms": 11407
+          },
+          {
+            "expected": "ɪ",
+            "observed": "t",
+            "score": 33,
+            "confidence": 0.18,
+            "start_ms": 11427,
+            "end_ms": 11447
+          },
+          {
+            "expected": "k",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 11607,
+            "end_ms": 11627
+          },
+          {
+            "expected": "ɔː",
+            "observed": "ɪ",
+            "score": 0,
+            "confidence": 1.0,
+            "start_ms": 11707,
+            "end_ms": 11727
+          },
+          {
+            "expected": "z",
+            "score": 95,
+            "confidence": 0.731,
+            "start_ms": 11907,
+            "end_ms": 11927
+          }
+        ]
+      },
+      {
+        "word_index": 27,
+        "text": "the",
+        "expected_phones": [
+          "ð",
+          "ə"
+        ],
+        "score": 98,
+        "start_ms": 12828,
+        "end_ms": 12868,
+        "phones": [
+          {
+            "expected": "ð",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 12828,
+            "end_ms": 12848
+          },
+          {
+            "expected": "ə",
+            "score": 95,
+            "confidence": 0.74,
+            "start_ms": 12848,
+            "end_ms": 12868
+          }
+        ]
+      },
+      {
+        "word_index": 28,
+        "text": "quality",
+        "expected_phones": [
+          "k",
+          "w",
+          "ɑː",
+          "l",
+          "ə",
+          "t",
+          "i"
+        ],
+        "score": 73,
+        "start_ms": 12988,
+        "end_ms": 13428,
+        "phones": [
+          {
+            "expected": "k",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 12988,
+            "end_ms": 13008
+          },
+          {
+            "expected": "w",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 13068,
+            "end_ms": 13108
+          },
+          {
+            "expected": "ɑː",
+            "score": 85,
+            "confidence": 0.429,
+            "start_ms": 13128,
+            "end_ms": 13148
+          },
+          {
+            "expected": "l",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 13268,
+            "end_ms": 13288
+          },
+          {
+            "expected": "ə",
+            "observed": "ᵻ",
+            "score": 32,
+            "confidence": 0.19,
+            "start_ms": 13288,
+            "end_ms": 13308
+          },
+          {
+            "expected": "t",
+            "observed": "ɾ",
+            "score": 5,
+            "confidence": 0.718,
+            "start_ms": 13348,
+            "end_ms": 13368
+          },
+          {
+            "expected": "i",
+            "score": 90,
+            "confidence": 0.562,
+            "start_ms": 13408,
+            "end_ms": 13428
+          }
+        ]
+      },
+      {
+        "word_index": 29,
+        "text": "of",
+        "expected_phones": [
+          "ʌ",
+          "v"
+        ],
+        "score": 98,
+        "start_ms": 13488,
+        "end_ms": 13608,
+        "phones": [
+          {
+            "expected": "ʌ",
+            "score": 97,
+            "confidence": 0.897,
+            "start_ms": 13488,
+            "end_ms": 13508
+          },
+          {
+            "expected": "v",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 13568,
+            "end_ms": 13608
+          }
+        ]
+      },
+      {
+        "word_index": 30,
+        "text": "the",
+        "expected_phones": [
+          "ð",
+          "ə"
+        ],
+        "score": 98,
+        "start_ms": 13628,
+        "end_ms": 13668,
+        "phones": [
+          {
+            "expected": "ð",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 13628,
+            "end_ms": 13648
+          },
+          {
+            "expected": "ə",
+            "score": 96,
+            "confidence": 0.783,
+            "start_ms": 13648,
+            "end_ms": 13668
+          }
+        ]
+      },
+      {
+        "word_index": 31,
+        "text": "product",
+        "expected_phones": [
+          "p",
+          "ɹ",
+          "ɑː",
+          "d",
+          "ə",
+          "k",
+          "t"
+        ],
+        "score": 86,
+        "start_ms": 13788,
+        "end_ms": 14489,
+        "phones": [
+          {
+            "expected": "p",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 13788,
+            "end_ms": 13808
+          },
+          {
+            "expected": "ɹ",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 13868,
+            "end_ms": 13928
+          },
+          {
+            "expected": "ɑː",
+            "score": 91,
+            "confidence": 0.573,
+            "start_ms": 13988,
+            "end_ms": 14008
+          },
+          {
+            "expected": "d",
+            "score": 98,
+            "confidence": 0.95,
+            "start_ms": 14148,
+            "end_ms": 14168
+          },
+          {
+            "expected": "ə",
+            "observed": "ʌ",
+            "score": 18,
+            "confidence": 0.383,
+            "start_ms": 14208,
+            "end_ms": 14229
+          },
+          {
+            "expected": "k",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 14369,
+            "end_ms": 14409
+          },
+          {
+            "expected": "t",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 14469,
+            "end_ms": 14489
+          }
+        ]
+      },
+      {
+        "word_index": 32,
+        "text": "is",
+        "expected_phones": [
+          "ɪ",
+          "z"
+        ],
+        "score": 98,
+        "start_ms": 15089,
+        "end_ms": 15229,
+        "phones": [
+          {
+            "expected": "ɪ",
+            "score": 98,
+            "confidence": 0.955,
+            "start_ms": 15089,
+            "end_ms": 15109
+          },
+          {
+            "expected": "z",
+            "score": 98,
+            "confidence": 0.993,
+            "start_ms": 15209,
+            "end_ms": 15229
+          }
+        ]
+      },
+      {
+        "word_index": 33,
+        "text": "more",
+        "expected_phones": [
+          "m",
+          "ɔː",
+          "ɹ"
+        ],
+        "score": 74,
+        "start_ms": 15329,
+        "end_ms": 15509,
+        "phones": [
+          {
+            "expected": "m",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 15329,
+            "end_ms": 15369
+          },
+          {
+            "expected": "ɔː",
+            "observed": "ɔːɹ",
+            "score": 33,
+            "confidence": 0.174,
+            "start_ms": 15389,
+            "end_ms": 15409
+          },
+          {
+            "expected": "ɹ",
+            "score": 90,
+            "confidence": 0.555,
+            "start_ms": 15489,
+            "end_ms": 15509
+          }
+        ]
+      },
+      {
+        "word_index": 34,
+        "text": "reliable",
+        "expected_phones": [
+          "ɹ",
+          "ɪ",
+          "l",
+          "aɪ",
+          "ə",
+          "b",
+          "ə",
+          "l"
+        ],
+        "score": 73,
+        "start_ms": 15549,
+        "end_ms": 16250,
+        "phones": [
+          {
+            "expected": "ɹ",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 15549,
+            "end_ms": 15569
+          },
+          {
+            "expected": "ɪ",
+            "observed": "ᵻ",
+            "score": 39,
+            "confidence": 0.111,
+            "start_ms": 15589,
+            "end_ms": 15609
+          },
+          {
+            "expected": "l",
+            "score": 100,
+            "confidence": 1.0,
+            "start_ms": 15729,
+            "end_ms": 15769
+          },
+          {
+            "expected": "aɪ",
+            "score": 97,
+            "confidence": 0.9,
+            "start_ms": 15809,
+            "end_ms": 15829
+          },
+          {
+            "expected": "ə",
+            "score": 52,
+            "confidence": 0.02,
+            "start_ms": 15990,
+            "end_ms": 16010
+          },
+          {
+            "expected": "b",
+            "score": 98,
+            "confidence": 0.964,
+            "start_ms": 16110,
+            "end_ms": 16130
+          },
+          {
+            "expected": "ə",
+            "observed": "əl",
+            "score": 1,
+            "confidence": 1.0,
+            "start_ms": 16150,
+            "end_ms": 16170
+          },
+          {
+            "expected": "l",
+            "score": 99,
+            "confidence": 1.0,
+            "start_ms": 16230,
+            "end_ms": 16250
+          }
+        ]
+      },
+      {
+        "word_index": 35,
+        "text": "for",
+        "expected_phones": [
+          "f",
+          "ɚ"
+        ],
+        "score": 67,
+        "start_ms": 16410,
+        "end_ms": 16470,
+        "phones": [
+          {
+            "expected": "f",
+            "score": 96,
+            "confidence": 0.788,
+            "start_ms": 16410,
+            "end_ms": 16430
+          },
+          {
+            "expected": "ɚ",
+            "observed": "ɜː",
+            "score": 37,
+            "confidence": 0.136,
+            "start_ms": 16450,
+            "end_ms": 16470
+          }
+        ]
+      },
+      {
+        "word_index": 36,
+        "text": "sure",
+        "expected_phones": [
+          "ʃ",
+          "ʊ",
+          "ɹ"
+        ],
+        "score": 62,
+        "start_ms": 16570,
+        "end_ms": 16730,
+        "phones": [
+          {
+            "expected": "ʃ",
+            "score": 98,
+            "confidence": 1.0,
+            "start_ms": 16570,
+            "end_ms": 16590
+          },
+          {
+            "expected": "ʊ",
+            "observed": "ɚ",
+            "score": 0,
+            "confidence": 1.0,
+            "start_ms": 16670,
+            "end_ms": 16690
+          },
+          {
+            "expected": "ɹ",
+            "score": 88,
+            "confidence": 0.495,
+            "start_ms": 16710,
+            "end_ms": 16730
+          }
+        ]
+      }
+    ]
+  },
+  "pronunciation_candidates": {
+    "threshold_policy": {
+      "high": "score < 40 and confidence >= 0.35",
+      "tentative": "alternative phone is stronger, but evidence does not meet the high threshold"
+    },
+    "candidates": [
+      {
+        "evidence_id": "P-W009-P02",
+        "strength": "high",
+        "word": "looking",
+        "word_index": 8,
+        "expected_phone": "ʊ",
+        "observed_phone": "ə",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 3762,
+        "end_ms": 3782
+      },
+      {
+        "evidence_id": "P-W010-P01",
+        "strength": "high",
+        "word": "for",
+        "word_index": 9,
+        "expected_phone": "f",
+        "observed_phone": "w",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 4183,
+        "end_ms": 4203
+      },
+      {
+        "evidence_id": "P-W027-P01",
+        "strength": "high",
+        "word": "because",
+        "word_index": 26,
+        "expected_phone": "b",
+        "observed_phone": "s",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 11387,
+        "end_ms": 11407
+      },
+      {
+        "evidence_id": "P-W027-P04",
+        "strength": "high",
+        "word": "because",
+        "word_index": 26,
+        "expected_phone": "ɔː",
+        "observed_phone": "ɪ",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 11707,
+        "end_ms": 11727
+      },
+      {
+        "evidence_id": "P-W037-P02",
+        "strength": "high",
+        "word": "sure",
+        "word_index": 36,
+        "expected_phone": "ʊ",
+        "observed_phone": "ɚ",
+        "match_score": 0,
+        "confidence": 1.0,
+        "start_ms": 16670,
+        "end_ms": 16690
+      },
+      {
+        "evidence_id": "P-W021-P01",
+        "strength": "high",
+        "word": "I",
+        "word_index": 20,
+        "expected_phone": "aɪ",
+        "observed_phone": "aʊ",
+        "match_score": 1,
+        "confidence": 1.0,
+        "start_ms": 9586,
+        "end_ms": 9606
+      },
+      {
+        "evidence_id": "P-W023-P08",
+        "strength": "high",
+        "word": "definitely",
+        "word_index": 22,
+        "expected_phone": "l",
+        "observed_phone": "k",
+        "match_score": 1,
+        "confidence": 1.0,
+        "start_ms": 10206,
+        "end_ms": 10226
+      },
+      {
+        "evidence_id": "P-W023-P09",
+        "strength": "high",
+        "word": "definitely",
+        "word_index": 22,
+        "expected_phone": "i",
+        "observed_phone": "t",
+        "match_score": 1,
+        "confidence": 1.0,
+        "start_ms": 10226,
+        "end_ms": 10246
+      },
+      {
+        "evidence_id": "P-W035-P07",
+        "strength": "high",
+        "word": "reliable",
+        "word_index": 34,
+        "expected_phone": "ə",
+        "observed_phone": "əl",
+        "match_score": 1,
+        "confidence": 1.0,
+        "start_ms": 16150,
+        "end_ms": 16170
+      },
+      {
+        "evidence_id": "P-W023-P04",
+        "strength": "high",
+        "word": "definitely",
+        "word_index": 22,
+        "expected_phone": "ə",
+        "observed_phone": "n",
+        "match_score": 2,
+        "confidence": 1.0,
+        "start_ms": 10066,
+        "end_ms": 10086
+      },
+      {
+        "evidence_id": "P-W023-P06",
+        "strength": "high",
+        "word": "definitely",
+        "word_index": 22,
+        "expected_phone": "ə",
+        "observed_phone": "ɪ",
+        "match_score": 2,
+        "confidence": 1.0,
+        "start_ms": 10106,
+        "end_ms": 10126
+      },
+      {
+        "evidence_id": "P-W020-P07",
+        "strength": "high",
+        "word": "computer",
+        "word_index": 19,
+        "expected_phone": "t",
+        "observed_phone": "ɾ",
+        "match_score": 3,
+        "confidence": 0.885,
+        "start_ms": 9165,
+        "end_ms": 9185
+      }
+    ],
+    "omitted_candidate_count": 28
+  },
+  "textpa_phonemes_cmu": "AE T D IH P EH N D Z (0.23s pause) AY (0.07s pause) AY M EY T D IH P EH N D Z (0.03s pause) AO W AH T AY AE M L UH K IH NG F AO R (0.37s pause) AH (0.01s pause) AH IH F AY AE M G OW IH N T UW B AY (0.89s pause) L AY K HH AE F AO OY N AO R AH R AH K AH M P Y UW T ER (0.07s pause) AY W UH D EH F L IY CH UW Z B IH G W AH N Z (0.08s pause) HH IH Z (0.33s pause) DH AH T AH T AH T (0.10s pause) DH AH K W AA L T IY AH V DH AH P R AA D AH K T (0.34s pause) IH T S M AO R IY L AY AH B AH L (0.03s pause) F R ER SH UH R",
+  "textpa_pauses": {
+    "source": "published TextPA Charsiu 10 ms CMU frame alignment",
+    "word_mapping": "approximate mapping through independent CTC word timestamps",
+    "alignment_duration_ms": 16710,
+    "events": [
+      {
+        "evidence_id": "F-001",
+        "start_ms": 1080,
+        "end_ms": 1310,
+        "duration_ms": 230,
+        "salience": "short",
+        "previous_cmu_phone": "Z",
+        "next_cmu_phone": "AY",
+        "after_word_approx": "depends",
+        "before_word_approx": "I"
+      },
+      {
+        "evidence_id": "F-002",
+        "start_ms": 1320,
+        "end_ms": 1390,
+        "duration_ms": 70,
+        "salience": "short",
+        "previous_cmu_phone": "AY",
+        "next_cmu_phone": "AY",
+        "after_word_approx": "depends",
+        "before_word_approx": "I"
+      },
+      {
+        "evidence_id": "F-003",
+        "start_ms": 2760,
+        "end_ms": 2790,
+        "duration_ms": 30,
+        "salience": "short",
+        "previous_cmu_phone": "Z",
+        "next_cmu_phone": "AO",
+        "after_word_approx": "depends",
+        "before_word_approx": "on"
+      },
+      {
+        "evidence_id": "F-004",
+        "start_ms": 4430,
+        "end_ms": 4800,
+        "duration_ms": 370,
+        "salience": "noticeable",
+        "previous_cmu_phone": "R",
+        "next_cmu_phone": "AH",
+        "after_word_approx": "for",
+        "before_word_approx": "if"
+      },
+      {
+        "evidence_id": "F-005",
+        "start_ms": 4830,
+        "end_ms": 4840,
+        "duration_ms": 10,
+        "salience": "short",
+        "previous_cmu_phone": "AH",
+        "next_cmu_phone": "AH",
+        "after_word_approx": "for",
+        "before_word_approx": "if"
+      },
+      {
+        "evidence_id": "F-006",
+        "start_ms": 6590,
+        "end_ms": 7480,
+        "duration_ms": 890,
+        "salience": "long",
+        "previous_cmu_phone": "AY",
+        "next_cmu_phone": "L",
+        "after_word_approx": "buy",
+        "before_word_approx": "like"
+      },
+      {
+        "evidence_id": "F-007",
+        "start_ms": 9360,
+        "end_ms": 9430,
+        "duration_ms": 70,
+        "salience": "short",
+        "previous_cmu_phone": "ER",
+        "next_cmu_phone": "AY",
+        "after_word_approx": "computer",
+        "before_word_approx": "I"
+      },
+      {
+        "evidence_id": "F-008",
+        "start_ms": 11530,
+        "end_ms": 11610,
+        "duration_ms": 80,
+        "salience": "short",
+        "previous_cmu_phone": "Z",
+        "next_cmu_phone": "HH",
+        "after_word_approx": "ones",
+        "before_word_approx": "the"
+      },
+      {
+        "evidence_id": "F-009",
+        "start_ms": 12060,
+        "end_ms": 12390,
+        "duration_ms": 330,
+        "salience": "noticeable",
+        "previous_cmu_phone": "Z",
+        "next_cmu_phone": "DH",
+        "after_word_approx": "because",
+        "before_word_approx": "the"
+      },
+      {
+        "evidence_id": "F-010",
+        "start_ms": 12700,
+        "end_ms": 12800,
+        "duration_ms": 100,
+        "salience": "short",
+        "previous_cmu_phone": "T",
+        "next_cmu_phone": "DH",
+        "after_word_approx": "because",
+        "before_word_approx": "the"
+      },
+      {
+        "evidence_id": "F-011",
+        "start_ms": 14650,
+        "end_ms": 14990,
+        "duration_ms": 340,
+        "salience": "noticeable",
+        "previous_cmu_phone": "T",
+        "next_cmu_phone": "IH",
+        "after_word_approx": "product",
+        "before_word_approx": "is"
+      },
+      {
+        "evidence_id": "F-012",
+        "start_ms": 16310,
+        "end_ms": 16340,
+        "duration_ms": 30,
+        "salience": "short",
+        "previous_cmu_phone": "L",
+        "next_cmu_phone": "F",
+        "after_word_approx": "reliable",
+        "before_word_approx": "for"
+      }
+    ]
+  }
+}

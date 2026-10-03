@@ -14,6 +14,7 @@ const {
   electronMocks,
   generateImageMock,
   assessPronunciationMock,
+  deletePronunciationExtensionMock,
   recognizeSpeechMock,
   speechSynthesizeMock,
   streamTextMock
@@ -41,6 +42,7 @@ const {
     },
     generateImageMock: vi.fn(),
     assessPronunciationMock: vi.fn(),
+    deletePronunciationExtensionMock: vi.fn(),
     recognizeSpeechMock: vi.fn(),
     speechSynthesizeMock: vi.fn(),
     streamTextMock: vi.fn()
@@ -96,15 +98,16 @@ vi.mock('../main/pronunciation-assessment-service', () => ({
     listModels() {
       return [
         {
-          providerId: 'builtin-facebook-phoneme',
+          providerId: 'builtin-cmu-phoneme',
           providerName: '内置发音评测',
-          modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+          modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061',
           modelName: 'Facebook Wav2Vec2 Phoneme INT8'
         }
       ]
     }
 
     assess = assessPronunciationMock
+    deleteExtension = deletePronunciationExtensionMock
   }
 }))
 
@@ -121,6 +124,7 @@ describe('AIRouter main integration', () => {
     generateImageMock.mockReset()
     recognizeSpeechMock.mockReset()
     assessPronunciationMock.mockReset()
+    deletePronunciationExtensionMock.mockReset()
     speechSynthesizeMock.mockReset()
     streamTextMock.mockReset()
     electronMocks.BrowserWindow.fromWebContents.mockReset()
@@ -375,22 +379,31 @@ describe('AIRouter main integration', () => {
     const { registerAIRouter } = await import('../main')
     registerAIRouter({ baseDir, secretStorage: createSecrets(baseDir) })
     const result = {
-      referenceText: 'three',
-      recognizedPhones: ['s'],
-      overallScore: 20,
-      words: [],
-      pauses: [],
-      feedbackMarkdown: 'feedback'
+      schema_version: 2,
+      reference_text: 'three',
+      audio_duration_ms: 1000,
+      frame_count: 10,
+      recognized_phones: ['S'],
+      recognized_phones_ipa: ['s'],
+      gop_method: 'viterbi',
+      alignment_path_score: -0.5,
+      acoustic_model: 'test model',
+      acoustic_phone_inventory: '39 CMU phones',
+      reference_source: 'CMUdict',
+      dictionary_source: 'test dictionary',
+      uncovered_words: [] as string[],
+      phones: [],
+      words: []
     }
     assessPronunciationMock.mockResolvedValue(result)
     expect(handler(AIROUTER_CHANNELS.listPronunciationModels)(undefined)).toEqual([
-      expect.objectContaining({ modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f' })
+      expect.objectContaining({ modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061' })
     ])
     const sender = createSender()
     const requestId = 'pronunciation-request'
     const request = {
-      providerConfigId: 'builtin-facebook-phoneme',
-      modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+      providerConfigId: 'builtin-cmu-phoneme',
+      modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061',
       referenceText: 'three',
       audio: { data: new Uint8Array([1, 2, 3]), mediaType: 'audio/wav' }
     }
@@ -404,6 +417,9 @@ describe('AIRouter main integration', () => {
     expect(assessPronunciationMock).toHaveBeenCalledWith(request, {
       signal: expect.any(AbortSignal)
     })
+
+    await handler(AIROUTER_CHANNELS.deletePronunciationExtension)(undefined)
+    expect(deletePronunciationExtensionMock).toHaveBeenCalledOnce()
   })
 })
 

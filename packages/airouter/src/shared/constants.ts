@@ -43,6 +43,7 @@ export const AIROUTER_CHANNELS = {
   listPronunciationModels: 'airouter:list-pronunciation-models',
   pronunciationExtensionStatus: 'airouter:pronunciation-extension-status',
   importPronunciationExtension: 'airouter:import-pronunciation-extension',
+  deletePronunciationExtension: 'airouter:delete-pronunciation-extension',
   pronunciationAssessmentStart: 'airouter:pronunciation-assessment-start',
   pronunciationAssessmentAbort: 'airouter:pronunciation-assessment-abort',
   pronunciationAssessmentEvent: 'airouter:pronunciation-assessment-event',
@@ -51,9 +52,9 @@ export const AIROUTER_CHANNELS = {
   generateEvent: 'airouter:generate-event'
 } as const
 
-export const BUILTIN_PRONUNCIATION_PROVIDER_ID = 'builtin-facebook-phoneme'
-export const BUILTIN_PRONUNCIATION_MODEL_ID = 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f'
-export const PRONUNCIATION_EXTENSION_ID = 'facebook-wav2vec2-pronunciation'
+export const BUILTIN_PRONUNCIATION_PROVIDER_ID = 'builtin-cmu-phoneme'
+export const BUILTIN_PRONUNCIATION_MODEL_ID = 'en-w2v2-ctc-libris-and-cv-int8-70f5061'
+export const PRONUNCIATION_EXTENSION_ID = 'charsiu-en-w2v2-pronunciation'
 export const PRONUNCIATION_EXTENSION_VERSION = '1.0.0'
 
 export type AIRouterChannel = (typeof AIROUTER_CHANNELS)[keyof typeof AIROUTER_CHANNELS]

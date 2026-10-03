@@ -6,7 +6,7 @@ import { strToU8, zipSync } from 'fflate'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { AIRouterExtensionStore } from '../main/extension-store'
 
-const EXTENSION_ID = 'facebook-wav2vec2-pronunciation'
+const EXTENSION_ID = 'charsiu-en-w2v2-pronunciation'
 const EXTENSION_VERSION = '1.0.0'
 
 describe('AIRouterExtensionStore', () => {
@@ -42,6 +42,17 @@ describe('AIRouterExtensionStore', () => {
     )
     const assets = await store.resolveAssetPaths(EXTENSION_ID, EXTENSION_VERSION)
     await expect(readFile(assets['model/vocab.json'])).resolves.toEqual(Buffer.from(bytes))
+  })
+
+  it('deletes an imported extension package', async () => {
+    await importPackage(store, baseDir, createPackage())
+
+    await store.deletePackage(EXTENSION_ID, EXTENSION_VERSION)
+
+    expect(store.isInstalled(EXTENSION_ID, EXTENSION_VERSION)).toBe(false)
+    await expect(
+      store.getStatus(EXTENSION_ID, EXTENSION_VERSION, 'AI 语音评测')
+    ).resolves.toMatchObject({ state: 'not-imported' })
   })
 
   it('rejects packages whose declared ID or version does not match the application requirement', async () => {

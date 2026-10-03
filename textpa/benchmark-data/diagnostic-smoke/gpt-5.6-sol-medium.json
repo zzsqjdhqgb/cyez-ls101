@@ -1,0 +1,86 @@
+{
+  "scope_note_zh": "以下判断仅依据未对齐到单词的整句音素识别结果；转写文本也可能有误，因此无法保证错误列表完整。",
+  "supported_errors": [
+    {
+      "index": 1,
+      "word_or_phrase": "When I",
+      "expected_pronunciation": "/wɛn aɪ/",
+      "acoustic_evidence": {
+        "cmu": "HH W AY",
+        "ipa": "w aɪ"
+      },
+      "diagnosis_zh": "两个音素流都更接近 /waɪ/，支持 when 中的 /ɛn/ 被省略，使 when I 听起来接近 why。",
+      "confidence": "medium"
+    },
+    {
+      "index": 2,
+      "word_or_phrase": "school",
+      "expected_pronunciation": "/skuːl/",
+      "acoustic_evidence": {
+        "cmu": "S K UW",
+        "ipa": "s ɡ uː"
+      },
+      "diagnosis_zh": "两个音素流都没有识别到词尾 /l/，school 可能被读成接近 /skuː/。IPA 中的 /ɡ/ 还提示 /k/ 可能有浊化，但这一点没有得到 CMU 支持。",
+      "confidence": "high"
+    },
+    {
+      "index": 3,
+      "word_or_phrase": "attended",
+      "expected_pronunciation": "/əˈtɛndɪd/",
+      "acoustic_evidence": {
+        "cmu": "AH T EH N D AH ER AH",
+        "ipa": "ɐ t ɛ n d ə"
+      },
+      "diagnosis_zh": "两个音素流在 /tɛnd/ 后都没有清楚呈现 attended 末尾的 /ɪd/，可能把最后一个音节弱化或省略了。",
+      "confidence": "medium"
+    },
+    {
+      "index": 4,
+      "word_or_phrase": "singing",
+      "expected_pronunciation": "/ˈsɪŋɪŋ/",
+      "acoustic_evidence": {
+        "cmu": "S IY",
+        "ipa": "s iː ŋ"
+      },
+      "diagnosis_zh": "两个音素流都只呈现了一个主要元音，且更像长元音 /iː/；第二个音节 /ɪŋ/ 没有出现。应注意 singing 通常是两个音节，并使用短元音 /ɪ/。",
+      "confidence": "high"
+    },
+    {
+      "index": 5,
+      "word_or_phrase": "madam",
+      "expected_pronunciation": "/ˈmædəm/",
+      "acoustic_evidence": {
+        "cmu": "M AE T ER",
+        "ipa": "m æ d ə"
+      },
+      "diagnosis_zh": "两个音素流都没有识别到词尾 /m/，madam 可能停在了 /ə/ 或类似 /ər/ 的音上。需要把双唇闭合，清楚发出最后的 /m/。",
+      "confidence": "high"
+    }
+  ],
+  "uncertain_items": [
+    {
+      "word_or_phrase": "class",
+      "acoustic_evidence": {
+        "cmu": "K AH S",
+        "ipa": "k l æ s"
+      },
+      "reason_uncertain_zh": "CMU 像是漏掉了 /l/ 并改变了元音，但 IPA 给出了正常的 /klæs/；两个音素流冲突，不能确定存在发音错误。"
+    },
+    {
+      "word_or_phrase": "taught",
+      "acoustic_evidence": {
+        "cmu": "T OW L D",
+        "ipa": "t oʊ d"
+      },
+      "reason_uncertain_zh": "两个音素流更像 told，而不是 taught；这既可能是发音替换，也可能说明 Whisper 把实际说出的 told 错写成了 taught，因此不能确定是发音错误。"
+    },
+    {
+      "word_or_phrase": "sing",
+      "acoustic_evidence": {
+        "cmu": "S EY",
+        "ipa": "s ɪ ŋ"
+      },
+      "reason_uncertain_zh": "IPA 给出了正常的 /sɪŋ/，而 CMU 显示不同元音且缺少 /ŋ/；两个识别结果明显冲突。"
+    }
+  ]
+}

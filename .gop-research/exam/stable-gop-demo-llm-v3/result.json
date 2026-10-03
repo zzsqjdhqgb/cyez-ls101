@@ -1,0 +1,1506 @@
+{
+  "schema_version": 2,
+  "input": "/workspace/.gop-research/exam/stable-gop-demo/result.json",
+  "input_sha256": "8a45d99d30395cbec63936b92682bdc55f7264279807c2f7326202249ddd6321",
+  "selection_policy": {
+    "gop_log_ratio_lte": -0.35,
+    "selected_count": 15,
+    "word_context_count": 9,
+    "meaning": "Every phone row at or below the threshold is included. No consonant, word-position, acoustic-winner, or hand-written diagnostic filter was applied."
+  },
+  "word_context_policy": {
+    "radius_words": 2,
+    "meaning": "For every word containing at least one selected row, include that word and up to two preceding and two following transcript words."
+  },
+  "evidence": [
+    {
+      "evidence_id": "GOP-0267",
+      "index": 267,
+      "word_index": 71,
+      "phone_index": 0,
+      "word": "advantages",
+      "expected": "AE",
+      "expected_ipa": "æ",
+      "acoustic_winner": "AH",
+      "acoustic_winner_ipa": "ʌ",
+      "best_alternative": "AH",
+      "best_alternative_ipa": "ʌ",
+      "expected_log_p": -7.635506,
+      "alternative_log_p": -0.009303,
+      "gop_log_ratio": -7.631584,
+      "confidence": 1.0,
+      "start_ms": 38673,
+      "end_ms": 38693
+    },
+    {
+      "evidence_id": "GOP-0261",
+      "index": 261,
+      "word_index": 68,
+      "phone_index": 1,
+      "word": "to",
+      "expected": "UW",
+      "expected_ipa": "uː",
+      "acoustic_winner": "EY",
+      "acoustic_winner_ipa": "eɪ",
+      "best_alternative": "EY",
+      "best_alternative_ipa": "eɪ",
+      "expected_log_p": -6.953546,
+      "alternative_log_p": -0.193535,
+      "gop_log_ratio": -6.839405,
+      "confidence": 1.0,
+      "start_ms": 37873,
+      "end_ms": 37893
+    },
+    {
+      "evidence_id": "GOP-0080",
+      "index": 80,
+      "word_index": 23,
+      "phone_index": 0,
+      "word": "books",
+      "expected": "B",
+      "expected_ipa": "b",
+      "acoustic_winner": "P",
+      "acoustic_winner_ipa": "p",
+      "best_alternative": "P",
+      "best_alternative_ipa": "p",
+      "expected_log_p": -6.512944,
+      "alternative_log_p": -0.006101,
+      "gop_log_ratio": -6.508749,
+      "confidence": 1.0,
+      "start_ms": 13825,
+      "end_ms": 13845
+    },
+    {
+      "evidence_id": "GOP-0102",
+      "index": 102,
+      "word_index": 27,
+      "phone_index": 4,
+      "word": "storage",
+      "expected": "AH",
+      "expected_ipa": "ʌ",
+      "acoustic_winner": "IY",
+      "acoustic_winner_ipa": "iː",
+      "best_alternative": "IY",
+      "best_alternative_ipa": "iː",
+      "expected_log_p": -6.201415,
+      "alternative_log_p": -0.023923,
+      "gop_log_ratio": -6.198464,
+      "confidence": 1.0,
+      "start_ms": 16405,
+      "end_ms": 16425
+    },
+    {
+      "evidence_id": "GOP-0268",
+      "index": 268,
+      "word_index": 71,
+      "phone_index": 1,
+      "word": "advantages",
+      "expected": "D",
+      "expected_ipa": "d",
+      "acoustic_winner": "DH",
+      "acoustic_winner_ipa": "ð",
+      "best_alternative": "DH",
+      "best_alternative_ipa": "ð",
+      "expected_log_p": -3.997687,
+      "alternative_log_p": -0.045621,
+      "gop_log_ratio": -3.973322,
+      "confidence": 0.993,
+      "start_ms": 38713,
+      "end_ms": 38733
+    },
+    {
+      "evidence_id": "GOP-0257",
+      "index": 257,
+      "word_index": 66,
+      "phone_index": 3,
+      "word": "want",
+      "expected": "T",
+      "expected_ipa": "t",
+      "acoustic_winner": "L",
+      "acoustic_winner_ipa": "l",
+      "best_alternative": "L",
+      "best_alternative_ipa": "l",
+      "expected_log_p": -6.280608,
+      "alternative_log_p": -3.210141,
+      "gop_log_ratio": -3.342875,
+      "confidence": 0.836,
+      "start_ms": 37392,
+      "end_ms": 37412
+    },
+    {
+      "evidence_id": "GOP-0210",
+      "index": 210,
+      "word_index": 54,
+      "phone_index": 1,
+      "word": "best",
+      "expected": "EH",
+      "expected_ipa": "ɛ",
+      "acoustic_winner": "AE",
+      "acoustic_winner_ipa": "æ",
+      "best_alternative": "AE",
+      "best_alternative_ipa": "æ",
+      "expected_log_p": -4.18408,
+      "alternative_log_p": -1.144714,
+      "gop_log_ratio": -3.273624,
+      "confidence": 0.818,
+      "start_ms": 31691,
+      "end_ms": 31711
+    },
+    {
+      "evidence_id": "GOP-0256",
+      "index": 256,
+      "word_index": 66,
+      "phone_index": 2,
+      "word": "want",
+      "expected": "N",
+      "expected_ipa": "n",
+      "acoustic_winner": "L",
+      "acoustic_winner_ipa": "l",
+      "best_alternative": "L",
+      "best_alternative_ipa": "l",
+      "expected_log_p": -3.829465,
+      "alternative_log_p": -0.786339,
+      "gop_log_ratio": -3.113698,
+      "confidence": 0.778,
+      "start_ms": 37372,
+      "end_ms": 37392
+    },
+    {
+      "evidence_id": "GOP-0212",
+      "index": 212,
+      "word_index": 54,
+      "phone_index": 3,
+      "word": "best",
+      "expected": "T",
+      "expected_ipa": "t",
+      "acoustic_winner": "S",
+      "acoustic_winner_ipa": "s",
+      "best_alternative": "S",
+      "best_alternative_ipa": "s",
+      "expected_log_p": -4.862623,
+      "alternative_log_p": -2.36209,
+      "gop_log_ratio": -2.644525,
+      "confidence": 0.661,
+      "start_ms": 31771,
+      "end_ms": 31791
+    },
+    {
+      "evidence_id": "GOP-0137",
+      "index": 137,
+      "word_index": 36,
+      "phone_index": 0,
+      "word": "any",
+      "expected": "EH",
+      "expected_ipa": "ɛ",
+      "acoustic_winner": "AE",
+      "acoustic_winner_ipa": "æ",
+      "best_alternative": "AE",
+      "best_alternative_ipa": "æ",
+      "expected_log_p": -2.406548,
+      "alternative_log_p": -0.189352,
+      "gop_log_ratio": -2.311043,
+      "confidence": 0.578,
+      "start_ms": 21467,
+      "end_ms": 21487
+    },
+    {
+      "evidence_id": "GOP-0012",
+      "index": 12,
+      "word_index": 5,
+      "phone_index": 0,
+      "word": "books",
+      "expected": "B",
+      "expected_ipa": "b",
+      "acoustic_winner": "P",
+      "acoustic_winner_ipa": "p",
+      "best_alternative": "P",
+      "best_alternative_ipa": "p",
+      "expected_log_p": -2.379085,
+      "alternative_log_p": -0.105259,
+      "gop_log_ratio": -2.277763,
+      "confidence": 0.569,
+      "start_ms": 2561,
+      "end_ms": 2581
+    },
+    {
+      "evidence_id": "GOP-0255",
+      "index": 255,
+      "word_index": 66,
+      "phone_index": 1,
+      "word": "want",
+      "expected": "AA",
+      "expected_ipa": "ɑː",
+      "acoustic_winner": "AH",
+      "acoustic_winner_ipa": "ʌ",
+      "best_alternative": "AH",
+      "best_alternative_ipa": "ʌ",
+      "expected_log_p": -2.347634,
+      "alternative_log_p": -0.785927,
+      "gop_log_ratio": -2.226473,
+      "confidence": 0.557,
+      "start_ms": 37352,
+      "end_ms": 37372
+    },
+    {
+      "evidence_id": "GOP-0211",
+      "index": 211,
+      "word_index": 54,
+      "phone_index": 2,
+      "word": "best",
+      "expected": "S",
+      "expected_ipa": "s",
+      "acoustic_winner": "T",
+      "acoustic_winner_ipa": "t",
+      "best_alternative": "T",
+      "best_alternative_ipa": "t",
+      "expected_log_p": -2.272281,
+      "alternative_log_p": -1.487948,
+      "gop_log_ratio": -1.434262,
+      "confidence": 0.359,
+      "start_ms": 31751,
+      "end_ms": 31771
+    },
+    {
+      "evidence_id": "GOP-0259",
+      "index": 259,
+      "word_index": 67,
+      "phone_index": 1,
+      "word": "me",
+      "expected": "IY",
+      "expected_ipa": "iː",
+      "acoustic_winner": "EY",
+      "acoustic_winner_ipa": "eɪ",
+      "best_alternative": "EY",
+      "best_alternative_ipa": "eɪ",
+      "expected_log_p": -1.508446,
+      "alternative_log_p": -0.427633,
+      "gop_log_ratio": -1.187054,
+      "confidence": 0.297,
+      "start_ms": 37553,
+      "end_ms": 37573
+    },
+    {
+      "evidence_id": "GOP-0081",
+      "index": 81,
+      "word_index": 23,
+      "phone_index": 1,
+      "word": "books",
+      "expected": "UH",
+      "expected_ipa": "ʊ",
+      "acoustic_winner": "AH",
+      "acoustic_winner_ipa": "ʌ",
+      "best_alternative": "AH",
+      "best_alternative_ipa": "ʌ",
+      "expected_log_p": -1.322071,
+      "alternative_log_p": -0.671419,
+      "gop_log_ratio": -0.97684,
+      "confidence": 0.244,
+      "start_ms": 13925,
+      "end_ms": 13945
+    }
+  ],
+  "word_contexts": [
+    {
+      "word_index": 5,
+      "word": "books",
+      "context_text": "that e books overweigh paper",
+      "context_words": [
+        {
+          "relative_position": -2,
+          "word_index": 3,
+          "word": "that",
+          "start_ms": 2041,
+          "end_ms": 2281
+        },
+        {
+          "relative_position": -1,
+          "word_index": 4,
+          "word": "e",
+          "start_ms": 2441,
+          "end_ms": 2461
+        },
+        {
+          "relative_position": 0,
+          "word_index": 5,
+          "word": "books",
+          "start_ms": 2561,
+          "end_ms": 2901
+        },
+        {
+          "relative_position": 1,
+          "word_index": 6,
+          "word": "overweigh",
+          "start_ms": 3161,
+          "end_ms": 3561
+        },
+        {
+          "relative_position": 2,
+          "word_index": 7,
+          "word": "paper",
+          "start_ms": 3681,
+          "end_ms": 3941
+        }
+      ],
+      "reference_phones": {
+        "arpabet": [
+          "B",
+          "UH",
+          "K",
+          "S"
+        ],
+        "ipa": [
+          "b",
+          "ʊ",
+          "k",
+          "s"
+        ]
+      },
+      "observed_phones": {
+        "arpabet": [
+          "P",
+          "UH",
+          "K",
+          "S"
+        ],
+        "ipa": [
+          "p",
+          "ʊ",
+          "k",
+          "s"
+        ],
+        "source": "acoustic_winner for each forced-aligned reference-phone segment; not an independent word-level decode"
+      },
+      "gop_evidence": [
+        {
+          "evidence_id": "GOP-0012",
+          "index": 12,
+          "word_index": 5,
+          "phone_index": 0,
+          "word": "books",
+          "expected": "B",
+          "expected_ipa": "b",
+          "acoustic_winner": "P",
+          "acoustic_winner_ipa": "p",
+          "best_alternative": "P",
+          "best_alternative_ipa": "p",
+          "expected_log_p": -2.379085,
+          "alternative_log_p": -0.105259,
+          "gop_log_ratio": -2.277763,
+          "confidence": 0.569,
+          "start_ms": 2561,
+          "end_ms": 2581
+        }
+      ]
+    },
+    {
+      "word_index": 23,
+      "word": "books",
+      "context_text": "the e books large capacity",
+      "context_words": [
+        {
+          "relative_position": -2,
+          "word_index": 21,
+          "word": "the",
+          "start_ms": 13404,
+          "end_ms": 13505
+        },
+        {
+          "relative_position": -1,
+          "word_index": 22,
+          "word": "e",
+          "start_ms": 13685,
+          "end_ms": 13705
+        },
+        {
+          "relative_position": 0,
+          "word_index": 23,
+          "word": "books",
+          "start_ms": 13825,
+          "end_ms": 14205
+        },
+        {
+          "relative_position": 1,
+          "word_index": 24,
+          "word": "large",
+          "start_ms": 14765,
+          "end_ms": 15025
+        },
+        {
+          "relative_position": 2,
+          "word_index": 25,
+          "word": "capacity",
+          "start_ms": 15105,
+          "end_ms": 15745
+        }
+      ],
+      "reference_phones": {
+        "arpabet": [
+          "B",
+          "UH",
+          "K",
+          "S"
+        ],
+        "ipa": [
+          "b",
+          "ʊ",
+          "k",
+          "s"
+        ]
+      },
+      "observed_phones": {
+        "arpabet": [
+          "P",
+          "AH",
+          "K",
+          "S"
+        ],
+        "ipa": [
+          "p",
+          "ʌ",
+          "k",
+          "s"
+        ],
+        "source": "acoustic_winner for each forced-aligned reference-phone segment; not an independent word-level decode"
+      },
+      "gop_evidence": [
+        {
+          "evidence_id": "GOP-0080",
+          "index": 80,
+          "word_index": 23,
+          "phone_index": 0,
+          "word": "books",
+          "expected": "B",
+          "expected_ipa": "b",
+          "acoustic_winner": "P",
+          "acoustic_winner_ipa": "p",
+          "best_alternative": "P",
+          "best_alternative_ipa": "p",
+          "expected_log_p": -6.512944,
+          "alternative_log_p": -0.006101,
+          "gop_log_ratio": -6.508749,
+          "confidence": 1.0,
+          "start_ms": 13825,
+          "end_ms": 13845
+        },
+        {
+          "evidence_id": "GOP-0081",
+          "index": 81,
+          "word_index": 23,
+          "phone_index": 1,
+          "word": "books",
+          "expected": "UH",
+          "expected_ipa": "ʊ",
+          "acoustic_winner": "AH",
+          "acoustic_winner_ipa": "ʌ",
+          "best_alternative": "AH",
+          "best_alternative_ipa": "ʌ",
+          "expected_log_p": -1.322071,
+          "alternative_log_p": -0.671419,
+          "gop_log_ratio": -0.97684,
+          "confidence": 0.244,
+          "start_ms": 13925,
+          "end_ms": 13945
+        }
+      ]
+    },
+    {
+      "word_index": 27,
+      "word": "storage",
+      "context_text": "capacity of storage its convenience",
+      "context_words": [
+        {
+          "relative_position": -2,
+          "word_index": 25,
+          "word": "capacity",
+          "start_ms": 15105,
+          "end_ms": 15745
+        },
+        {
+          "relative_position": -1,
+          "word_index": 26,
+          "word": "of",
+          "start_ms": 15905,
+          "end_ms": 15965
+        },
+        {
+          "relative_position": 0,
+          "word_index": 27,
+          "word": "storage",
+          "start_ms": 16045,
+          "end_ms": 16586
+        },
+        {
+          "relative_position": 1,
+          "word_index": 28,
+          "word": "its",
+          "start_ms": 17026,
+          "end_ms": 17126
+        },
+        {
+          "relative_position": 2,
+          "word_index": 29,
+          "word": "convenience",
+          "start_ms": 17166,
+          "end_ms": 17886
+        }
+      ],
+      "reference_phones": {
+        "arpabet": [
+          "S",
+          "T",
+          "AO",
+          "R",
+          "AH",
+          "JH"
+        ],
+        "ipa": [
+          "s",
+          "t",
+          "ɔː",
+          "ɹ",
+          "ʌ",
+          "dʒ"
+        ]
+      },
+      "observed_phones": {
+        "arpabet": [
+          "S",
+          "T",
+          "AO",
+          "R",
+          "IY",
+          "JH"
+        ],
+        "ipa": [
+          "s",
+          "t",
+          "ɔː",
+          "ɹ",
+          "iː",
+          "dʒ"
+        ],
+        "source": "acoustic_winner for each forced-aligned reference-phone segment; not an independent word-level decode"
+      },
+      "gop_evidence": [
+        {
+          "evidence_id": "GOP-0102",
+          "index": 102,
+          "word_index": 27,
+          "phone_index": 4,
+          "word": "storage",
+          "expected": "AH",
+          "expected_ipa": "ʌ",
+          "acoustic_winner": "IY",
+          "acoustic_winner_ipa": "iː",
+          "best_alternative": "IY",
+          "best_alternative_ipa": "iː",
+          "expected_log_p": -6.201415,
+          "alternative_log_p": -0.023923,
+          "gop_log_ratio": -6.198464,
+          "confidence": 1.0,
+          "start_ms": 16405,
+          "end_ms": 16425
+        }
+      ]
+    },
+    {
+      "word_index": 36,
+      "word": "any",
+      "context_text": "access to any material worldwide",
+      "context_words": [
+        {
+          "relative_position": -2,
+          "word_index": 34,
+          "word": "access",
+          "start_ms": 20707,
+          "end_ms": 21107
+        },
+        {
+          "relative_position": -1,
+          "word_index": 35,
+          "word": "to",
+          "start_ms": 21207,
+          "end_ms": 21307
+        },
+        {
+          "relative_position": 0,
+          "word_index": 36,
+          "word": "any",
+          "start_ms": 21467,
+          "end_ms": 21587
+        },
+        {
+          "relative_position": 1,
+          "word_index": 37,
+          "word": "material",
+          "start_ms": 21627,
+          "end_ms": 22307
+        },
+        {
+          "relative_position": 2,
+          "word_index": 38,
+          "word": "worldwide",
+          "start_ms": 22908,
+          "end_ms": 23588
+        }
+      ],
+      "reference_phones": {
+        "arpabet": [
+          "EH",
+          "N",
+          "IY"
+        ],
+        "ipa": [
+          "ɛ",
+          "n",
+          "i"
+        ]
+      },
+      "observed_phones": {
+        "arpabet": [
+          "AE",
+          "N",
+          "IY"
+        ],
+        "ipa": [
+          "æ",
+          "n",
+          "iː"
+        ],
+        "source": "acoustic_winner for each forced-aligned reference-phone segment; not an independent word-level decode"
+      },
+      "gop_evidence": [
+        {
+          "evidence_id": "GOP-0137",
+          "index": 137,
+          "word_index": 36,
+          "phone_index": 0,
+          "word": "any",
+          "expected": "EH",
+          "expected_ipa": "ɛ",
+          "acoustic_winner": "AE",
+          "acoustic_winner_ipa": "æ",
+          "best_alternative": "AE",
+          "best_alternative_ipa": "æ",
+          "expected_log_p": -2.406548,
+          "alternative_log_p": -0.189352,
+          "gop_log_ratio": -2.311043,
+          "confidence": 0.578,
+          "start_ms": 21467,
+          "end_ms": 21487
+        }
+      ]
+    },
+    {
+      "word_index": 54,
+      "word": "best",
+      "context_text": "of the best sellers that",
+      "context_words": [
+        {
+          "relative_position": -2,
+          "word_index": 52,
+          "word": "of",
+          "start_ms": 31070,
+          "end_ms": 31170
+        },
+        {
+          "relative_position": -1,
+          "word_index": 53,
+          "word": "the",
+          "start_ms": 31270,
+          "end_ms": 31390
+        },
+        {
+          "relative_position": 0,
+          "word_index": 54,
+          "word": "best",
+          "start_ms": 31591,
+          "end_ms": 31791
+        },
+        {
+          "relative_position": 1,
+          "word_index": 55,
+          "word": "sellers",
+          "start_ms": 31931,
+          "end_ms": 32411
+        },
+        {
+          "relative_position": 2,
+          "word_index": 56,
+          "word": "that",
+          "start_ms": 32871,
+          "end_ms": 33031
+        }
+      ],
+      "reference_phones": {
+        "arpabet": [
+          "B",
+          "EH",
+          "S",
+          "T"
+        ],
+        "ipa": [
+          "b",
+          "ɛ",
+          "s",
+          "t"
+        ]
+      },
+      "observed_phones": {
+        "arpabet": [
+          "B",
+          "AE",
+          "T",
+          "S"
+        ],
+        "ipa": [
+          "b",
+          "æ",
+          "t",
+          "s"
+        ],
+        "source": "acoustic_winner for each forced-aligned reference-phone segment; not an independent word-level decode"
+      },
+      "gop_evidence": [
+        {
+          "evidence_id": "GOP-0210",
+          "index": 210,
+          "word_index": 54,
+          "phone_index": 1,
+          "word": "best",
+          "expected": "EH",
+          "expected_ipa": "ɛ",
+          "acoustic_winner": "AE",
+          "acoustic_winner_ipa": "æ",
+          "best_alternative": "AE",
+          "best_alternative_ipa": "æ",
+          "expected_log_p": -4.18408,
+          "alternative_log_p": -1.144714,
+          "gop_log_ratio": -3.273624,
+          "confidence": 0.818,
+          "start_ms": 31691,
+          "end_ms": 31711
+        },
+        {
+          "evidence_id": "GOP-0211",
+          "index": 211,
+          "word_index": 54,
+          "phone_index": 2,
+          "word": "best",
+          "expected": "S",
+          "expected_ipa": "s",
+          "acoustic_winner": "T",
+          "acoustic_winner_ipa": "t",
+          "best_alternative": "T",
+          "best_alternative_ipa": "t",
+          "expected_log_p": -2.272281,
+          "alternative_log_p": -1.487948,
+          "gop_log_ratio": -1.434262,
+          "confidence": 0.359,
+          "start_ms": 31751,
+          "end_ms": 31771
+        },
+        {
+          "evidence_id": "GOP-0212",
+          "index": 212,
+          "word_index": 54,
+          "phone_index": 3,
+          "word": "best",
+          "expected": "T",
+          "expected_ipa": "t",
+          "acoustic_winner": "S",
+          "acoustic_winner_ipa": "s",
+          "best_alternative": "S",
+          "best_alternative_ipa": "s",
+          "expected_log_p": -4.862623,
+          "alternative_log_p": -2.36209,
+          "gop_log_ratio": -2.644525,
+          "confidence": 0.661,
+          "start_ms": 31771,
+          "end_ms": 31791
+        }
+      ]
+    },
+    {
+      "word_index": 66,
+      "word": "want",
+      "context_text": "if you want me to",
+      "context_words": [
+        {
+          "relative_position": -2,
+          "word_index": 64,
+          "word": "if",
+          "start_ms": 36632,
+          "end_ms": 36772
+        },
+        {
+          "relative_position": -1,
+          "word_index": 65,
+          "word": "you",
+          "start_ms": 36832,
+          "end_ms": 36912
+        },
+        {
+          "relative_position": 0,
+          "word_index": 66,
+          "word": "want",
+          "start_ms": 37252,
+          "end_ms": 37412
+        },
+        {
+          "relative_position": 1,
+          "word_index": 67,
+          "word": "me",
+          "start_ms": 37452,
+          "end_ms": 37573
+        },
+        {
+          "relative_position": 2,
+          "word_index": 68,
+          "word": "to",
+          "start_ms": 37693,
+          "end_ms": 37893
+        }
+      ],
+      "reference_phones": {
+        "arpabet": [
+          "W",
+          "AA",
+          "N",
+          "T"
+        ],
+        "ipa": [
+          "w",
+          "ɑː",
+          "n",
+          "t"
+        ]
+      },
+      "observed_phones": {
+        "arpabet": [
+          "W",
+          "AH",
+          "L",
+          "L"
+        ],
+        "ipa": [
+          "w",
+          "ʌ",
+          "l",
+          "l"
+        ],
+        "source": "acoustic_winner for each forced-aligned reference-phone segment; not an independent word-level decode"
+      },
+      "gop_evidence": [
+        {
+          "evidence_id": "GOP-0255",
+          "index": 255,
+          "word_index": 66,
+          "phone_index": 1,
+          "word": "want",
+          "expected": "AA",
+          "expected_ipa": "ɑː",
+          "acoustic_winner": "AH",
+          "acoustic_winner_ipa": "ʌ",
+          "best_alternative": "AH",
+          "best_alternative_ipa": "ʌ",
+          "expected_log_p": -2.347634,
+          "alternative_log_p": -0.785927,
+          "gop_log_ratio": -2.226473,
+          "confidence": 0.557,
+          "start_ms": 37352,
+          "end_ms": 37372
+        },
+        {
+          "evidence_id": "GOP-0256",
+          "index": 256,
+          "word_index": 66,
+          "phone_index": 2,
+          "word": "want",
+          "expected": "N",
+          "expected_ipa": "n",
+          "acoustic_winner": "L",
+          "acoustic_winner_ipa": "l",
+          "best_alternative": "L",
+          "best_alternative_ipa": "l",
+          "expected_log_p": -3.829465,
+          "alternative_log_p": -0.786339,
+          "gop_log_ratio": -3.113698,
+          "confidence": 0.778,
+          "start_ms": 37372,
+          "end_ms": 37392
+        },
+        {
+          "evidence_id": "GOP-0257",
+          "index": 257,
+          "word_index": 66,
+          "phone_index": 3,
+          "word": "want",
+          "expected": "T",
+          "expected_ipa": "t",
+          "acoustic_winner": "L",
+          "acoustic_winner_ipa": "l",
+          "best_alternative": "L",
+          "best_alternative_ipa": "l",
+          "expected_log_p": -6.280608,
+          "alternative_log_p": -3.210141,
+          "gop_log_ratio": -3.342875,
+          "confidence": 0.836,
+          "start_ms": 37392,
+          "end_ms": 37412
+        }
+      ]
+    },
+    {
+      "word_index": 67,
+      "word": "me",
+      "context_text": "you want me to say",
+      "context_words": [
+        {
+          "relative_position": -2,
+          "word_index": 65,
+          "word": "you",
+          "start_ms": 36832,
+          "end_ms": 36912
+        },
+        {
+          "relative_position": -1,
+          "word_index": 66,
+          "word": "want",
+          "start_ms": 37252,
+          "end_ms": 37412
+        },
+        {
+          "relative_position": 0,
+          "word_index": 67,
+          "word": "me",
+          "start_ms": 37452,
+          "end_ms": 37573
+        },
+        {
+          "relative_position": 1,
+          "word_index": 68,
+          "word": "to",
+          "start_ms": 37693,
+          "end_ms": 37893
+        },
+        {
+          "relative_position": 2,
+          "word_index": 69,
+          "word": "say",
+          "start_ms": 38073,
+          "end_ms": 38213
+        }
+      ],
+      "reference_phones": {
+        "arpabet": [
+          "M",
+          "IY"
+        ],
+        "ipa": [
+          "m",
+          "iː"
+        ]
+      },
+      "observed_phones": {
+        "arpabet": [
+          "M",
+          "EY"
+        ],
+        "ipa": [
+          "m",
+          "eɪ"
+        ],
+        "source": "acoustic_winner for each forced-aligned reference-phone segment; not an independent word-level decode"
+      },
+      "gop_evidence": [
+        {
+          "evidence_id": "GOP-0259",
+          "index": 259,
+          "word_index": 67,
+          "phone_index": 1,
+          "word": "me",
+          "expected": "IY",
+          "expected_ipa": "iː",
+          "acoustic_winner": "EY",
+          "acoustic_winner_ipa": "eɪ",
+          "best_alternative": "EY",
+          "best_alternative_ipa": "eɪ",
+          "expected_log_p": -1.508446,
+          "alternative_log_p": -0.427633,
+          "gop_log_ratio": -1.187054,
+          "confidence": 0.297,
+          "start_ms": 37553,
+          "end_ms": 37573
+        }
+      ]
+    },
+    {
+      "word_index": 68,
+      "word": "to",
+      "context_text": "want me to say some",
+      "context_words": [
+        {
+          "relative_position": -2,
+          "word_index": 66,
+          "word": "want",
+          "start_ms": 37252,
+          "end_ms": 37412
+        },
+        {
+          "relative_position": -1,
+          "word_index": 67,
+          "word": "me",
+          "start_ms": 37452,
+          "end_ms": 37573
+        },
+        {
+          "relative_position": 0,
+          "word_index": 68,
+          "word": "to",
+          "start_ms": 37693,
+          "end_ms": 37893
+        },
+        {
+          "relative_position": 1,
+          "word_index": 69,
+          "word": "say",
+          "start_ms": 38073,
+          "end_ms": 38213
+        },
+        {
+          "relative_position": 2,
+          "word_index": 70,
+          "word": "some",
+          "start_ms": 38313,
+          "end_ms": 38553
+        }
+      ],
+      "reference_phones": {
+        "arpabet": [
+          "T",
+          "UW"
+        ],
+        "ipa": [
+          "t",
+          "uː"
+        ]
+      },
+      "observed_phones": {
+        "arpabet": [
+          "T",
+          "EY"
+        ],
+        "ipa": [
+          "t",
+          "eɪ"
+        ],
+        "source": "acoustic_winner for each forced-aligned reference-phone segment; not an independent word-level decode"
+      },
+      "gop_evidence": [
+        {
+          "evidence_id": "GOP-0261",
+          "index": 261,
+          "word_index": 68,
+          "phone_index": 1,
+          "word": "to",
+          "expected": "UW",
+          "expected_ipa": "uː",
+          "acoustic_winner": "EY",
+          "acoustic_winner_ipa": "eɪ",
+          "best_alternative": "EY",
+          "best_alternative_ipa": "eɪ",
+          "expected_log_p": -6.953546,
+          "alternative_log_p": -0.193535,
+          "gop_log_ratio": -6.839405,
+          "confidence": 1.0,
+          "start_ms": 37873,
+          "end_ms": 37893
+        }
+      ]
+    },
+    {
+      "word_index": 71,
+      "word": "advantages",
+      "context_text": "say some advantages of paper",
+      "context_words": [
+        {
+          "relative_position": -2,
+          "word_index": 69,
+          "word": "say",
+          "start_ms": 38073,
+          "end_ms": 38213
+        },
+        {
+          "relative_position": -1,
+          "word_index": 70,
+          "word": "some",
+          "start_ms": 38313,
+          "end_ms": 38553
+        },
+        {
+          "relative_position": 0,
+          "word_index": 71,
+          "word": "advantages",
+          "start_ms": 38673,
+          "end_ms": 39413
+        },
+        {
+          "relative_position": 1,
+          "word_index": 72,
+          "word": "of",
+          "start_ms": 39533,
+          "end_ms": 39673
+        },
+        {
+          "relative_position": 2,
+          "word_index": 73,
+          "word": "paper",
+          "start_ms": 39753,
+          "end_ms": 40033
+        }
+      ],
+      "reference_phones": {
+        "arpabet": [
+          "AE",
+          "D",
+          "V",
+          "AE",
+          "N",
+          "T",
+          "IH",
+          "JH",
+          "IH",
+          "Z"
+        ],
+        "ipa": [
+          "æ",
+          "d",
+          "v",
+          "æ",
+          "n",
+          "t",
+          "ɪ",
+          "dʒ",
+          "ɪ",
+          "z"
+        ]
+      },
+      "observed_phones": {
+        "arpabet": [
+          "AH",
+          "DH",
+          "V",
+          "AE",
+          "N",
+          "T",
+          "IH",
+          "JH",
+          "IH",
+          "Z"
+        ],
+        "ipa": [
+          "ʌ",
+          "ð",
+          "v",
+          "æ",
+          "n",
+          "t",
+          "ɪ",
+          "dʒ",
+          "ɪ",
+          "z"
+        ],
+        "source": "acoustic_winner for each forced-aligned reference-phone segment; not an independent word-level decode"
+      },
+      "gop_evidence": [
+        {
+          "evidence_id": "GOP-0267",
+          "index": 267,
+          "word_index": 71,
+          "phone_index": 0,
+          "word": "advantages",
+          "expected": "AE",
+          "expected_ipa": "æ",
+          "acoustic_winner": "AH",
+          "acoustic_winner_ipa": "ʌ",
+          "best_alternative": "AH",
+          "best_alternative_ipa": "ʌ",
+          "expected_log_p": -7.635506,
+          "alternative_log_p": -0.009303,
+          "gop_log_ratio": -7.631584,
+          "confidence": 1.0,
+          "start_ms": 38673,
+          "end_ms": 38693
+        },
+        {
+          "evidence_id": "GOP-0268",
+          "index": 268,
+          "word_index": 71,
+          "phone_index": 1,
+          "word": "advantages",
+          "expected": "D",
+          "expected_ipa": "d",
+          "acoustic_winner": "DH",
+          "acoustic_winner_ipa": "ð",
+          "best_alternative": "DH",
+          "best_alternative_ipa": "ð",
+          "expected_log_p": -3.997687,
+          "alternative_log_p": -0.045621,
+          "gop_log_ratio": -3.973322,
+          "confidence": 0.993,
+          "start_ms": 38713,
+          "end_ms": 38733
+        }
+      ]
+    }
+  ],
+  "feedback": {
+    "summary_zh": "多数低GOP证据指向个别音素的高置信偏离，但部分现象可能受对齐边界、连读或弱读影响，建议优先关注重复出现的模式。",
+    "feedback_items": [
+      {
+        "evidence_ids": [
+          "GOP-0012",
+          "GOP-0080"
+        ],
+        "decision": "likely_issue",
+        "observations": [
+          {
+            "evidence_id": "GOP-0012",
+            "expected": "B",
+            "expected_ipa": "b",
+            "acoustic_winner": "P",
+            "acoustic_winner_ipa": "p"
+          },
+          {
+            "evidence_id": "GOP-0080",
+            "expected": "B",
+            "expected_ipa": "b",
+            "acoustic_winner": "P",
+            "acoustic_winner_ipa": "p"
+          }
+        ],
+        "finding_zh": "单词 books 两次出现时，首音 /b/ 均被声学赢家识别为清辅音 /p/，且第二次置信度达 1.0。",
+        "rationale_zh": "同一音素在同一词中多次出现相同模式的偏离，属于值得明确的发音观察。",
+        "practice_zh": "练习 books 时，注意首音 b 是浊辅音，发声时声带应振动；可对比 bare 与 pair 起始音的差异，刻意让 /b/ 带上振动感。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0102"
+        ],
+        "decision": "likely_issue",
+        "observations": [
+          {
+            "evidence_id": "GOP-0102",
+            "expected": "AH",
+            "expected_ipa": "ʌ",
+            "acoustic_winner": "IY",
+            "acoustic_winner_ipa": "iː"
+          }
+        ],
+        "finding_zh": "storage 中第三个音素参考为 /ʌ/，但声学赢家识别为长元音 /iː/，置信度 1.0。",
+        "rationale_zh": "高置信度的元音替代，且 /ʌ/ 与 /iː/ 听感差异明显，值得反馈。",
+        "practice_zh": "练习 storage 时，注意重读音节是短促的 /ʌ/（类似 'uh' 音），不要将口腔前伸或拉长成 /iː/；可对比 cut 与 seat 的元音差异。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0261"
+        ],
+        "decision": "likely_issue",
+        "observations": [
+          {
+            "evidence_id": "GOP-0261",
+            "expected": "UW",
+            "expected_ipa": "uː",
+            "acoustic_winner": "EY",
+            "acoustic_winner_ipa": "eɪ"
+          }
+        ],
+        "finding_zh": "to 的元音参考为 /uː/，但声学赢家识别为双元音 /eɪ/，置信度 1.0。",
+        "rationale_zh": "高置信度元音偏离，且 to 作为功能词在弱读时通常不会是 /eɪ/，值得明确反馈。",
+        "practice_zh": "练习 to 时，元音应保持圆唇的 /uː/ 或弱读时的中央元音 /ə/，避免开口度过大滑向 /eɪ/；可对比 too 与 day 的元音位置。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0268"
+        ],
+        "decision": "likely_issue",
+        "observations": [
+          {
+            "evidence_id": "GOP-0268",
+            "expected": "D",
+            "expected_ipa": "d",
+            "acoustic_winner": "DH",
+            "acoustic_winner_ipa": "ð"
+          }
+        ],
+        "finding_zh": "advantages 第二音素参考为清辅音 /d/，但声学赢家识别为浊齿擦音 /ð/，置信度 0.993。",
+        "rationale_zh": "高置信度辅音替换，/d/ 与 /ð/ 发音部位接近但方式不同，值得反馈。",
+        "practice_zh": "练习 advantages 时，注意第一个辅音是塞音 /d/，舌尖抵上齿龈后迅速释放，而非将舌尖置于齿间摩擦；可对比 dot 与 the 起始音。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0267"
+        ],
+        "decision": "needs_listening",
+        "observations": [
+          {
+            "evidence_id": "GOP-0267",
+            "expected": "AE",
+            "expected_ipa": "æ",
+            "acoustic_winner": "AH",
+            "acoustic_winner_ipa": "ʌ"
+          }
+        ],
+        "finding_zh": "advantages 首音节参考为 /æ/，声学赢家识别为 /ʌ/，置信度 1.0。",
+        "rationale_zh": "高置信度但 /æ/ 与 /ʌ/ 在非重读语境中可能存在合法变体或边界偏移，需人工复听确认。",
+        "practice_zh": "练习 advantages 时，注意首音节 /æ/ 的口腔开口度应大于 /ʌ/；可对比 cat 与 cut 的元音差异，留意两者口腔开合位置。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0256",
+          "GOP-0257"
+        ],
+        "decision": "needs_listening",
+        "observations": [
+          {
+            "evidence_id": "GOP-0256",
+            "expected": "N",
+            "expected_ipa": "n",
+            "acoustic_winner": "L",
+            "acoustic_winner_ipa": "l"
+          },
+          {
+            "evidence_id": "GOP-0257",
+            "expected": "T",
+            "expected_ipa": "t",
+            "acoustic_winner": "L",
+            "acoustic_winner_ipa": "l"
+          }
+        ],
+        "finding_zh": "want 中 /n/ 和 /t/ 先后被识别为 /l/，置信度分别为 0.778 和 0.836。",
+        "rationale_zh": "连续两个音素被同一替代音覆盖，可能反映连读、语境同化或对齐偏差，需人工复听。",
+        "practice_zh": "练习 want 时，注意 /n/ 是舌尖抵上齿龈的鼻音，/t/ 是清晰的塞音；在快速口语中可能弱化，但仍需与 /l/ 区分；可对比 night 与 light、top 与 loop 的起始差异。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0210"
+        ],
+        "decision": "needs_listening",
+        "observations": [
+          {
+            "evidence_id": "GOP-0210",
+            "expected": "EH",
+            "expected_ipa": "ɛ",
+            "acoustic_winner": "AE",
+            "acoustic_winner_ipa": "æ"
+          }
+        ],
+        "finding_zh": "best 中元音参考为 /ɛ/，声学赢家识别为 /æ/，置信度 0.818。",
+        "rationale_zh": "中等偏高置信度，但 /ɛ/ 与 /æ/ 在某些口音中存在接近区域，需人工复听确认是否为系统性偏离。",
+        "practice_zh": "练习 best 时，注意元音 /ɛ/ 的开口度小于 /æ/；可对比 bed 与 bad 的元音差异，留意口腔前部的舌位高度。"
+      }
+    ],
+    "withheld_differences": [
+      {
+        "evidence_ids": [
+          "GOP-0081"
+        ],
+        "observations": [
+          {
+            "evidence_id": "GOP-0081",
+            "expected": "UH",
+            "expected_ipa": "ʊ",
+            "acoustic_winner": "AH",
+            "acoustic_winner_ipa": "ʌ"
+          }
+        ],
+        "reason_zh": "置信度仅 0.244，且 books 中 /ʊ/ 处于非重读位置，可能与相邻音素协同发音或弱读变体有关，不宜直接报错。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0137"
+        ],
+        "observations": [
+          {
+            "evidence_id": "GOP-0137",
+            "expected": "EH",
+            "expected_ipa": "ɛ",
+            "acoustic_winner": "AE",
+            "acoustic_winner_ipa": "æ"
+          }
+        ],
+        "reason_zh": "置信度 0.578 中等，且 any 在口语中常弱读，/ɛ/ 与 /æ/ 的区分在非重读语境中可能不显著，需结合音频判断。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0211",
+          "GOP-0212"
+        ],
+        "observations": [
+          {
+            "evidence_id": "GOP-0211",
+            "expected": "S",
+            "expected_ipa": "s",
+            "acoustic_winner": "T",
+            "acoustic_winner_ipa": "t"
+          },
+          {
+            "evidence_id": "GOP-0212",
+            "expected": "T",
+            "expected_ipa": "t",
+            "acoustic_winner": "S",
+            "acoustic_winner_ipa": "s"
+          }
+        ],
+        "reason_zh": "best 末尾 /s/ 和 /t/ 相互替换，置信度分别为 0.359 和 0.661，可能反映对齐窗口偏移或连读中的音素顺序混淆，不宜直接归因于发音错误。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0255"
+        ],
+        "observations": [
+          {
+            "evidence_id": "GOP-0255",
+            "expected": "AA",
+            "expected_ipa": "ɑː",
+            "acoustic_winner": "AH",
+            "acoustic_winner_ipa": "ʌ"
+          }
+        ],
+        "reason_zh": "want 中 /ɑː/ 被识别为 /ʌ/，置信度 0.557 中等；在非重读或快速语速中，美式英语 want 的元音可能接近 /ɑ/ 或 /ʌ/，存在合法变体可能。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0259"
+        ],
+        "observations": [
+          {
+            "evidence_id": "GOP-0259",
+            "expected": "IY",
+            "expected_ipa": "iː",
+            "acoustic_winner": "EY",
+            "acoustic_winner_ipa": "eɪ"
+          }
+        ],
+        "reason_zh": "me 中 /iː/ 被识别为 /eɪ/，但置信度仅 0.297；me 作为功能词常弱读，边界偏移或语速可能导致识别不稳定，不宜直接报错。"
+      }
+    ],
+    "limitations_zh": [
+      "所有证据来自强制对齐窗口的声学赢家，而非独立单词级识别，边界可能偏移。",
+      "置信度反映模型对参考音素与赢家音素的相对偏好，不是发音错误的校准概率。",
+      "部分现象可能由连读、弱读、语境同化或对齐偏差导致，需人工复听确认。",
+      "未评估音高、重音、语调、流利度、停顿等韵律特征。",
+      "相邻单词的 ASR 上下文可能有错词，仅用于提供局部语境，不作为发音判断依据。"
+    ]
+  },
+  "llm": {
+    "input": "/workspace/.gop-research/exam/stable-gop-demo/result.json",
+    "output_dir": "/workspace/.gop-research/exam/stable-gop-demo-llm-v3",
+    "endpoint": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "model": "agnes-2.5-flash",
+    "threshold": -0.35,
+    "temperature": 0.0,
+    "thinking": true
+  }
+}

@@ -1,0 +1,823 @@
+{
+  "format": "ls101-submission",
+  "formatVersion": 1,
+  "meta": {
+    "examPackageId": "c011a9f1-59db-4977-8bc7-eb71a923369a",
+    "examTitle": "上海高考口语标准题型",
+    "submissionId": "e9bd3b1a-ae6e-472d-a605-00354eaf9f24",
+    "candidate": {
+      "displayName": "邹娟",
+      "candidateId": "666666"
+    },
+    "startedAt": "2026-08-16T01:15:37.605Z",
+    "submittedAt": "2026-08-16T01:27:49.887Z"
+  },
+  "answers": {
+    "strings": [],
+    "audios": [
+      {
+        "resourceKey": "answer-audio-0",
+        "durationMs": 15010
+      },
+      {
+        "resourceKey": "answer-audio-1",
+        "durationMs": 15005
+      },
+      {
+        "resourceKey": "answer-audio-2",
+        "durationMs": 30014
+      },
+      {
+        "resourceKey": "answer-audio-3",
+        "durationMs": 20009
+      },
+      {
+        "resourceKey": "answer-audio-4",
+        "durationMs": 20004
+      },
+      {
+        "resourceKey": "answer-audio-5",
+        "durationMs": 60013
+      },
+      {
+        "resourceKey": "answer-audio-6",
+        "durationMs": 5008
+      },
+      {
+        "resourceKey": "answer-audio-7",
+        "durationMs": 5006
+      },
+      {
+        "resourceKey": "answer-audio-8",
+        "durationMs": 5003
+      },
+      {
+        "resourceKey": "answer-audio-9",
+        "durationMs": 5014
+      },
+      {
+        "resourceKey": "answer-audio-10",
+        "durationMs": 30018
+      },
+      {
+        "resourceKey": "answer-audio-11",
+        "durationMs": 60016
+      }
+    ]
+  },
+  "schemaUses": [
+    {
+      "instanceId": "schema-use:function-call/schema-use-1",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "69fc2dc6-31d6-4666-bf6f-4b65a1e996dd",
+        "sourceDraftId": "2dd95767-659b-4d4b-b990-9fba6c8712ca",
+        "structureHash": "sha256:2b255b31dc91335f38e408dd624013489be58aed334ea288050490b38aef1353",
+        "revision": 0,
+        "structure": {
+          "questionType": "fixed-reading",
+          "answerFormat": [
+            {
+              "answerId": "sentence-1",
+              "type": "fixed-speech"
+            },
+            {
+              "answerId": "sentence-2",
+              "type": "fixed-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 朗读句子",
+          "description": "两句朗读合并评分，每句分别绑定原文和录音。",
+          "maxScore": 1,
+          "answerDescriptions": {
+            "sentence-1": "第一句朗读",
+            "sentence-2": "第二句朗读"
+          },
+          "inputDescriptions": {},
+          "rubricMarkdown": "**考试要求**： 2句，每句30秒准备，15秒朗读\n\n**评分标准**：\n\n-   1分（共2题，共1分）\n    -   能流利朗读所给句子\n    -   发音清楚，语音语调节奏正确\n    -   能正确处理句子重音、意群停顿\n    -   并熟练掌握连读、失爆等朗读技巧\n    -   在整句朗读流利且重音、停顿合理的情况下，如有个别单词读错不扣分\n-   0.5分\n    -   能基本读出所给句子，语音语调有错误，但不影响理解\n    -   第1句读错2-3个单词\n    -   第2句读错2-5个单词\n-   0分\n    -   不能朗读或朗读时错误严重，以致所读内容无法理解"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Speaking. Section A\n\nDirections: Read aloud the following sentences. For each sentence, you will have thirty seconds to prepare and fifteen seconds to read.\n\n1. The rapid development of artificial intelligence has raised important questions about the future of employment and the skills that young people need to acquire.\n2. Despite the challenges of modern life, maintaining a balance between work and personal interests remains essential for one's overall well-being."
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "sentence-1",
+          "type": "fixed-speech",
+          "text": "The rapid development of artificial intelligence has raised important questions about the future of employment and the skills that young people need to acquire.",
+          "audioAnswerIndex": 0
+        },
+        {
+          "answerId": "sentence-2",
+          "type": "fixed-speech",
+          "text": "Despite the challenges of modern life, maintaining a balance between work and personal interests remains essential for one's overall well-being.",
+          "audioAnswerIndex": 1
+        }
+      ]
+    },
+    {
+      "instanceId": "schema-use:function-call-1/schema-use-1",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "b066147d-96c5-401b-9f08-79e583fdd473",
+        "sourceDraftId": "d592a9c9-e5c4-4b9c-b9a2-9c1e10353520",
+        "structureHash": "sha256:125850f063a9be9157fa5daa6804ae12312a37c7a3b0eb0ddc34f57ca72e228e",
+        "revision": 0,
+        "structure": {
+          "questionType": "fixed-reading",
+          "answerFormat": [
+            {
+              "answerId": "passage",
+              "type": "fixed-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 朗读短文",
+          "description": "朗读一段短文，按语音、语调、节奏和流利度评分。",
+          "maxScore": 1,
+          "answerDescriptions": {
+            "passage": "短文朗读"
+          },
+          "inputDescriptions": {},
+          "rubricMarkdown": "**考试要求**： 1段，1分钟准备，30秒朗读\n\n**评分标准**：\n\n-   2分（共1题，共折合为1分）\n    -   能流利朗读所给的段落\n    -   发音清楚，语音语调节奏正确\n    -   能正确处理句子重音、意群停顿\n    -   语气转换，并熟练掌握连读、失爆等朗读技巧\n    -   在整句朗读流利且重音、停顿合理的情况下，如有个别单词读错不扣分\n-   1.5分\n    -   能基本流利朗读所给的段落\n    -   发音清楚，语音语调节奏基本正确\n    -   能基本正确处理句子重音、意群停顿\n    -   语气转换，并掌握连读、失爆等朗读技巧\n    -   有2-4个单词读错\n-   1分\n    -   能以正常语速朗读所给的段落\n    -   语音语调有错误，但不影响理解\n    -   有3-5个单词读错\n-   0.5分\n    -   能基本读出所给的段落\n    -   语音语调有错误，但不影响理解\n    -   有6-10个单词读错\n-   0分\n    -   不能朗读或朗读时错误严重，以致所读内容无法理解\n\n**注意事项**：\n1.  评分不以读完短文为标准，按照正常的语速朗读，注意力放在语音语调方面\n2.  务必注意意群停顿，不熟悉的单词也尽量按语感读出\n3.  准备时间里可以轻读调整，开始录音时用最合适的语音语调读出"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Section B\n\nDirections: Read aloud the following passage. You will have one minute to prepare and thirty seconds to read.\n\nMany cities around the world are now investing heavily in green spaces and parks to improve the quality of life for their residents. Research has shown that access to nature can reduce stress, improve mental health, and even boost physical activity levels. In Singapore, for example, the government has transformed the city into a Garden City by planting trees along nearly every major road and building rooftop gardens on public housing blocks. Similar efforts are being made in other urban areas, where old factories and unused lots are being converted into community gardens and walking trails. These initiatives not only beautify the environment but also encourage a stronger sense of community among neighbors who might otherwise have little interaction."
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "passage",
+          "type": "fixed-speech",
+          "text": "Many cities around the world are now investing heavily in green spaces and parks to improve the quality of life for their residents. Research has shown that access to nature can reduce stress, improve mental health, and even boost physical activity levels. In Singapore, for example, the government has transformed the city into a Garden City by planting trees along nearly every major road and building rooftop gardens on public housing blocks. Similar efforts are being made in other urban areas, where old factories and unused lots are being converted into community gardens and walking trails. These initiatives not only beautify the environment but also encourage a stronger sense of community among neighbors who might otherwise have little interaction.",
+          "audioAnswerIndex": 2
+        }
+      ]
+    },
+    {
+      "instanceId": "schema-use:function-call-2/schema-use-1",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "89d318a8-0e31-4650-a2d9-9ce7e968f397",
+        "sourceDraftId": "fef65658-a439-47ff-b18f-f7e280853b82",
+        "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+        "revision": 0,
+        "structure": {
+          "questionType": "freetalk",
+          "answerFormat": [
+            {
+              "answerId": "answer",
+              "type": "free-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            },
+            {
+              "inputId": "reference-answer",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 情景提问",
+          "description": "针对一个情景提出两个问题。",
+          "maxScore": 1,
+          "answerDescriptions": {
+            "answer": "情景提问录音"
+          },
+          "inputDescriptions": {
+            "reference-answer": "参考答案"
+          },
+          "rubricMarkdown": "**考试要求**： 2个情景，各提2个问题\n\n**评分标准**：\n\n-   1分（共2题，共2分）\n    -   能对所给情景进行提问\n    -   内容恰当，问句结构正确\n\n-   0.5分\n    -   提问基本符合情景要求\n    -   语音结构有误\n\n-   0分\n    -   不能提问或不符要求\n\n\n**注意事项**：\n\n1.  至少一句特殊疑问句（可以先问特殊疑问句）\n2.  两个问题须针对不同的信息（可以问针对不同方面的两句特殊疑问句）"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Section C\n\nDirections: Ask two questions about each situation given below. At least one special question should be asked about each situation.\n\nQuestion 1~2: Your friend just adopted a rescue dog from the local animal shelter last weekend. You are curious about the new pet. Ask two questions."
+        },
+        {
+          "inputId": "reference-answer",
+          "type": "text",
+          "value": "What breed is the rescue dog? How old is it?"
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "answer",
+          "type": "free-speech",
+          "audioAnswerIndex": 3
+        }
+      ]
+    },
+    {
+      "instanceId": "schema-use:function-call-2/schema-use-2",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "89d318a8-0e31-4650-a2d9-9ce7e968f397",
+        "sourceDraftId": "fef65658-a439-47ff-b18f-f7e280853b82",
+        "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+        "revision": 0,
+        "structure": {
+          "questionType": "freetalk",
+          "answerFormat": [
+            {
+              "answerId": "answer",
+              "type": "free-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            },
+            {
+              "inputId": "reference-answer",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 情景提问",
+          "description": "针对一个情景提出两个问题。",
+          "maxScore": 1,
+          "answerDescriptions": {
+            "answer": "情景提问录音"
+          },
+          "inputDescriptions": {
+            "reference-answer": "参考答案"
+          },
+          "rubricMarkdown": "**考试要求**： 2个情景，各提2个问题\n\n**评分标准**：\n\n-   1分（共2题，共2分）\n    -   能对所给情景进行提问\n    -   内容恰当，问句结构正确\n\n-   0.5分\n    -   提问基本符合情景要求\n    -   语音结构有误\n\n-   0分\n    -   不能提问或不符要求\n\n\n**注意事项**：\n\n1.  至少一句特殊疑问句（可以先问特殊疑问句）\n2.  两个问题须针对不同的信息（可以问针对不同方面的两句特殊疑问句）"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Section C\n\nDirections: Ask two questions about each situation given below. At least one special question should be asked about each situation.\n\nQuestion 3~4: Your classmate participated in a volunteer teaching program at a rural primary school during the summer vacation. You want to know more about the experience. Ask two questions."
+        },
+        {
+          "inputId": "reference-answer",
+          "type": "text",
+          "value": "How long did the volunteer program last? What subjects did you teach the children?"
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "answer",
+          "type": "free-speech",
+          "audioAnswerIndex": 4
+        }
+      ]
+    },
+    {
+      "instanceId": "schema-use:function-call-3/schema-use-1",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "20b03294-5fc7-4880-98f3-e69f5b85262e",
+        "sourceDraftId": "3ac19082-a975-4d20-b5c6-99ab03290db1",
+        "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+        "revision": 0,
+        "structure": {
+          "questionType": "freetalk",
+          "answerFormat": [
+            {
+              "answerId": "answer",
+              "type": "free-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            },
+            {
+              "inputId": "reference-answer",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 看图说话",
+          "description": "根据四幅图片和给定开头句完成口头叙述。",
+          "maxScore": 1.5,
+          "answerDescriptions": {
+            "answer": "看图说话录音"
+          },
+          "inputDescriptions": {
+            "reference-answer": "参考答案"
+          },
+          "rubricMarkdown": "**考试要求**： 1分钟准备，1分钟回答。时间分配：5s→10s×4→15s\n\n**评分标准**：\n\n-   3分（共1题，共折合为1.5分）\n    -   能有条理地、完整地叙述一个主题，内容与图片相符\n    -   表达清楚，叙述连贯流畅\n    -   语言结构和用词符合交际要求\n    -   语音正确\n\n-   2.5分\n    -   能有条理地、完整地叙述一个主题，内容与图片相符\n    -   表达基本清楚，叙述基本连贯流畅，但有较少的表达错误\n    -   语言结构和用词基本符合交际要求\n    -   语音正确\n\n-   2分\n    -   能连贯地叙述一个主题，内容基本与图片相符\n    -   语言结构与用词有错误，但不影响整段意义的表达与理解\n    -   语音基本正确\n\n-   1.5分\n    -   能较连贯地叙述一个主题，内容基本与图片相符\n    -   语言结构与用词有错误，但基本不影响整段意义的表达与理解\n    -   语音基本正确\n\n-   1分\n    -   能讲述几句，但主题不清楚，内容不连贯\n    -   与图片关系不大，叙述中大多数语言结构混乱，用词不正确\n    -   语音错误严重，使人理解困难\n\n-   0.5分\n    -   只能讲述1句\n\n-   0分\n    -   没有答题或答题内容与图片内容无关   \n\n\n**注意事项**：\n\n1.  利用好所给的句子，纵观所有图片，形成一个总体框架，然后按顺序讲述\n2.  看清图片中的人物和背景，读懂图片，明确图片立意和内涵主题\n3.  描述过程中的时态和人称以 Guided sentence 提供的时态为主"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Section D\n\nDirections: You will have one minute to prepare and another minute to talk about the following pictures with at least five sentences. Begin your talk with the sentence given.\n\nIt was a quiet weekend evening.\n\n| 1![](resource:schema-schema-use%3Afunction-call-3%2Fschema-use-1-img1) | 2![](resource:schema-schema-use%3Afunction-call-3%2Fschema-use-1-img2) |\n| ------ | ------ |\n| 3![](resource:schema-schema-use%3Afunction-call-3%2Fschema-use-1-img3) | 4![](resource:schema-schema-use%3Afunction-call-3%2Fschema-use-1-img4) |"
+        },
+        {
+          "inputId": "reference-answer",
+          "type": "text",
+          "value": "It was a quiet weekend evening. Grandpa was standing at the kitchen doorway when he noticed his granddaughter practicing Chinese brush calligraphy at the table. He was so fascinated by her skill that he decided to learn calligraphy himself. He enrolled in a community calligraphy class and practiced seriously every day. Every morning, he stood on the balcony with his brush pen, writing character after character. After months of hard work, he entered a senior calligraphy competition and won first prize. His granddaughter was extremely proud of him."
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "answer",
+          "type": "free-speech",
+          "audioAnswerIndex": 5
+        }
+      ]
+    },
+    {
+      "instanceId": "schema-use:function-call-4/schema-use-1",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "3305545e-8ea6-4c5d-931b-20ab4f8a7362",
+        "sourceDraftId": "304e2f2f-4afa-481c-9b98-55f47555039f",
+        "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+        "revision": 0,
+        "structure": {
+          "questionType": "freetalk",
+          "answerFormat": [
+            {
+              "answerId": "answer",
+              "type": "free-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            },
+            {
+              "inputId": "reference-answer",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 快速应答",
+          "description": "听一句话后在五秒内作出合理应答。",
+          "maxScore": 0.5,
+          "answerDescriptions": {
+            "answer": "快速应答录音"
+          },
+          "inputDescriptions": {
+            "reference-answer": "参考答案"
+          },
+          "rubricMarkdown": "**考试要求**：共4句，每句5秒回答。\n\n**评分标准**：\n\n  - 0.5分（共4题，共2分）\n      - 能作出准确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.25分\n      - 应答较为准确合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或应答不准确合理，不符合交际要求\n\n**注意事项**：\n\n1.  须准备不同的功能话题；\n2.  快速判断所给题目是一般疑问句/特殊疑问句/陈述句/祈使句，听到考题时注意疑问词和时态。"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Listening & Speaking. Section A\n\nDirections: In Section A, you will hear four sentences. Make quick responses to the sentences you have heard.\n\n1. I'm really sorry — I completely forgot to bring the book you lent me last week."
+        },
+        {
+          "inputId": "reference-answer",
+          "type": "text",
+          "value": "That's all right. You can bring it to me tomorrow."
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "answer",
+          "type": "free-speech",
+          "audioAnswerIndex": 6
+        }
+      ]
+    },
+    {
+      "instanceId": "schema-use:function-call-4/schema-use-2",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "3305545e-8ea6-4c5d-931b-20ab4f8a7362",
+        "sourceDraftId": "304e2f2f-4afa-481c-9b98-55f47555039f",
+        "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+        "revision": 0,
+        "structure": {
+          "questionType": "freetalk",
+          "answerFormat": [
+            {
+              "answerId": "answer",
+              "type": "free-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            },
+            {
+              "inputId": "reference-answer",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 快速应答",
+          "description": "听一句话后在五秒内作出合理应答。",
+          "maxScore": 0.5,
+          "answerDescriptions": {
+            "answer": "快速应答录音"
+          },
+          "inputDescriptions": {
+            "reference-answer": "参考答案"
+          },
+          "rubricMarkdown": "**考试要求**：共4句，每句5秒回答。\n\n**评分标准**：\n\n  - 0.5分（共4题，共2分）\n      - 能作出准确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.25分\n      - 应答较为准确合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或应答不准确合理，不符合交际要求\n\n**注意事项**：\n\n1.  须准备不同的功能话题；\n2.  快速判断所给题目是一般疑问句/特殊疑问句/陈述句/祈使句，听到考题时注意疑问词和时态。"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Listening & Speaking. Section A\n\nDirections: In Section A, you will hear four sentences. Make quick responses to the sentences you have heard.\n\n2. Would you like to join our school's art festival next Friday? We'd love to have you."
+        },
+        {
+          "inputId": "reference-answer",
+          "type": "text",
+          "value": "That sounds wonderful! What time does it start?"
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "answer",
+          "type": "free-speech",
+          "audioAnswerIndex": 7
+        }
+      ]
+    },
+    {
+      "instanceId": "schema-use:function-call-4/schema-use-3",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "3305545e-8ea6-4c5d-931b-20ab4f8a7362",
+        "sourceDraftId": "304e2f2f-4afa-481c-9b98-55f47555039f",
+        "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+        "revision": 0,
+        "structure": {
+          "questionType": "freetalk",
+          "answerFormat": [
+            {
+              "answerId": "answer",
+              "type": "free-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            },
+            {
+              "inputId": "reference-answer",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 快速应答",
+          "description": "听一句话后在五秒内作出合理应答。",
+          "maxScore": 0.5,
+          "answerDescriptions": {
+            "answer": "快速应答录音"
+          },
+          "inputDescriptions": {
+            "reference-answer": "参考答案"
+          },
+          "rubricMarkdown": "**考试要求**：共4句，每句5秒回答。\n\n**评分标准**：\n\n  - 0.5分（共4题，共2分）\n      - 能作出准确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.25分\n      - 应答较为准确合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或应答不准确合理，不符合交际要求\n\n**注意事项**：\n\n1.  须准备不同的功能话题；\n2.  快速判断所给题目是一般疑问句/特殊疑问句/陈述句/祈使句，听到考题时注意疑问词和时态。"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Listening & Speaking. Section A\n\nDirections: In Section A, you will hear four sentences. Make quick responses to the sentences you have heard.\n\n3. Thank you so much for your help with the presentation — you really saved me!"
+        },
+        {
+          "inputId": "reference-answer",
+          "type": "text",
+          "value": "You're welcome! I'm glad I could be of help."
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "answer",
+          "type": "free-speech",
+          "audioAnswerIndex": 8
+        }
+      ]
+    },
+    {
+      "instanceId": "schema-use:function-call-4/schema-use-4",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "3305545e-8ea6-4c5d-931b-20ab4f8a7362",
+        "sourceDraftId": "304e2f2f-4afa-481c-9b98-55f47555039f",
+        "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+        "revision": 0,
+        "structure": {
+          "questionType": "freetalk",
+          "answerFormat": [
+            {
+              "answerId": "answer",
+              "type": "free-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            },
+            {
+              "inputId": "reference-answer",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 快速应答",
+          "description": "听一句话后在五秒内作出合理应答。",
+          "maxScore": 0.5,
+          "answerDescriptions": {
+            "answer": "快速应答录音"
+          },
+          "inputDescriptions": {
+            "reference-answer": "参考答案"
+          },
+          "rubricMarkdown": "**考试要求**：共4句，每句5秒回答。\n\n**评分标准**：\n\n  - 0.5分（共4题，共2分）\n      - 能作出准确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.25分\n      - 应答较为准确合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或应答不准确合理，不符合交际要求\n\n**注意事项**：\n\n1.  须准备不同的功能话题；\n2.  快速判断所给题目是一般疑问句/特殊疑问句/陈述句/祈使句，听到考题时注意疑问词和时态。"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Listening & Speaking. Section A\n\nDirections: In Section A, you will hear four sentences. Make quick responses to the sentences you have heard.\n\n4. I've been offered the position of club president, but I'm not sure if I'm ready for it. What do you think?"
+        },
+        {
+          "inputId": "reference-answer",
+          "type": "text",
+          "value": "I think you should go for it. You've been a member for two years and everyone respects you."
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "answer",
+          "type": "free-speech",
+          "audioAnswerIndex": 9
+        }
+      ]
+    },
+    {
+      "instanceId": "schema-use:function-call-5/schema-use-1",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "a46b4930-9ed0-438e-8714-e6f5dd45428c",
+        "sourceDraftId": "4f64965e-a958-4c36-a86a-bb6d7fdb336d",
+        "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+        "revision": 0,
+        "structure": {
+          "questionType": "freetalk",
+          "answerFormat": [
+            {
+              "answerId": "answer",
+              "type": "free-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            },
+            {
+              "inputId": "reference-answer",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 听短文回答事实题",
+          "description": "根据所听短文信息回答第一问。",
+          "maxScore": 1,
+          "answerDescriptions": {
+            "answer": "事实题回答录音"
+          },
+          "inputDescriptions": {
+            "reference-answer": "参考答案"
+          },
+          "rubricMarkdown": "**考试要求**：30秒准备，30秒回答（共1题，共1分）。\n\n**评分标准**：\n\n  - 1分\n      - 能针对问题作出清楚全面、正确合理的应答\n      - 语音正确\n      - 语言结构和用词符合交际要求\n  - 0.5分\n      - 能针对问题给出部分答案，不够完整合理\n      - 语音基本正确\n      - 有个别语言结构或用词错误\n  - 0分\n      - 没有答题或答题内容与问题无关"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Section B\n\nDirections: In Section B, you will hear a short passage about the benefits of developing a reading habit. The passage will be read twice. After you hear the passage, answer the first question with the information you hear and the second in your own opinion with at least 3 sentences. For the first question, you will have 30 seconds to prepare and 30 seconds to talk. For the second question, you will have one minute to prepare and another minute to talk.\n\nDeveloping a regular reading habit can significantly benefit students in multiple ways. First, reading expands your vocabulary and improves your language skills far beyond what textbooks alone can offer. Second, it broadens your horizons by exposing you to different cultures, ideas, and perspectives that you might not encounter in daily life. Experts suggest two practical ways to build a reading routine. One is to set aside a specific time each day — even just twenty minutes before bed — for reading. The other is to choose books that genuinely interest you, rather than forcing yourself to read something difficult just because others recommend it. While it takes effort to form this habit, the rewards are well worth it.\n\n1. What are the two practical ways suggested in the passage for building a reading routine?"
+        },
+        {
+          "inputId": "reference-answer",
+          "type": "text",
+          "value": "The two ways are: setting aside a specific time each day for reading, such as twenty minutes before bed, and choosing books that genuinely interest you instead of reading something difficult just because others recommend it."
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "answer",
+          "type": "free-speech",
+          "audioAnswerIndex": 10
+        }
+      ]
+    },
+    {
+      "instanceId": "schema-use:function-call-5/schema-use-2",
+      "schema": {
+        "formatVersion": 2,
+        "schemaId": "5b673f50-b3a8-485c-96fc-3e06e33429d5",
+        "sourceDraftId": "53461417-7484-43f4-884c-97a2b4939e9b",
+        "structureHash": "sha256:de759d3988be2ad2174b20af6b8bf4cacb2ac2235066b98db5fe5640ef218cf8",
+        "revision": 0,
+        "structure": {
+          "questionType": "freetalk",
+          "answerFormat": [
+            {
+              "answerId": "answer",
+              "type": "free-speech"
+            }
+          ],
+          "templateInputs": [
+            {
+              "inputId": "question-description",
+              "type": "text",
+              "required": true
+            },
+            {
+              "inputId": "reference-answer",
+              "type": "text",
+              "required": true
+            }
+          ]
+        },
+        "data": {
+          "name": "上海高考 - 听短文回答观点题",
+          "description": "结合个人观点用至少三句话回答第二问。",
+          "maxScore": 1.5,
+          "answerDescriptions": {
+            "answer": "观点题回答录音"
+          },
+          "inputDescriptions": {
+            "reference-answer": "参考答案"
+          },
+          "rubricMarkdown": "**考试要求**：1分钟准备，1分钟回答（共1题，共1.5分）。\n\n**评分标准**：\n\n  - 1.5分\n      - 能连贯流畅地表达思想\n      - 内容切题\n      - 语言正确\n  - 1分\n      - 基本能连贯完整地表达思想\n      - 能针对题目谈话\n  - 0.5分\n      - 能讲述几句，但内容不连贯\n      - 与题目的关系不大\n      - 语言结构或用词错误严重，使人理解困难\n  - 0分\n      - 没有答题或内容与题目无关"
+        }
+      },
+      "inputs": [
+        {
+          "inputId": "question-description",
+          "type": "text",
+          "value": "## Section B\n\nDirections: In Section B, you will hear a short passage about the benefits of developing a reading habit. The passage will be read twice. After you hear the passage, answer the first question with the information you hear and the second in your own opinion with at least 3 sentences. For the first question, you will have 30 seconds to prepare and 30 seconds to talk. For the second question, you will have one minute to prepare and another minute to talk.\n\nDeveloping a regular reading habit can significantly benefit students in multiple ways. First, reading expands your vocabulary and improves your language skills far beyond what textbooks alone can offer. Second, it broadens your horizons by exposing you to different cultures, ideas, and perspectives that you might not encounter in daily life. Experts suggest two practical ways to build a reading routine. One is to set aside a specific time each day — even just twenty minutes before bed — for reading. The other is to choose books that genuinely interest you, rather than forcing yourself to read something difficult just because others recommend it. While it takes effort to form this habit, the rewards are well worth it.\n\n2. Do you prefer reading e-books or paper books? Give at least three reasons to support your preference."
+        },
+        {
+          "inputId": "reference-answer",
+          "type": "text",
+          "value": "I prefer paper books for several reasons. First, reading paper books helps me focus better because there are no screen distractions. Second, I enjoy the feeling of turning pages and holding a real book in my hands. Third, paper books are easier on my eyes, especially when I read for a long time before bed."
+        }
+      ],
+      "answers": [
+        {
+          "answerId": "answer",
+          "type": "free-speech",
+          "audioAnswerIndex": 11
+        }
+      ]
+    }
+  ],
+  "resources": {
+    "schema-schema-use%3Afunction-call-3%2Fschema-use-1-img1": {
+      "filename": "picture_file1-657ef4e8-70c9-4e63-88c4-0653f610f407.png",
+      "packagePath": "resources/schema-schema-use%3Afunction-call-3%2Fschema-use-1-img1/picture_file1-657ef4e8-70c9-4e63-88c4-0653f610f407.png",
+      "mediaType": "image/png"
+    },
+    "schema-schema-use%3Afunction-call-3%2Fschema-use-1-img2": {
+      "filename": "picture_file2-6161c86f-6984-4ccf-8f54-e4cfa3d44f95.png",
+      "packagePath": "resources/schema-schema-use%3Afunction-call-3%2Fschema-use-1-img2/picture_file2-6161c86f-6984-4ccf-8f54-e4cfa3d44f95.png",
+      "mediaType": "image/png"
+    },
+    "schema-schema-use%3Afunction-call-3%2Fschema-use-1-img3": {
+      "filename": "picture_file3-e984818a-032d-4646-aa1b-737bd69e3a60.png",
+      "packagePath": "resources/schema-schema-use%3Afunction-call-3%2Fschema-use-1-img3/picture_file3-e984818a-032d-4646-aa1b-737bd69e3a60.png",
+      "mediaType": "image/png"
+    },
+    "schema-schema-use%3Afunction-call-3%2Fschema-use-1-img4": {
+      "filename": "picture_file4-ee4c5351-c7bb-462d-8b02-73f06da79f2d.png",
+      "packagePath": "resources/schema-schema-use%3Afunction-call-3%2Fschema-use-1-img4/picture_file4-ee4c5351-c7bb-462d-8b02-73f06da79f2d.png",
+      "mediaType": "image/png"
+    },
+    "answer-audio-0": {
+      "filename": "recording-0.webm",
+      "packagePath": "recordings/answer-audio-0/recording-0.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-1": {
+      "filename": "recording-1.webm",
+      "packagePath": "recordings/answer-audio-1/recording-1.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-2": {
+      "filename": "recording-2.webm",
+      "packagePath": "recordings/answer-audio-2/recording-2.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-3": {
+      "filename": "recording-3.webm",
+      "packagePath": "recordings/answer-audio-3/recording-3.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-4": {
+      "filename": "recording-4.webm",
+      "packagePath": "recordings/answer-audio-4/recording-4.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-5": {
+      "filename": "recording-5.webm",
+      "packagePath": "recordings/answer-audio-5/recording-5.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-6": {
+      "filename": "recording-6.webm",
+      "packagePath": "recordings/answer-audio-6/recording-6.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-7": {
+      "filename": "recording-7.webm",
+      "packagePath": "recordings/answer-audio-7/recording-7.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-8": {
+      "filename": "recording-8.webm",
+      "packagePath": "recordings/answer-audio-8/recording-8.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-9": {
+      "filename": "recording-9.webm",
+      "packagePath": "recordings/answer-audio-9/recording-9.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-10": {
+      "filename": "recording-10.webm",
+      "packagePath": "recordings/answer-audio-10/recording-10.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    },
+    "answer-audio-11": {
+      "filename": "recording-11.webm",
+      "packagePath": "recordings/answer-audio-11/recording-11.webm",
+      "mediaType": "audio/webm;codecs=opus"
+    }
+  }
+}
