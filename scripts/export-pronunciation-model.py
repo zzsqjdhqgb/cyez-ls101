@@ -109,8 +109,10 @@ def main(argv: list[str]) -> int:
 
     shutil.copy(args.model_dir / "config.json", args.output / "config.json")
     shutil.copy(args.tokenizer_dir / "vocab.json", args.output / "vocab.json")
-    (args.output / "preprocessor_config.json").write_text(
-        json.dumps(PREPROCESSOR_CONFIG, indent=2) + "\n", encoding="utf8"
+    # 必须用 write_bytes 固定 LF：文本模式在 Windows 上会把 \n 转成 \r\n，
+    # 产物大小与 SHA-256 就会与固定清单不一致（安装路径会把它判为损坏并删除）。
+    (args.output / "preprocessor_config.json").write_bytes(
+        (json.dumps(PREPROCESSOR_CONFIG, indent=2) + "\n").encode("utf8")
     )
 
     summary = []

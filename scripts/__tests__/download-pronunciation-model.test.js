@@ -10,6 +10,8 @@ const { tmpdir } = require('node:os')
 const { join } = require('node:path')
 const { test } = require('node:test')
 const {
+  DEFAULT_MODEL_ROOT,
+  DEFAULT_SOURCE_CACHE_ROOT,
   PINNED_MANIFEST,
   RELEASE_TAG_PREFIX,
   assertMetadataMatches,
@@ -20,6 +22,8 @@ const {
   parseOptions,
   releaseApiUrl,
   releaseAssetUrl,
+  resolveModelRoot,
+  resolveSourceCacheRoot,
   sourceDirectory,
   validateManifest
 } = require('../download-pronunciation-model.js')
@@ -199,6 +203,8 @@ test('inspects runtime assets against a manifest', async () => {
       partial.mismatched.map((asset) => asset.path),
       ['onnx/model_quantized.onnx']
     )
+    assert.equal(partial.mismatched[0].actualSize, Buffer.byteLength('tampered'))
+    assert.equal(partial.mismatched[0].actualSha256, sha256(Buffer.from('tampered')))
 
     await writeFile(join(root, 'onnx', 'model_quantized.onnx'), weights)
     const complete = await inspectRuntimeAssets(manifest, root)
@@ -230,6 +236,44 @@ test('builds the exporter command from the manifest sources', () => {
     'charsiu/tokenizer_en_cmu'
   )
   assert.throws(() => sourceDirectory({ sources: [] }, 'model'), /缺少 model 目录/)
+})
+
+test('resolves cache roots inside the repository', () => {
+  const repoRoot = join(__dirname, '..', '..')
+  const previousModelRoot = process.env.LS101_PRONUNCIATION_MODEL_ROOT
+  const previousSourceRoot = process.env.LS101_PRONUNCIATION_SOURCE_ROOT
+
+  try {
+    delete process.env.LS101_PRONUNCIATION_MODEL_ROOT
+    delete process.env.LS101_PRONUNCIATION_SOURCE_ROOT
+    assert.equal(resolveModelRoot(), DEFAULT_MODEL_ROOT)
+    assert.equal(resolveSourceCacheRoot(), DEFAULT_SOURCE_CACHE_ROOT)
+
+    assert.equal(
+      resolveModelRoot('.cache/pronunciation/model'),
+      join(repoRoot, '.cache', 'pronunciation', 'model')
+    )
+    assert.equal(
+      resolveSourceCacheRoot(join(repoRoot, '.cache', 'pronunciation', 'sources')),
+      join(repoRoot, '.cache', 'pronunciation', 'sources')
+    )
+
+    process.env.LS101_PRONUNCIATION_MODEL_ROOT = '.cache/pronunciation/model'
+    process.env.LS101_PRONUNCIATION_SOURCE_ROOT = '.cache/pronunciation/sources'
+    assert.equal(resolveModelRoot(), join(repoRoot, '.cache', 'pronunciation', 'model'))
+    assert.equal(resolveSourceCacheRoot(), join(repoRoot, '.cache', 'pronunciation', 'sources'))
+  } finally {
+    if (previousModelRoot === undefined) delete process.env.LS101_PRONUNCIATION_MODEL_ROOT
+    else process.env.LS101_PRONUNCIATION_MODEL_ROOT = previousModelRoot
+    if (previousSourceRoot === undefined) delete process.env.LS101_PRONUNCIATION_SOURCE_ROOT
+    else process.env.LS101_PRONUNCIATION_SOURCE_ROOT = previousSourceRoot
+  }
+
+  assert.throws(() => resolveModelRoot('../outside-repo'), /必须位于仓库内/)
+  assert.throws(
+    () => resolveSourceCacheRoot(join(repoRoot, '..', 'outside-repo')),
+    /必须位于仓库内/
+  )
 })
 
 test('only accepts pronunciation downloader options', () => {

@@ -23,6 +23,10 @@
  * 受限网络可用 `LS101_RELEASE_ENDPOINT` 指向 GitHub Release 镜像、
  * `LS101_RELEASE_API_ENDPOINT` 指向 Release API 镜像、`LS101_HF_ENDPOINT`
  * 指向 Hugging Face 镜像，用 `LS101_PYTHON` 指定导出解释器。
+ *
+ * 缓存位置默认在 `externals/ai/` 下，可用 `LS101_PRONUNCIATION_MODEL_ROOT`
+ * （运行时资产）与 `LS101_PRONUNCIATION_SOURCE_ROOT`（上游权重缓存，约 377 MB）
+ * 指到仓库内其他目录，例如 `.cache/pronunciation/`。
  */
 
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/explicit-function-return-type */
@@ -30,14 +34,20 @@ const { createHash } = require('node:crypto')
 const { createReadStream, readFileSync } = require('node:fs')
 const { stat } = require('node:fs/promises')
 const { execFileSync } = require('node:child_process')
-const { join } = require('node:path')
+const { isAbsolute, join, relative } = require('node:path')
 const { ensureAssetSet } = require('./asset-integrity.js')
 const { downloadVerifiedAsset } = require('./download-asset.js')
 
 const ROOT_DIR = join(__dirname, '..')
 const MANIFEST_PATH = join(__dirname, 'pronunciation-model-assets.json')
-const MODEL_ROOT = join(ROOT_DIR, 'externals', 'ai', 'pronunciation', 'model')
-const SOURCE_CACHE_ROOT = join(ROOT_DIR, 'externals', 'ai', '.model-sources', 'pronunciation')
+const DEFAULT_MODEL_ROOT = join(ROOT_DIR, 'externals', 'ai', 'pronunciation', 'model')
+const DEFAULT_SOURCE_CACHE_ROOT = join(
+  ROOT_DIR,
+  'externals',
+  'ai',
+  '.model-sources',
+  'pronunciation'
+)
 const STATE_ROOT = join(ROOT_DIR, 'externals', 'ai', '.setup-verification')
 const RUNTIME_STATE_PATH = join(STATE_ROOT, 'pronunciation-model.json')
 const RELEASE_TAG_PREFIX = 'pronunciation-model-v'
@@ -162,6 +172,31 @@ function resolveHfEndpoint(explicit) {
   return resolveEndpoint(explicit, process.env.LS101_HF_ENDPOINT, DEFAULT_HF_ENDPOINT)
 }
 
+// 缓存位置默认在 externals/ 下，可用环境变量指到仓库内其他目录（例如 .cache/）。
+// 目录必须留在仓库内：资产完整性校验以仓库根目录为安全边界。
+function resolveWorkspaceDirectory(value, label) {
+  const absolute = isAbsolute(value) ? value : join(ROOT_DIR, value)
+  const relativePath = relative(ROOT_DIR, absolute)
+  if (relativePath.startsWith('..') || isAbsolute(relativePath)) {
+    throw new Error(`${label}必须位于仓库内：${value}`)
+  }
+  return absolute
+}
+
+function resolveModelRoot(explicit) {
+  return resolveWorkspaceDirectory(
+    explicit ?? process.env.LS101_PRONUNCIATION_MODEL_ROOT ?? DEFAULT_MODEL_ROOT,
+    '发音模型运行时目录'
+  )
+}
+
+function resolveSourceCacheRoot(explicit) {
+  return resolveWorkspaceDirectory(
+    explicit ?? process.env.LS101_PRONUNCIATION_SOURCE_ROOT ?? DEFAULT_SOURCE_CACHE_ROOT,
+    '发音模型上游缓存目录'
+  )
+}
+
 function releaseAssetUrl(release, name, endpoint = DEFAULT_RELEASE_ENDPOINT) {
   return `${endpoint}/${release.repository}/releases/download/${release.tag}/${encodeURIComponent(name)}`
 }
@@ -210,8 +245,9 @@ async function inspectRuntimeAssets(manifest, runtimeDir) {
       missing.push(asset)
       continue
     }
-    if (details.size !== asset.size || (await sha256File(path)) !== asset.sha256) {
-      mismatched.push(asset)
+    const sha256 = await sha256File(path)
+    if (details.size !== asset.size || sha256 !== asset.sha256) {
+      mismatched.push({ ...asset, actualSize: details.size, actualSha256: sha256 })
     }
   }
   return { missing, mismatched }
@@ -391,7 +427,8 @@ function buildRuntimeAssets({ manifest, sourceRootFor, runtimeDir, python }) {
 
 async function exportRuntimeAssets({ manifest, options, runtimeDir, overrides }) {
   const sourceRootFor =
-    overrides.sourceRootFor ?? ((source) => join(SOURCE_CACHE_ROOT, source.directory))
+    overrides.sourceRootFor ??
+    ((source) => join(resolveSourceCacheRoot(overrides.sourceRoot), source.directory))
   const python = overrides.python ?? process.env.LS101_PYTHON ?? 'python3'
 
   await ensureSources(manifest, {
@@ -412,7 +449,10 @@ async function exportRuntimeAssets({ manifest, options, runtimeDir, overrides })
     )
   }
   for (const asset of after.mismatched) {
-    const message = `导出资产与固定 SHA-256 不一致（可能是导出工具链版本差异）：${asset.path}`
+    const message =
+      `导出资产与固定清单不一致：${asset.path}（实际 ${asset.actualSize} B / ` +
+      `${asset.actualSha256.slice(0, 12)}…，期望 ${asset.size} B / ${asset.sha256.slice(0, 12)}…；` +
+      '导出工具链差异或文本换行符被转换都会导致）'
     if (options.verify) throw new Error(message)
     console.warn(`[pronunciation] 警告：${message}`)
   }
@@ -426,7 +466,8 @@ async function main(argv = process.argv.slice(2), overrides = {}) {
   const options = { ...parseOptions(argv), ...overrides }
   const manifest = overrides.manifest ?? PINNED_MANIFEST
   validateManifest(manifest)
-  const runtimeDir = overrides.runtimeDir ?? join(MODEL_ROOT, manifest.runtimeDirectory)
+  const runtimeDir =
+    overrides.runtimeDir ?? join(resolveModelRoot(overrides.modelRoot), manifest.runtimeDirectory)
 
   if (options.export) {
     return exportRuntimeAssets({ manifest, options, runtimeDir, overrides })
@@ -477,10 +518,11 @@ if (require.main === module) {
 
 module.exports = {
   DEFAULT_HF_ENDPOINT,
+  DEFAULT_MODEL_ROOT,
+  DEFAULT_SOURCE_CACHE_ROOT,
   DEFAULT_RELEASE_API_ENDPOINT,
   DEFAULT_RELEASE_ENDPOINT,
   MANIFEST_PATH,
-  MODEL_ROOT,
   PINNED_MANIFEST,
   RELEASE_TAG_PREFIX,
   RUNTIME_STATE_PATH,
@@ -496,8 +538,10 @@ module.exports = {
   releaseApiUrl,
   releaseAssetUrl,
   resolveHfEndpoint,
+  resolveModelRoot,
   resolveReleaseApiEndpoint,
   resolveReleaseEndpoint,
+  resolveSourceCacheRoot,
   runtimeAssets,
   sourceDirectory,
   validateManifest
