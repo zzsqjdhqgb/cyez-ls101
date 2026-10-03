@@ -75,6 +75,7 @@ describe('submission AIRouter adapter', () => {
       acoustic_phone_inventory: '39 CMU phones',
       reference_source: 'CMUdict',
       dictionary_source: 'test dictionary',
+      uncovered_words: [],
       phones: [],
       words: []
     })
@@ -166,6 +167,7 @@ function mockClient(): AIRouterClient {
     listSpeechRecognitionProviderModels: vi.fn().mockResolvedValue([]),
     getPronunciationAssessmentExtensionStatus: vi.fn(),
     importPronunciationAssessmentExtension: vi.fn().mockResolvedValue(null),
+    deletePronunciationAssessmentExtension: vi.fn(),
     generateImage: vi.fn(),
     generateText: vi.fn()
   }

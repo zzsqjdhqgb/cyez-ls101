@@ -291,7 +291,7 @@ export function assessCtcPronunciation(
   for (const reference of references) {
     const tokenIds = reference.phones.map((phone) => {
       const tokenId = inventory.byCmu.get(phone)?.tokenId
-      if (!Number.isSafeInteger(tokenId)) {
+      if (typeof tokenId !== 'number' || !Number.isSafeInteger(tokenId)) {
         throw new Error(`音素模型词表不包含 CMU 音素“${phone}”`)
       }
       return tokenId

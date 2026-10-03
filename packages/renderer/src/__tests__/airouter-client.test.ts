@@ -253,8 +253,6 @@ function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
     importSpeechRecognitionModelPackage: vi.fn(),
     deleteSpeechRecognitionModelPackage: vi.fn(),
     listSpeechRecognitionProviderModels: vi.fn(),
-    getPronunciationAssessmentExtensionStatus: vi.fn(),
-    importPronunciationAssessmentExtension: vi.fn(),
     startSpeechRecognition: vi.fn(),
     listPronunciationAssessmentModels: vi.fn(),
     getPronunciationAssessmentExtensionStatus: vi.fn(),
