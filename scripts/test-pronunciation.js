@@ -7,8 +7,9 @@
 const { existsSync, readFileSync } = require('node:fs')
 const { join, resolve } = require('node:path')
 const { Worker } = require('node:worker_threads')
+const { PINNED_MANIFEST, resolveModelRoot } = require('./download-pronunciation-model.js')
 
-const MODEL_DIRECTORY = 'charsiu-en_w2v2_ctc_libris_and_cv-int8'
+const MODEL_DIRECTORY = PINNED_MANIFEST.runtimeDirectory
 const PROVIDER_ID = 'builtin-cmu-phoneme'
 const MODEL_ID = 'en-w2v2-ctc-libris-and-cv-int8-70f5061'
 
@@ -34,7 +35,7 @@ function mediaTypeFor(path) {
 async function main() {
   const { audioPath, referenceText } = parseArgs(process.argv.slice(2))
   const workerPath = resolve('out/main/pronunciation-assessment-worker.js')
-  const modelDir = resolve('externals/ai/pronunciation/model', MODEL_DIRECTORY)
+  const modelDir = join(resolveModelRoot(), MODEL_DIRECTORY)
   if (!existsSync(workerPath)) throw new Error('请先运行 yarn electron-vite build')
   if (!existsSync(join(modelDir, 'onnx', 'model_quantized.onnx'))) {
     throw new Error('请先运行 node scripts/download-pronunciation-model.js')

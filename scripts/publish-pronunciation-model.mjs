@@ -36,7 +36,8 @@ import { pathToFileURL } from 'node:url'
 
 const require = createRequire(import.meta.url)
 const model = require('./download-pronunciation-model.js')
-const { MANIFEST_PATH, MODEL_ROOT, PINNED_MANIFEST, releaseAssetUrl, validateManifest } = model
+const { MANIFEST_PATH, PINNED_MANIFEST, releaseAssetUrl, resolveModelRoot, validateManifest } =
+  model
 
 const USER_AGENT = 'cyez-ls101-pronunciation-model-publisher'
 const SHA256_PATTERN = /^[a-f0-9]{64}$/
@@ -254,7 +255,7 @@ async function main(argv = process.argv.slice(2)) {
 
   let manifest = PINNED_MANIFEST
   validateManifest(manifest)
-  const runtimeDir = path.join(MODEL_ROOT, manifest.runtimeDirectory)
+  const runtimeDir = path.join(resolveModelRoot(), manifest.runtimeDirectory)
   const release = manifest.release
 
   console.log(`[publish] 清单：${MANIFEST_PATH}`)

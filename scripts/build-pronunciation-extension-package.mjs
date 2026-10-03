@@ -2,20 +2,18 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream, createWriteStream } from 'node:fs'
 import { mkdir, rename, rm, stat } from 'node:fs/promises'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import process from 'node:process'
 import { once } from 'node:events'
 import { Zip, ZipPassThrough, strToU8 } from 'fflate'
 
+const require = createRequire(import.meta.url)
+const { PINNED_MANIFEST, resolveModelRoot } = require('./download-pronunciation-model.js')
+
 const root = path.resolve(import.meta.dirname, '..')
-const sourceRoot = path.join(
-  root,
-  'externals',
-  'ai',
-  'pronunciation',
-  'model',
-  'charsiu-en_w2v2_ctc_libris_and_cv-int8'
-)
+// 默认使用 externals/ai/pronunciation/model，可用 LS101_PRONUNCIATION_MODEL_ROOT 覆盖。
+const sourceRoot = path.join(resolveModelRoot(), PINNED_MANIFEST.runtimeDirectory)
 const files = [
   ['config.json', 'model/config.json', 'model-config'],
   ['preprocessor_config.json', 'model/preprocessor_config.json', 'model-config'],

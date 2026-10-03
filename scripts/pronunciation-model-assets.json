@@ -29,8 +29,8 @@
       {
         "name": "charsiu-en_w2v2_ctc_libris_and_cv-int8-onnx-model_quantized.onnx",
         "path": "onnx/model_quantized.onnx",
-        "size": 121994834,
-        "sha256": "fbcb0e896f36dbf606cd8a269f6ff6470e55e9e939cb25d2577064a5f3b4e55f"
+        "size": 121960900,
+        "sha256": "85cd70d8f92b5cfa72f3f6c18ad5c20b1847ad08de33082a3185a1d556319a86"
       }
     ]
   },
