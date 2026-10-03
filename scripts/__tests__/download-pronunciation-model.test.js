@@ -216,13 +216,15 @@ test('inspects runtime assets against a manifest', async () => {
 })
 
 test('builds the exporter command from the manifest sources', () => {
+  const repoRoot = join(__dirname, '..', '..')
   const args = exporterArguments({
     manifest: PINNED_MANIFEST,
     sourceRootFor: (source) => `/sources/${source.directory}`,
     runtimeDir: '/runtime-output'
   })
 
-  assert.ok(args[0].endsWith(PINNED_MANIFEST.exporter))
+  // join() keeps the comparison valid on Windows too (backslash separators).
+  assert.equal(args[0], join(repoRoot, PINNED_MANIFEST.exporter))
   assert.deepEqual(args.slice(1), [
     '--model-dir',
     '/sources/model',
