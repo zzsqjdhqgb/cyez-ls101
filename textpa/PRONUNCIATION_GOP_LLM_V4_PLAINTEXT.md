@@ -126,8 +126,9 @@ evidence IDs or any kind of score. Never claim a pronunciation error is confirme
 `pronunciation-model-v1.0.0` Release；安装与 CI 只运行
 `scripts/download-pronunciation-model.js` 从该 Release 下载并按 size 与 SHA-256 校验，
 不需要 Python。重新导出用 `node scripts/download-pronunciation-model.js --export`
-（受限网络可用 `LS101_HF_ENDPOINT` 指向镜像），再用
-`node scripts/publish-pronunciation-model.mjs --publish` 发布新 Release。
+（受限网络可用 `LS101_HF_ENDPOINT` 指向镜像），再由
+`node scripts/publish-pronunciation-model.mjs --stage <dir> --notes <file>` 暂存、
+经 `gh release create` 发布新 Release。
 
 仍未解决：阈值 −0.35 与 `confidence` 是随旧模型标定的，换模型后分布整体上移，
 该阈值现在更宽松，是否重新标定需要中国学生语料；短句（快速应答）样本量小，

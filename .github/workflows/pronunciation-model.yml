@@ -225,12 +225,32 @@ jobs:
             exit 1
           fi
 
-      # Re-verifies the local assets, creates the release with the provenance body from
-      # releaseNotes(), uploads every pinned asset and re-checks size and digest afterwards.
-      - name: Publish release assets
+      # The pinned asset names differ from the runtime file names, so the assets are staged
+      # under their published names. Staging also re-verifies every copy against the manifest.
+      - name: Stage release assets
+        run: |
+          node scripts/publish-pronunciation-model.mjs \
+            --stage "$RUNNER_TEMP/pronunciation-release" \
+            --notes "$RUNNER_TEMP/pronunciation-release-notes.md"
+
+      # Upload with the GitHub CLI: it owns the API headers, so the publishing path no longer
+      # depends on hand-written request code.
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/publish-pronunciation-model.mjs --publish
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
+          RELEASE_PRERELEASE: ${{ needs.metadata.outputs.prerelease }}
+        run: |
+          flags=()
+          if [ "$RELEASE_PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" \
+            --repo "$GH_REPO" \
+            --target "${{ github.sha }}" \
+            --title "$RELEASE_TAG" \
+            --notes-file "$RUNNER_TEMP/pronunciation-release-notes.md" \
+            "${flags[@]}" \
+            "$RUNNER_TEMP/pronunciation-release"/*
 
       # End-to-end check of the install path: delete the exported files, download them again
       # from the release and verify SHA-256 against the manifest plus the release metadata.

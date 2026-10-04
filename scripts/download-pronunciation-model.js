@@ -17,8 +17,8 @@
  * 上游（charsiu）没有可直接下载的 ONNX，因此换模型或重新导出时先按固定 revision 与
  * SHA-256 下载两个上游仓库（模型权重 + CMU 音素 tokenizer），再调用
  * `scripts/export-pronunciation-model.py` 导出 fp32 ONNX 并做 INT8 量化，最后按清单
- * 核对产物；产物通过 `scripts/publish-pronunciation-model.mjs` 发布到固定 Release 后，
- * 安装路径才不再需要 Python。
+ * 核对产物；产物由 `scripts/publish-pronunciation-model.mjs` 暂存后经 `gh release create`
+ * 发布到固定 Release，安装路径才不再需要 Python。
  *
  * 受限网络可用 `LS101_RELEASE_ENDPOINT` 指向 GitHub Release 镜像、
  * `LS101_RELEASE_API_ENDPOINT` 指向 Release API 镜像、`LS101_HF_ENDPOINT`
@@ -457,7 +457,7 @@ async function exportRuntimeAssets({ manifest, options, runtimeDir, overrides })
     console.warn(`[pronunciation] 警告：${message}`)
   }
   console.log(
-    '[pronunciation] 运行时资产导出完成；发布前请运行 node scripts/publish-pronunciation-model.mjs'
+    '[pronunciation] 运行时资产导出完成；发布前请运行 node scripts/publish-pronunciation-model.mjs --stage <dir> --notes <file> 核对并暂存'
   )
   return { method: 'exported', repaired: after.mismatched.length }
 }
@@ -481,7 +481,7 @@ async function main(argv = process.argv.slice(2), overrides = {}) {
   }).catch((error) => {
     if (/HTTP 404/.test(error.message)) {
       throw new Error(
-        `${error.message}\n发音模型 Release "${manifest.release.tag}" 还没有发布对应资产；维护者需要先运行 node scripts/publish-pronunciation-model.mjs --publish。`
+        `${error.message}\n发音模型 Release "${manifest.release.tag}" 还没有发布对应资产；维护者需要先以 mode=publish 运行 pronunciation-model 工作流。`
       )
     }
     throw error
