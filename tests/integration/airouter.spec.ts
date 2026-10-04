@@ -3,9 +3,9 @@ import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { strToU8, zipSync } from 'fflate'
+import { createTemporaryDirectory } from '../support/temporary-directory'
 import { MOCK_PNG_BASE64, MockAiServer } from './support/mock-ai-server'
 import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
 
@@ -82,12 +82,12 @@ interface SpeechRecognitionEvent {
 interface PronunciationAssessmentEvent {
   type: 'result' | 'error'
   result?: {
-    referenceText: string
-    recognizedPhones: string[]
-    overallScore: number
+    schema_version: 2
+    reference_text: string
+    recognized_phones: string[]
+    gop_method: 'viterbi'
+    phones: unknown[]
     words: unknown[]
-    pauses: unknown[]
-    feedbackMarkdown: string
   }
   message?: string
 }
@@ -151,7 +151,7 @@ test.afterAll(async () => mockServer.close())
 
 test.beforeEach(async () => {
   mockServer.reset()
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-airouter-'))
+  userDataDir = await createTemporaryDirectory('ls101-airouter-')
   pageErrors = []
   electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()
@@ -340,8 +340,8 @@ async function collectPronunciationAssessment(
       new Promise((resolve) => {
         window.airouter.startPronunciationAssessment(
           {
-            providerConfigId: 'builtin-facebook-phoneme',
-            modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f',
+            providerConfigId: 'builtin-cmu-phoneme',
+            modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061',
             referenceText: text,
             audio: {
               data: new Uint8Array(bytes),
@@ -1739,7 +1739,7 @@ test('AR-32d imports and executes the required pronunciation extension in Electr
     }))
   ).resolves.toMatchObject({
     status: {
-      extensionId: 'facebook-wav2vec2-pronunciation',
+      extensionId: 'charsiu-en-w2v2-pronunciation',
       requiredVersion: '1.0.0',
       installedVersion: '1.0.0',
       state: 'imported',
@@ -1747,8 +1747,8 @@ test('AR-32d imports and executes the required pronunciation extension in Electr
     },
     models: [
       {
-        providerId: 'builtin-facebook-phoneme',
-        modelId: 'wav2vec2-lv-60-espeak-cv-ft-int8-c69750f'
+        providerId: 'builtin-cmu-phoneme',
+        modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061'
       }
     ]
   })
@@ -1758,12 +1758,32 @@ test('AR-32d imports and executes the required pronunciation extension in Electr
   expect(assessment).toMatchObject({
     type: 'result',
     result: {
-      referenceText: 'Hi.',
-      recognizedPhones: expect.any(Array),
-      overallScore: expect.any(Number),
-      words: expect.any(Array),
-      pauses: expect.any(Array),
-      feedbackMarkdown: expect.any(String)
+      schema_version: 2,
+      reference_text: 'Hi.',
+      recognized_phones: expect.any(Array),
+      gop_method: 'viterbi',
+      phones: expect.any(Array),
+      words: expect.any(Array)
+    }
+  })
+
+  await page.getByRole('button', { name: '删除扩展包 AI 语音评测' }).click()
+  const deleteConfirmation = page.getByRole('alertdialog', {
+    name: '删除 AI 语音评测扩展包？'
+  })
+  await deleteConfirmation.getByRole('button', { name: '删除扩展包' }).click()
+  await expect(page.getByText('未导入', { exact: true })).toBeVisible()
+  await expect(
+    page.evaluate(async () => ({
+      models: await window.airouter.listPronunciationAssessmentModels(),
+      status: await window.airouter.getPronunciationAssessmentExtensionStatus()
+    }))
+  ).resolves.toMatchObject({
+    models: [],
+    status: {
+      extensionId: 'charsiu-en-w2v2-pronunciation',
+      requiredVersion: '1.0.0',
+      state: 'not-imported'
     }
   })
 })

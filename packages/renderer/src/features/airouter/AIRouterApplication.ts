@@ -65,6 +65,7 @@ export interface AIRouterApplication {
   probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
   getPronunciationExtensionStatus(): Promise<AIRouterPronunciationAssessmentExtensionStatus>
   importPronunciationExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null>
+  deletePronunciationExtension(): Promise<void>
   listSpeechRecognitionConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
   saveSpeechRecognitionConfig(
     config: AIRouterSpeechRecognitionProviderConfigInput
@@ -110,6 +111,7 @@ export function createAIRouterApplication(
     probeQwenTtsCuda: () => client.probeQwenTtsCuda(),
     getPronunciationExtensionStatus: () => client.getPronunciationAssessmentExtensionStatus(),
     importPronunciationExtension: () => client.importPronunciationAssessmentExtension(),
+    deletePronunciationExtension: () => client.deletePronunciationAssessmentExtension(),
     listSpeechRecognitionConfigs: () => client.listSpeechRecognitionProviderConfigs(),
     saveSpeechRecognitionConfig: (config) => client.saveSpeechRecognitionProviderConfig(config),
     deleteSpeechRecognitionConfig: (id) => client.deleteSpeechRecognitionProviderConfig(id),

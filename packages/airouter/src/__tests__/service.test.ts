@@ -215,6 +215,39 @@ describe('AIRouterService', () => {
     )
   })
 
+  it('forwards per-request system, temperature, and bounded output options', async () => {
+    const saved = await service.saveProviderConfig({
+      name: '测试 OpenAI',
+      type: 'openai-compatible',
+      models: [{ id: 'test-model', enabled: true, maxOutputTokens: 100_000 }]
+    })
+    streamTextMock.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: 'finish', finishReason: 'stop' }
+      })()
+    })
+
+    for await (const _chunk of service.generateText({
+      providerConfigId: saved.id,
+      modelId: 'test-model',
+      prompt: 'user evidence',
+      systemPrompt: 'frozen system',
+      temperature: 0,
+      maxOutputTokens: 65_535
+    })) {
+      // Consume the stream.
+    }
+
+    expect(streamTextMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: 'user evidence',
+        system: 'frozen system',
+        temperature: 0,
+        maxOutputTokens: 65_535
+      })
+    )
+  })
+
   it('uses the lower models.dev output limit and forwards reasoning effort', async () => {
     const saved = await service.saveProviderConfig({
       name: 'Reasoning OpenAI',

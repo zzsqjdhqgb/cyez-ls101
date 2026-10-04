@@ -19,8 +19,61 @@ import { SubmissionSettlementPage } from '../features/submissions/SubmissionSett
 
 const aiAdapterMocks = vi.hoisted(() => ({
   recognize: vi.fn().mockResolvedValue('recognized answer'),
-  correct: vi.fn().mockResolvedValue('pronunciation feedback'),
-  generate: vi.fn().mockResolvedValue('{"score":4,"comment":"AI comment"}')
+  assess: vi.fn().mockImplementation(async ({ referenceText }: { referenceText: string }) => {
+    const text = referenceText.split(/\s+/)[0]
+    const phone = {
+      index: 0,
+      word_index: 0,
+      phone_index: 0,
+      word: text,
+      expected: 'R',
+      expected_ipa: 'ɹ',
+      acoustic_winner: 'L',
+      acoustic_winner_ipa: 'l',
+      best_alternative: 'L',
+      best_alternative_ipa: 'l',
+      expected_log_p: -2,
+      alternative_log_p: -0.1,
+      gop_log_ratio: -1,
+      confidence: 0.25,
+      start_ms: 0,
+      end_ms: 100
+    }
+    return {
+      schema_version: 2,
+      reference_text: referenceText,
+      audio_duration_ms: 100,
+      frame_count: 10,
+      recognized_phones: ['L'],
+      recognized_phones_ipa: ['l'],
+      gop_method: 'viterbi',
+      alignment_path_score: -0.5,
+      acoustic_model: 'test model',
+      acoustic_phone_inventory: '39 CMU phones',
+      reference_source: 'CMUdict',
+      dictionary_source: 'test dictionary',
+      uncovered_words: [] as string[],
+      phones: [phone],
+      words: [
+        {
+          word_index: 0,
+          text,
+          expected_arpabet: ['R'],
+          expected_ipa: ['ɹ'],
+          start_ms: 0,
+          end_ms: 100,
+          phones: [phone]
+        }
+      ]
+    }
+  }),
+  generate: vi.fn().mockImplementation(async (prompt: string) => {
+    const marker = '按单词组织的低 GOP 证据 JSON：\n'
+    if (prompt.includes(marker)) {
+      return '单条声学证据不足以确认发音问题，暂不直接反馈；建议结合原录音复听后对照练习。'
+    }
+    return '{"score":4,"comment":"AI comment"}'
+  })
 }))
 
 vi.mock('../features/submissions/SubmissionAIRouterAdapter', () => ({
@@ -41,8 +94,8 @@ vi.mock('../features/submissions/SubmissionAIRouterAdapter', () => ({
       }
     ]
   }),
+  createAIRouterPronunciationAssessor: vi.fn(() => ({ assess: aiAdapterMocks.assess })),
   createAIRouterSpeechRecognizer: vi.fn(() => ({ recognize: aiAdapterMocks.recognize })),
-  createAIRouterSpeechCorrector: vi.fn(() => ({ correct: aiAdapterMocks.correct })),
   createAIRouterTextGradingModel: vi.fn(() => ({ generate: aiAdapterMocks.generate }))
 }))
 
@@ -210,7 +263,7 @@ describe('submission grading UI', () => {
     fireEvent.click(await screen.findByRole('button', { name: '全部审查' }))
     expect(await screen.findByText('语音识别与发音纠正')).toBeInTheDocument()
     expect(screen.getByText('识别文本：recognized answer')).toBeInTheDocument()
-    expect(screen.getByText('pronunciation feedback')).toBeInTheDocument()
+    expect(screen.getAllByText(/单条声学证据不足以确认发音问题/)).not.toHaveLength(0)
     fireEvent.change(await screen.findByLabelText('分数'), { target: { value: '3.125' } })
     fireEvent.change(screen.getByLabelText('评语'), { target: { value: 'Reviewed' } })
     fireEvent.click(screen.getByRole('button', { name: '确认本题' }))

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type JSX } from 'react'
-import { CheckCircle2, Download, Package, Upload } from 'lucide-react'
+import { CheckCircle2, Download, Package, Trash2, Upload } from 'lucide-react'
 import type { AIRouterApplication } from './AIRouterApplication'
 import { airouterApplication } from './AIRouterApplication'
 import {
@@ -10,6 +10,7 @@ import {
 } from './AIRouterFeedback'
 import { formatAIRouterError } from './airouterError'
 import { Button } from '../../components/ui/Button'
+import { ConfirmModal } from '../../components/ui/ConfirmModal'
 import { SettingsContent, SettingsSection } from '../../components/settings/SettingsContent'
 import { toast } from '../../components/ui/toast'
 import styles from './AIRouterSettingsPage.module.css'
@@ -26,6 +27,8 @@ export function AIRouterPronunciationSettingsPage({
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState<AIRouterFeedbackValue | undefined>()
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const load = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -54,6 +57,21 @@ export function AIRouterPronunciationSettingsPage({
       toast.success('AI 语音评测扩展包已导入')
     } catch (reason) {
       setFeedback({ kind: 'error', text: formatAIRouterError(reason, '扩展包导入失败') })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const deleteExtension = async (): Promise<void> => {
+    setBusy(true)
+    setDeleteError(null)
+    try {
+      await application.deletePronunciationExtension()
+      setDeleteConfirmationOpen(false)
+      await load()
+      toast.success('AI 语音评测扩展包已删除')
+    } catch (reason) {
+      setDeleteError(formatAIRouterError(reason, '扩展包删除失败'))
     } finally {
       setBusy(false)
     }
@@ -110,7 +128,19 @@ export function AIRouterPronunciationSettingsPage({
               导入扩展包
             </Button>
           ) : (
-            <CheckCircle2 aria-label="扩展包已就绪" />
+            <button
+              aria-label={`删除扩展包 ${status.name}`}
+              className={styles.removeModel}
+              disabled={busy}
+              onClick={() => {
+                setDeleteError(null)
+                setDeleteConfirmationOpen(true)
+              }}
+              title="删除扩展包"
+              type="button"
+            >
+              <Trash2 aria-hidden="true" />
+            </button>
           )}
         </div>
         <AIRouterOperationFeedback value={feedback} />
@@ -121,6 +151,21 @@ export function AIRouterPronunciationSettingsPage({
           </div>
         ) : null}
       </SettingsSection>
+      <ConfirmModal
+        busy={busy}
+        closeOnConfirm={false}
+        confirmLabel="删除扩展包"
+        danger
+        error={deleteError}
+        message={`将删除“${status.name}”v${status.requiredVersion} 及其本地模型资源。删除后需要重新导入才能使用语音评测。`}
+        open={deleteConfirmationOpen}
+        title="删除 AI 语音评测扩展包？"
+        onCancel={() => {
+          setDeleteConfirmationOpen(false)
+          setDeleteError(null)
+        }}
+        onConfirm={() => void deleteExtension()}
+      />
     </SettingsContent>
   )
 }

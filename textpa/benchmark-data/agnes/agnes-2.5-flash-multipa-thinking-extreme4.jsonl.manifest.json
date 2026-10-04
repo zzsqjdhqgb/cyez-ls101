@@ -1,0 +1,151 @@
+{
+  "config": {
+    "api_key_env": "TEXTPA_API_KEY",
+    "api_style": "openai-compatible-chat-completions",
+    "base_url": "https://apihub.agnes-ai.com/v1",
+    "concurrency": 20,
+    "endpoint": "chat/completions",
+    "max_tokens": 65535,
+    "minimum_request_start_interval_seconds": 3.25,
+    "model": "agnes-2.5-flash",
+    "retries": 12,
+    "temperature": "provider default (omitted)",
+    "thinking": {
+      "chat_template_kwargs": {
+        "enable_thinking": true
+      }
+    },
+    "timeout_seconds": 300
+  },
+  "dataset": {
+    "name": "MultiPA paper cue benchmark",
+    "source_records": 50,
+    "evaluated_records": 46,
+    "split": "paper_cues minus four calibration anchors"
+  },
+  "calibration": {
+    "enabled": true,
+    "anchor_file": "benchmark-data/calibration/multipa-extreme4-anchors.jsonl",
+    "anchor_file_sha256": "401d953328630d7133de1facc9e1d82e96d8ddf143b635e2883d7122557db211",
+    "exclude_from_evaluation": true,
+    "anchor_count": 4,
+    "selection_note": "Transductive MultiPA anchors selected from the 50-item benchmark; anchor records are excluded from the reported 46-item score.",
+    "anchors": [
+      {
+        "id": "957ae206-f481-4d95-8331-975d9e973a21---0bc0695c-10d9-406c-a7f6-8112ab87068.wav",
+        "role": "accuracy_low",
+        "accuracy": 1.6,
+        "fluency": 2.0
+      },
+      {
+        "id": "b7fc44a4-a030-48d0-9199-b08957ce298e---ab535313-53da-4106-8a87-689302f4007.wav",
+        "role": "accuracy_high",
+        "accuracy": 4.8,
+        "fluency": 4.0
+      },
+      {
+        "id": "cbfa6fe0-f25d-4b44-816e-79938af0c780---540a6466-10c4-494e-9004-2a65e3ae33a.wav",
+        "role": "fluency_low",
+        "accuracy": 2.2,
+        "fluency": 1.4
+      },
+      {
+        "id": "b5607279-05ef-42d4-bccd-95d666e21ea7---2abe4804-7a52-4433-a68a-d02b15452dd.wav",
+        "role": "fluency_high",
+        "accuracy": 4.4,
+        "fluency": 4.4
+      }
+    ]
+  },
+  "comparison_on_same_46_ids": {
+    "no_anchor_source": "benchmark-data/agnes/agnes-2.5-flash-multipa-thinking.jsonl",
+    "no_anchor_note": "The four anchor IDs were removed from the existing 50-item no-anchor output before scoring.",
+    "no_anchor": {
+      "n": 46,
+      "llm_only_accuracy_pcc": 0.43628390833105646,
+      "fluency_pcc": 0.595165860532316,
+      "paper_fused_accuracy_pcc": 0.5749257714354156,
+      "deployment_accuracy_pcc": 0.5795814939733396
+    },
+    "with_anchors": {
+      "n": 46,
+      "llm_only_accuracy_pcc": 0.25795930997234967,
+      "fluency_pcc": 0.5706390816685615,
+      "paper_fused_accuracy_pcc": 0.5196485380873199,
+      "deployment_accuracy_pcc": 0.4802393819101319
+    }
+  },
+  "evaluation": {
+    "n": 46,
+    "llm_only": {
+      "accuracy_field": "assessment.accuracy",
+      "accuracy_pcc": 0.25795930997234967,
+      "fluency_field": "assessment.fluency",
+      "fluency_pcc": 0.5706390816685615
+    },
+    "paper_fused": {
+      "accuracy_field": "scores.paper_cohort_accuracy",
+      "accuracy_pcc": 0.5196485380873199,
+      "fluency_field": "assessment.fluency",
+      "fluency_pcc": 0.5706390816685615
+    },
+    "deployment_fused": {
+      "accuracy_field": "scores.deployment_accuracy_1_5",
+      "accuracy_pcc": 0.4802393819101319,
+      "fluency_field": "assessment.fluency",
+      "fluency_pcc": 0.5706390816685615
+    }
+  },
+  "execution": {
+    "observed_billing_errors": 0,
+    "observed_unresolved_rate_limit_errors": 0,
+    "usage": {
+      "prompt_tokens": 113814,
+      "completion_tokens": 54411,
+      "total_tokens": 168225,
+      "reasoning_tokens": 42550,
+      "text_tokens": 11861
+    }
+  },
+  "inputs": [
+    {
+      "path": "benchmark-data/multipa-reference/paper_cues.jsonl",
+      "records": 50,
+      "sha256": "f0ab31f1c78bc7735ac1a9adae5266b6fd76d9f50d81f5e7341b12d92d82b02a"
+    }
+  ],
+  "output": {
+    "path": "benchmark-data/agnes/agnes-2.5-flash-multipa-thinking-extreme4.jsonl",
+    "records": 46,
+    "bytes": 141832,
+    "sha256": "0935876a5083efc45fe6aa747fc8033bf1007d8340004355cab15963e3c810ff"
+  },
+  "finalized_output": {
+    "path": "benchmark-data/agnes/agnes-2.5-flash-multipa-thinking-extreme4-final.jsonl",
+    "records": 46,
+    "bytes": 164707,
+    "sha256": "1edf930cc7d470e77927a5d644ec03cacb4559e70ad5ae752040ce337754ae0f",
+    "canonical_ipa": {
+      "phonemizer": "3.4.0",
+      "espeak_ng": "1.51"
+    }
+  },
+  "integrity": {
+    "raw_jsonl_valid": true,
+    "raw_unique_ids": 46,
+    "raw_missing_assessments": 0,
+    "anchor_ids_in_raw_output": 0,
+    "final_jsonl_valid": true,
+    "final_unique_ids": 46,
+    "final_missing_score_records": 0
+  },
+  "runner": {
+    "path": "scripts/run_agnes_eval.py",
+    "sha256": "fb3939d9aefda4d7c7726adbd35e5025bc8d531b63243851651705cbc38c3830"
+  },
+  "schema_version": 1,
+  "stage": "finalized",
+  "started_at": "2026-08-20T07:27:48.914437000Z",
+  "completed_at": "2026-08-20T07:36:03.693043600Z",
+  "status": "completed"
+}

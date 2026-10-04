@@ -1,7 +1,6 @@
 import { expect, test, type ElectronApplication } from '@playwright/test'
-import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import path from 'node:path'
+import { rm } from 'node:fs/promises'
+import { createTemporaryDirectory } from '../support/temporary-directory'
 import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
 
 let electronApp: ElectronApplication
@@ -13,7 +12,7 @@ test.afterEach(async () => {
 })
 
 test('keeps the startup animation visible for its full animation and settle delay', async () => {
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-startup-minimum-duration-'))
+  userDataDir = await createTemporaryDirectory('ls101-startup-minimum-duration-')
   electronApp = await launchIntegrationApp(userDataDir)
   const page = await electronApp.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -50,7 +49,7 @@ test('keeps the startup animation visible for its full animation and settle dela
 })
 
 test('shows an animated progress indicator while application initialization is pending', async () => {
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-startup-progress-'))
+  userDataDir = await createTemporaryDirectory('ls101-startup-progress-')
   electronApp = await launchIntegrationApp(userDataDir, {
     environment: { LS101_INTEGRATION_STARTUP_DELAY_MS: '4000' }
   })

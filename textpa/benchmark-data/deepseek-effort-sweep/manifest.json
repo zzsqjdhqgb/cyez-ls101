@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "dataset": "MultiPA paper_cues（50 条，作者公开中间结果）",
+  "purpose": "deepseek-flash 四档 reasoning_effort × {零样本, 四锚点} 的对照；供 speechocean762 大轮次选档",
+  "endpoint": "https://api.deepseek.com/v1/chat/completions（经本地代理注入 Key）",
+  "model": "deepseek-flash",
+  "parameters": {
+    "max_tokens": 65535,
+    "temperature": 0,
+    "reasoning_effort": "见各条件"
+  },
+  "inputs": {
+    "cues": {
+      "path": "../multipa-reference/paper_cues.jsonl",
+      "sha256": "f0ab31f1c78bc7735ac1a9adae5266b6fd76d9f50d81f5e7341b12d92d82b02a"
+    },
+    "annotations": {
+      "path": "../multipa-reference/annotation.csv",
+      "sha256": "ba0ec822068b3e2648277a5f38d925908c48ab063bf0b99a95f8c3caba76e0a9"
+    },
+    "anchors": {
+      "path": "../calibration/multipa-extreme4-anchors.jsonl",
+      "sha256": "401d953328630d7133de1facc9e1d82e96d8ddf143b635e2883d7122557db211"
+    },
+    "prompt": "textpa_repro.prompting.render_prompt(paper_compat=True)"
+  },
+  "protocol": {
+    "zero-shot": "50 条全部评估",
+    "four-anchor": "4 锚点入 prompt，按 cli.py 语义校验并排除，评估其余 46 条"
+  },
+  "conditions": {
+    "none/zero-shot": {
+      "file": "deepseek-flash-multipa-none.jsonl.gz",
+      "records": 50,
+      "evaluated": 50,
+      "failed": 0,
+      "prompt_tokens": 29759,
+      "completion_tokens": 15525,
+      "cache_hit_tokens": 0,
+      "mean_completion_tokens": 310.5,
+      "accuracy_pcc": 0.516421,
+      "fluency_pcc": 0.49627,
+      "accuracy_mae": 0.84,
+      "mean_seconds": 2.0,
+      "sha256_uncompressed": "e4807a203b1e9fe187cb94f212fea688bc769706f02c5fdf179820436b0a065a",
+      "sha256": "fbf62959bc43c258c69675dcfd2407cc3c202614f699dadb64404d03764d1143",
+      "bytes_uncompressed": 114414,
+      "bytes_compressed": 18849
+    },
+    "minimal/zero-shot": {
+      "file": "deepseek-flash-multipa-minimal.jsonl.gz",
+      "records": 50,
+      "evaluated": 50,
+      "failed": 0,
+      "prompt_tokens": 31059,
+      "completion_tokens": 175201,
+      "cache_hit_tokens": 0,
+      "mean_completion_tokens": 3504.0,
+      "accuracy_pcc": 0.388813,
+      "fluency_pcc": 0.641558,
+      "accuracy_mae": 1.32,
+      "mean_seconds": 17.1,
+      "sha256_uncompressed": "64f91dc0fa05965aac79db4d2a1500c8b59a83d6836635777abac8f91cbe3f4e",
+      "sha256": "03943e489af85e813eecdde56169f2a4c9ecbc3773d25ac97504eca84cbc0742",
+      "bytes_uncompressed": 94519,
+      "bytes_compressed": 16903
+    },
+    "high/zero-shot": {
+      "file": "deepseek-flash-multipa-high.jsonl.gz",
+      "records": 50,
+      "evaluated": 50,
+      "failed": 0,
+      "prompt_tokens": 31059,
+      "completion_tokens": 310070,
+      "cache_hit_tokens": 0,
+      "mean_completion_tokens": 6201.4,
+      "accuracy_pcc": 0.60403,
+      "fluency_pcc": 0.583472,
+      "accuracy_mae": 1.23,
+      "mean_seconds": 28.7,
+      "sha256_uncompressed": "42ee020f2024bffc842a14df85d443691030e92e9414e2fc38570844390b06ce",
+      "sha256": "a9d4c65ab14725406f08d7d6a00e11f256bd7c5754eeb18274a7bf4b3af17044",
+      "bytes_uncompressed": 99727,
+      "bytes_compressed": 17940
+    },
+    "max/zero-shot": {
+      "file": "deepseek-flash-multipa-max.jsonl.gz",
+      "records": 50,
+      "evaluated": 49,
+      "failed": 1,
+      "prompt_tokens": 31059,
+      "completion_tokens": 468429,
+      "cache_hit_tokens": 0,
+      "mean_completion_tokens": 9368.6,
+      "accuracy_pcc": 0.457285,
+      "fluency_pcc": 0.590045,
+      "accuracy_mae": 1.1102,
+      "mean_seconds": 44.3,
+      "sha256_uncompressed": "76613e9dcad2fc0e5fab91e1d5a2571127633b2728c5b704f1e472839675104d",
+      "sha256": "bbdaabf85bdfa4d978460ccfda6c6dc5d7e122ad141396690dcb2f84a98b86a5",
+      "bytes_uncompressed": 97994,
+      "bytes_compressed": 17951
+    },
+    "none/four-anchor": {
+      "file": "deepseek-flash-multipa-none-extreme4.jsonl.gz",
+      "records": 46,
+      "evaluated": 46,
+      "failed": 0,
+      "prompt_tokens": 92202,
+      "completion_tokens": 15341,
+      "cache_hit_tokens": 47872,
+      "mean_completion_tokens": 333.5,
+      "accuracy_pcc": 0.635168,
+      "fluency_pcc": 0.651947,
+      "accuracy_mae": 0.4217,
+      "mean_seconds": 2.3,
+      "sha256_uncompressed": "41e39620353a2fdc2e7676c57dd816a294d6013324f23161d506fd0f08f56aab",
+      "sha256": "d027b22051c44f4c18d166d9d9bdcbe4c2d3226c0d93280354aed81c2cbe98db",
+      "bytes_uncompressed": 112123,
+      "bytes_compressed": 17929
+    },
+    "minimal/four-anchor": {
+      "file": "deepseek-flash-multipa-minimal-extreme4.jsonl.gz",
+      "records": 46,
+      "evaluated": 46,
+      "failed": 0,
+      "prompt_tokens": 93398,
+      "completion_tokens": 275732,
+      "cache_hit_tokens": 52096,
+      "mean_completion_tokens": 5994.2,
+      "accuracy_pcc": 0.415197,
+      "fluency_pcc": 0.716848,
+      "accuracy_mae": 0.6391,
+      "mean_seconds": 28.1,
+      "sha256_uncompressed": "6376000b79c610c2689c83a81c0a744f533b7f90dd313ee9d2e79506fbce99c1",
+      "sha256": "d8553d5ddf5ad2171e7d07281710ed9707d08bdb4fa49d5edbc2f97b23975805",
+      "bytes_uncompressed": 84804,
+      "bytes_compressed": 15271
+    },
+    "high/four-anchor": {
+      "file": "deepseek-flash-multipa-high-extreme4.jsonl.gz",
+      "records": 46,
+      "evaluated": 46,
+      "failed": 0,
+      "prompt_tokens": 93398,
+      "completion_tokens": 567066,
+      "cache_hit_tokens": 49408,
+      "mean_completion_tokens": 12327.5,
+      "accuracy_pcc": 0.505803,
+      "fluency_pcc": 0.71395,
+      "accuracy_mae": 0.5087,
+      "mean_seconds": 54.8,
+      "sha256_uncompressed": "e956a5429f8386ed88d7987b10cf3eb3effd670e15279bd47ea3e3763769511f",
+      "sha256": "3af94ef5de5decb68ca0960149e324b62fbb70d22aee6109c7f9520206340686",
+      "bytes_uncompressed": 86238,
+      "bytes_compressed": 15871
+    },
+    "max/four-anchor": {
+      "file": "deepseek-flash-multipa-max-extreme4.jsonl.gz",
+      "records": 46,
+      "evaluated": 45,
+      "failed": 1,
+      "prompt_tokens": 91361,
+      "completion_tokens": 768164,
+      "cache_hit_tokens": 49280,
+      "mean_completion_tokens": 16699.2,
+      "accuracy_pcc": 0.543239,
+      "fluency_pcc": 0.75827,
+      "accuracy_mae": 0.4933,
+      "mean_seconds": 77.8,
+      "sha256_uncompressed": "52453427ab23f740731a8304adc56fd94e3acdb2f1fba526f0e2660732265b2e",
+      "sha256": "b873edf4b84b89cc95e728c4216aa5d14a10f9f545e499d6ebb486804cc6f445",
+      "bytes_uncompressed": 86968,
+      "bytes_compressed": 15953
+    }
+  },
+  "totals": {
+    "prompt_tokens": 493295,
+    "completion_tokens": 2595528,
+    "requests": 384
+  },
+  "call_logs": {
+    "file": "call-logs.jsonl.gz",
+    "format": "gzip (mtime=0, level 9)，解压后为 JSONL，一行一次调用",
+    "read": "gunzip -c call-logs.jsonl.gz | jq -c 'select(.tier==\"none\")'",
+    "records": 382,
+    "bytes_compressed": 2604384,
+    "bytes_uncompressed": 10244060,
+    "sha256_uncompressed": "a455d4e0682af6800ed8313da8c42786f8786b7889afc1cde7200a0760e4c0ab",
+    "sha256": "a2f162a59a7b34ada33bff837dd68992e0dda5a761a80787afba2a5ec84bade3",
+    "duration_ms_present": 382,
+    "contents": "完整请求体、完整响应体（含 reasoning_content）、usage、耗时、请求/响应 sha256；鉴权头已打码为 Bearer [REDACTED]"
+  },
+  "runner": {
+    "path": "../../scripts/run_effort_sweep.py",
+    "sha256": "dc35b2c2d64ee15c286e859b4615116f0429e35f9e3d3c344daca8f0a6527c93",
+    "note": "stdlib-only；prompt 构造与结果解析复用 textpa_repro，与 CLI 同一套代码"
+  }
+}

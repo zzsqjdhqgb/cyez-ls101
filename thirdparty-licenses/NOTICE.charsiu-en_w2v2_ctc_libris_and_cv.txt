@@ -1,0 +1,42 @@
+Copyright and licence notice for the bundled pronunciation acoustic model.
+
+Model:  charsiu/en_w2v2_ctc_libris_and_cv  (wav2vec2-base acoustic model,
+        39 unstressed CMU/ARPAbet phone tokens plus [SIL] / [UNK] / [PAD])
+Local runtime directory:
+        externals/ai/pronunciation/model/charsiu-en_w2v2_ctc_libris_and_cv-int8
+Pinned upstream revisions (see scripts/pronunciation-model-assets.json):
+        model     charsiu/en_w2v2_ctc_libris_and_cv @ 70f5061463f2927a27236d7e9d309cf0fd5282b3
+        tokenizer charsiu/tokenizer_en_cmu          @ 10507401aedf5e0aba164128535b49225ff95260
+Upstream code repository: https://github.com/lingjzhu/charsiu  (MIT)
+Base model: facebook/wav2vec2-base (Apache License 2.0)
+
+Provenance of the shipped artefacts
+-----------------------------------
+The upstream Hugging Face repositories above publish PyTorch and tokenizer
+files only; they do not publish an ONNX export. The four runtime assets in
+scripts/pronunciation-model-assets.json (config.json, vocab.json,
+preprocessor_config.json, onnx/model_quantized.onnx) are therefore produced by
+the maintainers with scripts/export-pronunciation-model.py from the pinned
+revisions, exporting fp32 ONNX and quantising MatMul to INT8, and are published
+as the pinned GitHub Release `pronunciation-model-v1.0.0` of this repository.
+Every consumer verifies the recorded size and SHA-256 before use.
+
+Licence status (UNRESOLVED - see docs/engineering/licensing-audit.md)
+--------------------------------------------------------------------
+The Hugging Face model repository charsiu/en_w2v2_ctc_libris_and_cv does NOT
+declare a licence (no cardData.license, no licence tag). The author's code
+repository is MIT and the base checkpoint facebook/wav2vec2-base is Apache-2.0,
+but neither fact automatically covers the trained weights.
+
+This file records the provenance for audit purposes. It is not a substitute for
+a licence grant: redistribution of the quantised ONNX weights and of any
+package derived from them (including the pronunciation extension ZIP) should be
+confirmed with the upstream author, or the model should be replaced with one
+whose licence is declared, before this repository or its installers are
+distributed outside the maintainers' organisation.
+
+The licence text for the previously bundled model is kept in
+LICENSE.facebook-wav2vec2-lv-60-espeak-cv-ft.txt. That model is no longer used
+by the application; the file remains only so that existing installations can be
+traced, and it can be removed from electron-builder.yml once no released build
+ships it.

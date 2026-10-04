@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { parentPort, workerData } from 'node:worker_threads'
 import { createRequire } from 'node:module'
 import type * as OnnxRuntime from 'onnxruntime-node'
-import { assessCtcPronunciation } from '@ls101/grading-engine/pronunciation'
+import { assessCtcPronunciation, resolveBlankTokenId } from '@ls101/grading-engine/pronunciation'
 import type { AIRouterPronunciationAssessmentRequest } from '../shared'
 
 const SAMPLE_RATE = 16_000
@@ -61,7 +61,7 @@ async function assess(
     vocabulary,
     referenceText: request.referenceText,
     durationMs: (samples.length / SAMPLE_RATE) * 1000,
-    blankTokenId: vocabulary['<pad>'] ?? 0
+    blankTokenId: resolveBlankTokenId(vocabulary)
   })
 }
 

@@ -1,0 +1,649 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.textpa/schemas/scoring-sample.schema.json",
+  "title": "Generic English speaking assessment sample",
+  "type": "object",
+  "required": ["schema_version", "id", "audio_path", "task"],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "$ref": "#/$defs/non_empty_string"
+    },
+    "audio_path": {
+      "$ref": "#/$defs/non_empty_string"
+    },
+    "audio": {
+      "$ref": "#/$defs/audio_metadata"
+    },
+    "task": {
+      "$ref": "#/$defs/task"
+    },
+    "rubric_ref": {
+      "$ref": "#/$defs/rubric_ref"
+    },
+    "rubric": {
+      "$ref": "#/$defs/rubric"
+    },
+    "transcript": {
+      "$ref": "#/$defs/non_empty_string"
+    },
+    "phonemes_cmu": {
+      "$ref": "#/$defs/non_empty_string"
+    },
+    "phonemes_ipa": {
+      "$ref": "#/$defs/non_empty_string"
+    },
+    "alignment": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/alignment_span"
+      }
+    },
+    "derived": {
+      "$ref": "#/$defs/derived"
+    },
+    "labels": {
+      "$ref": "#/$defs/labels"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "oneOf": [
+    {
+      "required": ["rubric_ref"],
+      "not": {
+        "required": ["rubric"]
+      }
+    },
+    {
+      "required": ["rubric"],
+      "not": {
+        "required": ["rubric_ref"]
+      }
+    }
+  ],
+  "dependentRequired": {
+    "transcript": ["phonemes_cmu", "phonemes_ipa"],
+    "phonemes_cmu": ["transcript", "phonemes_ipa"],
+    "phonemes_ipa": ["transcript", "phonemes_cmu"],
+    "alignment": ["transcript", "phonemes_cmu", "phonemes_ipa"]
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "non_negative_number": {
+      "type": "number",
+      "minimum": 0
+    },
+    "audio_metadata": {
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "pattern": "^[A-Fa-f0-9]{64}$"
+        },
+        "duration_seconds": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "sample_rate_hz": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "channels": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "task": {
+      "type": "object",
+      "required": ["type", "prompt", "reference"],
+      "properties": {
+        "profile_id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "profile_version": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "instance_id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "type": {
+          "enum": [
+            "read_aloud",
+            "short_answer",
+            "retelling",
+            "picture_description",
+            "free_talk",
+            "dialogue",
+            "other"
+          ]
+        },
+        "prompt": {
+          "$ref": "#/$defs/prompt"
+        },
+        "stimuli": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/stimulus"
+          }
+        },
+        "reference": {
+          "$ref": "#/$defs/reference"
+        },
+        "response_constraints": {
+          "$ref": "#/$defs/response_constraints"
+        }
+      },
+      "dependentRequired": {
+        "profile_id": ["profile_version"],
+        "profile_version": ["profile_id"]
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "read_aloud"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "properties": {
+              "reference": {
+                "properties": {
+                  "mode": {
+                    "const": "exact_text"
+                  }
+                },
+                "required": ["mode"]
+              }
+            }
+          }
+        }
+      ],
+      "additionalProperties": true
+    },
+    "prompt": {
+      "type": "object",
+      "required": ["text"],
+      "properties": {
+        "language": {
+          "$ref": "#/$defs/non_empty_string",
+          "default": "en"
+        },
+        "text": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "context": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "turns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prompt_turn"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "prompt_turn": {
+      "type": "object",
+      "required": ["role", "text"],
+      "properties": {
+        "role": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "text": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "start": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "end": {
+          "$ref": "#/$defs/non_negative_number"
+        }
+      },
+      "additionalProperties": true
+    },
+    "stimulus": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "enum": ["text", "image", "audio"]
+        },
+        "text": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "path": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "description": {
+          "$ref": "#/$defs/non_empty_string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "text"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["text"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": ["image", "audio"]
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["path"]
+          }
+        }
+      ],
+      "additionalProperties": true
+    },
+    "reference": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "enum": ["none", "open", "exact_text", "reference_answer", "key_points"]
+        },
+        "expected_text": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "reference_answer": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "key_points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/key_point"
+          },
+          "minItems": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "exact_text"
+              }
+            }
+          },
+          "then": {
+            "required": ["expected_text"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "reference_answer"
+              }
+            }
+          },
+          "then": {
+            "required": ["reference_answer"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "mode": {
+                "const": "key_points"
+              }
+            }
+          },
+          "then": {
+            "required": ["key_points"]
+          }
+        }
+      ],
+      "additionalProperties": true
+    },
+    "key_point": {
+      "type": "object",
+      "required": ["id", "description"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "description": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "required": {
+          "type": "boolean",
+          "default": true
+        },
+        "weight": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "acceptable_examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/non_empty_string"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "response_constraints": {
+      "type": "object",
+      "properties": {
+        "preparation_seconds": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "response_seconds": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "minimum_words": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maximum_words": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "rubric_ref": {
+      "type": "object",
+      "required": ["id", "version"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "version": {
+          "$ref": "#/$defs/non_empty_string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "rubric": {
+      "type": "object",
+      "required": ["id", "version", "score_scale", "dimensions"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "version": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "score_scale": {
+          "$ref": "#/$defs/score_scale"
+        },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rubric_dimension"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "score_scale": {
+      "type": "object",
+      "required": ["minimum", "maximum", "step"],
+      "properties": {
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "step": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "rubric_dimension": {
+      "type": "object",
+      "required": ["id", "description", "bands"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "description": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "bands": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rubric_band"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "rubric_band": {
+      "type": "object",
+      "required": ["score", "descriptor"],
+      "properties": {
+        "score": {
+          "type": "number"
+        },
+        "descriptor": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "examples": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/non_empty_string"
+          },
+          "minItems": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "alignment_span": {
+      "type": "object",
+      "$comment": "A semantic validator must also enforce end >= start.",
+      "required": ["start", "end", "phone"],
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "end": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "phone": {
+          "$ref": "#/$defs/non_empty_string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "derived": {
+      "type": "object",
+      "properties": {
+        "transcript_segments": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/transcript_segment"
+          }
+        },
+        "fluency_events": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/fluency_event"
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": {
+            "type": ["number", "integer", "string", "boolean", "null"]
+          }
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        }
+      },
+      "additionalProperties": true
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "asr": {
+          "$ref": "#/$defs/model_provenance"
+        },
+        "ipa": {
+          "$ref": "#/$defs/model_provenance"
+        },
+        "cmu": {
+          "$ref": "#/$defs/model_provenance"
+        }
+      },
+      "additionalProperties": true
+    },
+    "model_provenance": {
+      "type": "object",
+      "required": ["model"],
+      "properties": {
+        "model": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "revision": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "provider": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "transcript_segment": {
+      "type": "object",
+      "$comment": "A semantic validator must also enforce end >= start.",
+      "required": ["start", "end", "text"],
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "end": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "text": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "fluency_event": {
+      "type": "object",
+      "$comment": "A semantic validator must also enforce end >= start.",
+      "required": ["type", "start", "end"],
+      "properties": {
+        "type": {
+          "enum": ["silence", "filled_pause", "repetition", "restart", "self_correction", "other"]
+        },
+        "start": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "end": {
+          "$ref": "#/$defs/non_negative_number"
+        },
+        "evidence": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "confidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": true
+    },
+    "labels": {
+      "type": "object",
+      "properties": {
+        "raters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rater_label"
+          }
+        },
+        "consensus": {
+          "$ref": "#/$defs/consensus_label"
+        }
+      },
+      "additionalProperties": true
+    },
+    "rater_label": {
+      "type": "object",
+      "required": ["rater_id", "scores"],
+      "properties": {
+        "rater_id": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "scores": {
+          "$ref": "#/$defs/scores"
+        },
+        "notes": {
+          "$ref": "#/$defs/non_empty_string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "consensus_label": {
+      "type": "object",
+      "required": ["method", "scores"],
+      "properties": {
+        "method": {
+          "$ref": "#/$defs/non_empty_string"
+        },
+        "scores": {
+          "$ref": "#/$defs/scores"
+        },
+        "notes": {
+          "$ref": "#/$defs/non_empty_string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "scores": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "number"
+      }
+    }
+  }
+}

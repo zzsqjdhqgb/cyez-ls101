@@ -179,6 +179,7 @@ function clientWith(overrides: Partial<AIRouterClient>): AIRouterClient {
     listPronunciationAssessmentModels: vi.fn().mockResolvedValue([]),
     getPronunciationAssessmentExtensionStatus: vi.fn(),
     importPronunciationAssessmentExtension: vi.fn().mockResolvedValue(null),
+    deletePronunciationAssessmentExtension: vi.fn(),
     assessPronunciation: vi.fn(),
     synthesizeSpeech: vi.fn(),
     generateImage: vi.fn(),

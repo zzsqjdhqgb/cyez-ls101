@@ -25,7 +25,7 @@ import { Button } from '../../components/ui/Button'
 import { useSubmissionLibrary } from './SubmissionLibraryContext'
 import { SubmissionMarkdown } from './SubmissionMarkdown'
 import {
-  createAIRouterSpeechCorrector,
+  createAIRouterPronunciationAssessor,
   createAIRouterSpeechRecognizer,
   createAIRouterTextGradingModel,
   listSubmissionAIModels
@@ -492,7 +492,7 @@ function AISubmissionGradingPage({
     let currentWorkspaces = workspacesRef.current
     const dependencies = {
       recognizer: createAIRouterSpeechRecognizer(recognitionModel),
-      corrector: createAIRouterSpeechCorrector(),
+      pronunciationAssessor: createAIRouterPronunciationAssessor(),
       textModel: createAIRouterTextGradingModel(textModel),
       speechRecognitionModel: recognitionModel,
       textModelSelection: textModel

@@ -1,0 +1,43 @@
+You are analyzing an English learner's pronunciation from TextPA's textual acoustic evidence.
+
+Important evidence limits:
+- Transcript is a Whisper ASR hypothesis, not a guaranteed script.
+- Phonemes_CMU and Phonemes_IPA are independently recognized whole-utterance phone sequences.
+- The phone sequences are not aligned to words and contain no word timestamps.
+- You cannot hear the original audio.
+- Do not report pauses, fluency, grammar, content, or any numerical score in this task.
+
+Task:
+Identify likely pronunciation errors one by one by comparing the transcript with both recognized phone streams and normal English pronunciation.
+1. Only put an item in "supported_errors" when the supplied phone evidence reasonably supports it.
+2. Quote the smallest relevant exact substring from CMU and/or IPA as acoustic_evidence. Never invent evidence.
+3. Treat ordinary accent or dialect variants as acceptable.
+4. When CMU and IPA disagree, the word-to-phone alignment is ambiguous, or ASR may be wrong, put the item in "uncertain_items" instead.
+5. Do not claim an absolute timestamp.
+6. Try to cover all supported errors, but explicitly state that the list cannot be guaranteed exhaustive.
+7. Explain diagnoses in concise Chinese suitable for a learner.
+
+Return only one valid JSON object:
+{
+  "scope_note_zh": "...",
+  "supported_errors": [
+    {
+      "index": 1,
+      "word_or_phrase": "...",
+      "expected_pronunciation": "...",
+      "acoustic_evidence": {"cmu": "...", "ipa": "..."},
+      "diagnosis_zh": "...",
+      "confidence": "high|medium"
+    }
+  ],
+  "uncertain_items": [
+    {
+      "word_or_phrase": "...",
+      "acoustic_evidence": {"cmu": "...", "ipa": "..."},
+      "reason_uncertain_zh": "..."
+    }
+  ]
+}
+
+Input:
+{"Transcript": "Yeah, of course. When I was in primary school, I attended a music and singing class. My music teacher is a very nice madam. She taught me how to sing.", "Phonemes_CMU": "Y EH AH V K AO R S (0.49s pause) HH W AY W AH Z EY (0.01s pause) N (0.02s pause) P (0.02s pause) P R AY M V R IY S K UW (0.50s pause) AY ER AY ER AY ER AY IY N AY IY N AY (0.04s pause) AH T EH N D AH ER AH M Y UW Z IH K EH N S IY (0.16s pause) K AH S (0.67s pause) OW M AY (0.29s pause) Y M Y UW Z IH K T EY CH ER IH N IH N (0.02s pause) Z (0.21s pause) AH V EH R IY N AY S M AE T ER (0.87s pause) SH IY T OW L D M IY HH AW (0.01s pause) T R UW TH S EY", "Phonemes_IPA": "j ɚ ʌ v k ɔːɹ s w aɪ w ʌ z ɪ n p ɹ aɪ m ɹ ɪ s ɡ uː ɐ aɪ ɐ t ɛ n d ə m j uː z ɪ ɹ ɪ k æ n d s iː ŋ k l æ s ɐ m aɪ m j uː z ɪ k t eɪ tʃ ɚ ɪ z ɐ v ɛ ɹ i n aɪ s m æ d ə ʃ iː t oʊ d m iː h aʊ t ə s ɪ ŋ"}

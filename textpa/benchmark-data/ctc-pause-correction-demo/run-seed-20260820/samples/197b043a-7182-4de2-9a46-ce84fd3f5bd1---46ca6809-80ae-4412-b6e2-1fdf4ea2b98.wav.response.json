@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "id": "197b043a-7182-4de2-9a46-ce84fd3f5bd1---46ca6809-80ae-4412-b6e2-1fdf4ea2b98.wav",
+  "prompt_sha256": "d7b399a2262b0a7b1070c6e5cdce04afceb1c20f19c194acafb94055caabc195",
+  "request_config": {
+    "endpoint": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "model": "agnes-2.5-flash",
+    "max_tokens": 65535,
+    "temperature": 0.0,
+    "thinking": true
+  },
+  "api_response": {
+    "id": "66305c6645d04b09ab32f93cc396d4ad",
+    "created": 1787235362,
+    "model": "agnes-2.5-flash",
+    "object": "chat.completion",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "content": "\n\n```json\n{\n  \"summary\": \"录音中存在多处元音与辅音发音偏差，主要集中在course、money、saving等词，需针对性练习。\",\n  \"pronunciation_issues\": [\n    {\n      \"evidence_ids\": [\"P-W010-P02\", \"P-W010-P03\", \"P-W010-P04\"],\n      \"certainty\": \"high\",\n      \"location\": \"course，约3766-4587ms\",\n      \"finding\": \"较可能：元音ɔː被发成ʌ，辅音s被发成æ，ɹ被发成p，整体发音偏离标准。\",\n      \"practice\": \"练习course的/ kɔːrs /发音，重点区分元音ɔː与ʌ，并清晰发出词尾的/z/音。\"\n    },\n    {\n      \"evidence_ids\": [\"P-W004-P02\"],\n      \"certainty\": \"high\",\n      \"location\": \"saving，约1663-1683ms\",\n      \"finding\": \"较可能：双元音eɪ被发成短元音ɪ。\",\n      \"practice\": \"练习saving的/ˈseɪvɪŋ/，重点体会eɪ从中央向高位的滑动感，避免发成单一的ɪ。\"\n    },\n    {\n      \"evidence_ids\": [\"P-W005-P02\", \"P-W012-P02\"],\n      \"certainty\": \"high\",\n      \"location\": \"money，约1943-1963ms及5168-5188ms\",\n      \"finding\": \"较可能：元音ʌ被发成æ，两处发音呈现一致偏差。\",\n      \"practice\": \"练习money的/ˈmʌni/，对比ʌ（张口较大、舌位居中）与æ（舌位前移、口型更扁）的区别。\"\n    },\n    {\n      \"evidence_ids\": [\"P-W025-P01\"],\n      \"certainty\": \"high\",\n      \"location\": \"things，约9194-9214ms\",\n      \"finding\": \"较可能：齿间音θ被发成齿龈音t。\",\n      \"practice\": \"练习things的/θɪŋz/，将舌尖轻置于上下齿之间送气，再过渡到ɪŋz。\"\n    },\n    {\n      \"evidence_ids\": [\"P-W031-P04\"],\n      \"certainty\": \"high\",\n      \"location\": \"habit，约11718-11738ms\",\n      \"finding\": \"较可能：弱读元音ə被发成双元音eɪ。\",\n      \"practice\": \"练习habit的/ˈhæbɪt/，注意第二音节为轻读的ɪ或弱化的ə，避免发成明显的eɪ。\"\n    },\n    {\n      \"evidence_ids\": [\"P-W018-P02\"],\n      \"certainty\": \"high\",\n      \"location\": \"means，约7151-7171ms\",\n      \"finding\": \"较可能：长元音iː被发成双元音eɪ。\",\n      \"practice\": \"练习means的/miːnz/，保持舌位稳定、唇形不变，发出纯粹的长元音iː。\"\n    }\n  ],\n  \"fluency_issues\": [],\n  \"positive_observations\": [],\n  \"limitations\": [\n    \"reference为Whisper ASR假设，可能存在文本错误，CTC对齐仅供参考。\",\n    \"多处音素冲突集中在少数词汇，可能存在强制对齐偏差，建议复听确认。\",\n    \"TextPA停顿事件均为short级别，不足以支持流畅度问题断言。\"\n  ]\n}\n```",
+          "role": "assistant",
+          "reasoning_content": "我需要仔细分析这些声学证据，生成中文语音纠错。首先看CTC强制对齐的证据。有多个high强度的证据，涉及不同的音素冲突。\n\n让我逐一分析：\n1. P-W009-P02: \"Of\" - expected 'v', observed 't' - 这是辅音冲突，'v'变成了't'\n2. P-W010-P04: \"course\" - expected 's', observed 'æ' - 这是元音替代了辅音\n3. P-W025-P01: \"things\" - expected 'θ', observed 't' - 这是齿间音变成齿龈音，常见错误\n4. P-W031-P04: \"habit\" - expected 'ə', observed 'eɪ' - 元音冲突\n5. P-W010-P02: \"course\" - expected 'ɔː', observed 'ʌ' - 元音冲突\n6. P-W004-P02: \"saving\" - expected 'eɪ', observed 'ɪ' - 元音冲突\n7. P-W012-P02: \"money\" - expected 'ʌ', observed 'æ' - 元音冲突\n8. P-W005-P02: \"money\" - 同样的问题\n9. P-W018-P02: \"means\" - expected 'iː', observed 'eɪ' - 元音冲突\n10. P-W010-P03: \"course\" - expected 'ɹ', observed 'p' - 辅音冲突\n11. P-W007-P02: \"very\" - expected 'ɛ', observed 'ɜː' - 元音冲突\n12. P-W022-P02: \"plan\" - expected 'æ', observed 'aɪ' - 元音冲突\n\n根据规则，同一个词的多个P证据应合并为一条。让我按词分组：\n\n\n- \"Of\": P-W009-P02 (v→t)\n- \"course\": P-W010-P04 (s→æ), P-W010-P02 (ɔː→ʌ), P-W010-P03 (ɹ→p) - 这三个可以合并\n- \"things\": P-W025-P01 (θ→t)\n- \"habit\": P-W031-P04 (ə→eɪ)\n- \"saving\": P-W004-P02 (eɪ→ɪ)\n- \"money\": P-W012-P02和P-W005-P02都显示相同的æ错误，应合并为一条\n- \"means\": P-W018-P02 (iː→eɪ)\n- \"very\": P-W007-P02 (ɛ→ɜː)\n- \"plan\": P-W022-P03 (æ→aɪ)\n\nTextPA暂停分析显示所有事件都是short类型，按照规则这些不应单独报错。\n\nF证据来自独立的Charsiu检测，短暂停不需要单独处理。由于没有noticeable或long的暂停，fluency_issues应该是空的。现在需要确定pronunciation_issues中的certainty级别。所有证据都是high强度，意味着match_score较低且confidence较高，所以应该标记为\"high\"。接下来要编写具体的practice建议。\n\n对于Of的v→t转换，需要强调咬唇浊音的正确发音方法。course中出现三个音素冲突（s→æ、ɔː→ʌ、ɹ→p），表明这个词需要整体练习。things的θ→t转换是常见的发音问题，应该通过舌位练习来纠正。habit的ə→eɪ转换需要强调弱读元音。saving的eɪ→ɪ转换涉及双元音变短元音的问题。money的ʌ→æ转换需要区分这两个元音的发音位置。means的iː→eɪ转换同样是双元音和长元音的混淆。\n\nvery的ɛ→ɜː转换涉及前元音到中元音的变化。plan的æ→aɪ转换则是另一个需要纠正的元音问题。在验证这些建议时，我需要确认这些音素冲突确实反映了发音偏差而非其他因素。比如Of的v→t可能表示单词未被正确识别，course中的多个冲突可能指向整体发音困难，而things的θ→t则是一个明确的发音错误。\n\n现在整理成最终的JSON格式，summary应该简洁保守，pronunciation_issues最多6条，fluency_issues最多4条。由于所有TextPA事件都是short停顿，fluency_issues应为空。positive_observations需要基于证据支持的内容。\n\n对于positive observations，我可以指出发音问题的多样性反映了练习范围广，但需要保守一些。实际上我没有看到明确支持正面观察的证据，所以保持空列表更稳妥。limitations部分应该提及ASR假设的潜在误差、CTC对齐的不确定性，以及短停顿的近似映射。\n"
+        },
+        "provider_specific_fields": {
+          "matched_stop": 248046
+        }
+      }
+    ],
+    "usage": {
+      "completion_tokens": 2001,
+      "prompt_tokens": 3708,
+      "total_tokens": 5709,
+      "completion_tokens_details": {
+        "reasoning_tokens": 1096,
+        "text_tokens": 905
+      }
+    },
+    "metadata": {
+      "weight_version": "default"
+    }
+  },
+  "feedback": {
+    "summary": "录音中存在多处元音与辅音发音偏差，主要集中在course、money、saving等词，需针对性练习。",
+    "pronunciation_issues": [
+      {
+        "evidence_ids": [
+          "P-W010-P02",
+          "P-W010-P03",
+          "P-W010-P04"
+        ],
+        "certainty": "high",
+        "location": "course，约3766-4587ms",
+        "finding": "较可能：元音ɔː被发成ʌ，辅音s被发成æ，ɹ被发成p，整体发音偏离标准。",
+        "practice": "练习course的/ kɔːrs /发音，重点区分元音ɔː与ʌ，并清晰发出词尾的/z/音。"
+      },
+      {
+        "evidence_ids": [
+          "P-W004-P02"
+        ],
+        "certainty": "high",
+        "location": "saving，约1663-1683ms",
+        "finding": "较可能：双元音eɪ被发成短元音ɪ。",
+        "practice": "练习saving的/ˈseɪvɪŋ/，重点体会eɪ从中央向高位的滑动感，避免发成单一的ɪ。"
+      },
+      {
+        "evidence_ids": [
+          "P-W005-P02",
+          "P-W012-P02"
+        ],
+        "certainty": "high",
+        "location": "money，约1943-1963ms及5168-5188ms",
+        "finding": "较可能：元音ʌ被发成æ，两处发音呈现一致偏差。",
+        "practice": "练习money的/ˈmʌni/，对比ʌ（张口较大、舌位居中）与æ（舌位前移、口型更扁）的区别。"
+      },
+      {
+        "evidence_ids": [
+          "P-W025-P01"
+        ],
+        "certainty": "high",
+        "location": "things，约9194-9214ms",
+        "finding": "较可能：齿间音θ被发成齿龈音t。",
+        "practice": "练习things的/θɪŋz/，将舌尖轻置于上下齿之间送气，再过渡到ɪŋz。"
+      },
+      {
+        "evidence_ids": [
+          "P-W031-P04"
+        ],
+        "certainty": "high",
+        "location": "habit，约11718-11738ms",
+        "finding": "较可能：弱读元音ə被发成双元音eɪ。",
+        "practice": "练习habit的/ˈhæbɪt/，注意第二音节为轻读的ɪ或弱化的ə，避免发成明显的eɪ。"
+      },
+      {
+        "evidence_ids": [
+          "P-W018-P02"
+        ],
+        "certainty": "high",
+        "location": "means，约7151-7171ms",
+        "finding": "较可能：长元音iː被发成双元音eɪ。",
+        "practice": "练习means的/miːnz/，保持舌位稳定、唇形不变，发出纯粹的长元音iː。"
+      }
+    ],
+    "fluency_issues": [],
+    "positive_observations": [],
+    "limitations": [
+      "reference为Whisper ASR假设，可能存在文本错误，CTC对齐仅供参考。",
+      "多处音素冲突集中在少数词汇，可能存在强制对齐偏差，建议复听确认。",
+      "TextPA停顿事件均为short级别，不足以支持流畅度问题断言。"
+    ]
+  }
+}

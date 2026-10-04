@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "id": "5f97bbc9-c953-4143-a4fe-09006ba4c74a---92b07602-30f4-4899-831b-18091ea6063.wav",
+  "prompt_sha256": "61533d230a0105cd78b4ac2ab58445577ce5d41cef4de84508322df3b702866b",
+  "request_config": {
+    "endpoint": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "model": "agnes-2.5-flash",
+    "max_tokens": 65535,
+    "temperature": 0.0,
+    "thinking": true
+  },
+  "api_response": {
+    "id": "bc9e5bdf2ca4425bbe6cfc374327ffa0",
+    "created": 1787235645,
+    "model": "agnes-2.5-flash",
+    "object": "chat.completion",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "content": "\n\n{\n  \"summary\": \"录音整体可理解，主要需关注 apparently、Cherry、are 三处音素发音，以及 do 到 And 处的长停顿。\",\n  \"pronunciation_issues\": [\n    {\n      \"evidence_ids\": [\"P-W023-P03\", \"P-W023-P07\", \"P-W023-P01\"],\n      \"certainty\": \"high\",\n      \"location\": \"apparently，约 10513–11094 ms\",\n      \"finding\": \"证据显示该词内部出现三处音素冲突：第一音节可能把 /æ/ 发为 /ɪ/；第二音节 schwa 中性化为近似 [ɐ]；第7音素期望清辅音 /t/ 但观察到鼻音 /n/。这些证据相互独立且强度均为 high，反映该词整体发音偏离标准。\",\n      \"practice\": \"重听并跟读 apparently /əˈpær.ənt.li/ 或 /æpˈær.ənt.li/，重点放慢第一音节 /æ/ 的开口度、确保第二音节为清晰 schwa，并检查词尾 -ent 的 /t/ 是否被鼻音 /n/ 替代。可用最小对 [t] vs [n] 做单独对比练习。\"\n    },\n    {\n      \"evidence_ids\": [\"P-W025-P02\", \"P-W025-P04\"],\n      \"certainty\": \"high\",\n      \"location\": \"Cherry，约 12456–12696 ms\",\n      \"finding\": \"Cherry 的前半段期望 /ɛ/ 但观察到 /ɜː/，末尾期望 /i/ 但观察到 /ɪ/。两处证据强度均为 high，提示该专有名词的元音开口度和尾音清晰度都可能偏离标准。\",\n      \"practice\": \"慢速跟读 Cherry /ˈtʃer.i/，对比 /ɛ/（bed）与 /ɜː/（bird）的舌位差异，并把词尾 /i/ 发得饱满些，避免滑向短音 /ɪ/。可先用 /ˈtʃɛr.i/ 练准第一音节，再补齐第二音节。\"\n    },\n    {\n      \"evidence_ids\": [\"P-W012-P01\"],\n      \"certainty\": \"high\",\n      \"location\": \"are，约 5247–5267 ms\",\n      \"finding\": \"are 期望 r-colored schwa /ɚ/，但观察到 /ɑːɹ/。证据强度 high，提示此处元音拖长且卷舌动作偏后。\",\n      \"practice\": \"练习 are /ɑːɹ/ → /ɚ/ 的过渡：先发较短的 /ɑ/，随即带出轻微卷舌，不要拉长为 /ɑː/。可对比 arm /ɑːm/ 与 are /ɚ/ 的时长差异，目标让 are 保持短时弱读形式。\"\n    }\n  ],\n  \"fluency_issues\": [\n    {\n      \"evidence_ids\": [\"F-001\", \"F-002\"],\n      \"certainty\": \"high\",\n      \"location\": \"you → It，约 1920–3080 ms\",\n      \"finding\": \"在 you 与 It 之间检测到两段 noticeable 停顿（F-001 约 270 ms，F-002 约 380 ms），合计约 650 ms。该区间位于第一句末尾与第二句开头之间，停顿长度已明显超出一般词间连接时长。\",\n      \"practice\": \"复习 'Yes, I agree with you. It depends...' 这句的句际过渡。可在 you 末尾保持声音延续，让下一个 It 的 /ɪ/ 在停顿结束前尽快接入，缩短句间空白。建议分段慢练：you—I（不停顿）→ it depends。\"\n    },\n    {\n      \"evidence_ids\": [\"F-005\"],\n      \"certainty\": \"high\",\n      \"location\": \"do → And，约 8960–9950 ms\",\n      \"finding\": \"检测到一处 long 停顿，持续约 990 ms，位于 do 与 And 之间。该停顿跨越从句边界，长度显著影响整体节奏。\",\n      \"practice\": \"回听该片段，标记出 do 的尾音与 And 起音之间的空白。练习时将 do 的 /uː/ 收短，并在停顿处快速换气，使 And 尽快接上。可采用节拍器在 /do—And/ 之间打两个等时拍，强制缩短停顿。\"\n    },\n    {\n      \"evidence_ids\": [\"F-003\", \"F-006\"],\n      \"certainty\": \"tentative\",\n      \"location\": \"now → and（约 6230–6530 ms）与 apparently → what（约 11500–11840 ms）\",\n      \"finding\": \"两处 noticeable 停顿分别约 300 ms 和 340 ms，可能反映从句边界处的自然迟疑，但目前证据不足以断言是否影响整体流利度。\",\n      \"practice\": \"建议复听 now and 与 apparently what 相邻片段，确认停顿是否为刻意换气或思维中断。若为后者，可尝试将并列从句用轻微连读连接，减少不必要的停顿。\"\n    }\n  ],\n  \"positive_observations\": [\n    \"CTC 整体匹配分数为 87，说明大部分音素与 reference 基本吻合。\",\n    \"文本中多处短句结构完整，ASR 能产出连贯句子，反映整体可懂度尚可。\",\n    \"长停顿仅出现在 do 与 And 之间一处，其余停顿多为 noticeable 级别，未出现大面积断裂。\"\n  ],\n  \"limitations\": [\n    \"P-W023-P01 的 ə→ɐ 处于 schwa 与近开央元音之间，差异较小；建议人工复听 10513–10533 ms 确认是否为中性化而非真正错误。\",\n    \"TextPA 停顿边界通过近似 CTC 词时间戳映射，具体到 word_approx 的位置可能存在 ±1 词的偏移，建议复听时以时间戳为准。\",\n    \"本分析基于 CTC 强制对齐，reference 本身来自 Whisper ASR 假设，若 ASR 转录有误，音素冲突的解释可能受影响。\"\n  ]\n}",
+          "role": "assistant",
+          "reasoning_content": "我需要根据提供的声学证据生成中文语音纠错报告。让我仔细分析证据：\n\n1. CTC强制对齐证据（P证据）：\n   - P-W023-P03: \"apparently\" 词22，ɛ→ɪ (high)\n   - P-W023-P07: \"apparently\" 词22，t→n (high)\n   - P-W025-P02: \"Cherry\" 词24，ɛ→ɜː (high)\n   - P-W025-P04: \"Cherry\" 词24，i→ɪ (high)\n   - P-W023-P01: \"apparently\" 词22，ə→ɐ (high)\n   - P-W012-P01: \"are\" 词11，ɚ→ɑːɹ (high)\n\n2. TextPA停顿证据（F证据）：\n   - F-001: noticeable, 1920-2190ms, 在\"you\"和\"It\"之间，270ms\n   - F-002: noticeable, 2700-3080ms, 在\"you\"和\"It\"之间，380ms\n   - F-003: noticeable, 6230-6530ms, 在\"now\"和\"and\"之间，300ms\n   - F-004: short, 70ms - 不单独报错\n   - F-005: long, 8960-9950ms, 在\"do\"和\"And\"之间，990ms\n   - F-006: noticeable, 11500-11840ms, 在\"apparently\"和\"what\"之间，340ms\n   - F-007: short, 150ms - 不单独报错\n\n关于发音问题，我在\"apparently\"这个词上发现了三个音素冲突，包括元音和辅音的变化。同时，\"are\"的发音也显示出与预期不同的特征。\"Cherry\"同样存在两处音素偏差。根据规则，这些证据应该被整合成一条综合反馈。\n\n对于流利度问题，F-001和F-002都指向\"you It\"之间的停顿，需要合并分析。F-003标记了\"now and\"之间的停顿，F-005则是特别长的停顿，F-006在\"apparently what\"之间也有停顿。\n\n现在我在逐一分析这些发现。\"apparently\"中的ə→ɐ可能只是中性化，而ɛ→ɪ和t→n更值得关注，尤其是t→n的变化。\"are\"的ɚ→ɑːɹ表明卷舌音发得过长。\"Cherry\"的发音问题中ɛ→ɜː更为关键。停顿方面，F-001和F-002虽然都在\"you It\"附近，但时间上不连续，需要分别考虑。\n"
+        },
+        "provider_specific_fields": {
+          "matched_stop": 248046
+        }
+      }
+    ],
+    "usage": {
+      "completion_tokens": 2193,
+      "prompt_tokens": 2646,
+      "total_tokens": 4839,
+      "completion_tokens_details": {
+        "reasoning_tokens": 690,
+        "text_tokens": 1503
+      }
+    },
+    "metadata": {
+      "weight_version": "default"
+    }
+  },
+  "feedback": {
+    "summary": "录音整体可理解，主要需关注 apparently、Cherry、are 三处音素发音，以及 do 到 And 处的长停顿。",
+    "pronunciation_issues": [
+      {
+        "evidence_ids": [
+          "P-W023-P03",
+          "P-W023-P07",
+          "P-W023-P01"
+        ],
+        "certainty": "high",
+        "location": "apparently，约 10513–11094 ms",
+        "finding": "证据显示该词内部出现三处音素冲突：第一音节可能把 /æ/ 发为 /ɪ/；第二音节 schwa 中性化为近似 [ɐ]；第7音素期望清辅音 /t/ 但观察到鼻音 /n/。这些证据相互独立且强度均为 high，反映该词整体发音偏离标准。",
+        "practice": "重听并跟读 apparently /əˈpær.ənt.li/ 或 /æpˈær.ənt.li/，重点放慢第一音节 /æ/ 的开口度、确保第二音节为清晰 schwa，并检查词尾 -ent 的 /t/ 是否被鼻音 /n/ 替代。可用最小对 [t] vs [n] 做单独对比练习。"
+      },
+      {
+        "evidence_ids": [
+          "P-W025-P02",
+          "P-W025-P04"
+        ],
+        "certainty": "high",
+        "location": "Cherry，约 12456–12696 ms",
+        "finding": "Cherry 的前半段期望 /ɛ/ 但观察到 /ɜː/，末尾期望 /i/ 但观察到 /ɪ/。两处证据强度均为 high，提示该专有名词的元音开口度和尾音清晰度都可能偏离标准。",
+        "practice": "慢速跟读 Cherry /ˈtʃer.i/，对比 /ɛ/（bed）与 /ɜː/（bird）的舌位差异，并把词尾 /i/ 发得饱满些，避免滑向短音 /ɪ/。可先用 /ˈtʃɛr.i/ 练准第一音节，再补齐第二音节。"
+      },
+      {
+        "evidence_ids": [
+          "P-W012-P01"
+        ],
+        "certainty": "high",
+        "location": "are，约 5247–5267 ms",
+        "finding": "are 期望 r-colored schwa /ɚ/，但观察到 /ɑːɹ/。证据强度 high，提示此处元音拖长且卷舌动作偏后。",
+        "practice": "练习 are /ɑːɹ/ → /ɚ/ 的过渡：先发较短的 /ɑ/，随即带出轻微卷舌，不要拉长为 /ɑː/。可对比 arm /ɑːm/ 与 are /ɚ/ 的时长差异，目标让 are 保持短时弱读形式。"
+      }
+    ],
+    "fluency_issues": [
+      {
+        "evidence_ids": [
+          "F-001",
+          "F-002"
+        ],
+        "certainty": "high",
+        "location": "you → It，约 1920–3080 ms",
+        "finding": "在 you 与 It 之间检测到两段 noticeable 停顿（F-001 约 270 ms，F-002 约 380 ms），合计约 650 ms。该区间位于第一句末尾与第二句开头之间，停顿长度已明显超出一般词间连接时长。",
+        "practice": "复习 'Yes, I agree with you. It depends...' 这句的句际过渡。可在 you 末尾保持声音延续，让下一个 It 的 /ɪ/ 在停顿结束前尽快接入，缩短句间空白。建议分段慢练：you—I（不停顿）→ it depends。"
+      },
+      {
+        "evidence_ids": [
+          "F-005"
+        ],
+        "certainty": "high",
+        "location": "do → And，约 8960–9950 ms",
+        "finding": "检测到一处 long 停顿，持续约 990 ms，位于 do 与 And 之间。该停顿跨越从句边界，长度显著影响整体节奏。",
+        "practice": "回听该片段，标记出 do 的尾音与 And 起音之间的空白。练习时将 do 的 /uː/ 收短，并在停顿处快速换气，使 And 尽快接上。可采用节拍器在 /do—And/ 之间打两个等时拍，强制缩短停顿。"
+      },
+      {
+        "evidence_ids": [
+          "F-003",
+          "F-006"
+        ],
+        "certainty": "tentative",
+        "location": "now → and（约 6230–6530 ms）与 apparently → what（约 11500–11840 ms）",
+        "finding": "两处 noticeable 停顿分别约 300 ms 和 340 ms，可能反映从句边界处的自然迟疑，但目前证据不足以断言是否影响整体流利度。",
+        "practice": "建议复听 now and 与 apparently what 相邻片段，确认停顿是否为刻意换气或思维中断。若为后者，可尝试将并列从句用轻微连读连接，减少不必要的停顿。"
+      }
+    ],
+    "positive_observations": [
+      "CTC 整体匹配分数为 87，说明大部分音素与 reference 基本吻合。",
+      "文本中多处短句结构完整，ASR 能产出连贯句子，反映整体可懂度尚可。",
+      "长停顿仅出现在 do 与 And 之间一处，其余停顿多为 noticeable 级别，未出现大面积断裂。"
+    ],
+    "limitations": [
+      "P-W023-P01 的 ə→ɐ 处于 schwa 与近开央元音之间，差异较小；建议人工复听 10513–10533 ms 确认是否为中性化而非真正错误。",
+      "TextPA 停顿边界通过近似 CTC 词时间戳映射，具体到 word_approx 的位置可能存在 ±1 词的偏移，建议复听时以时间戳为准。",
+      "本分析基于 CTC 强制对齐，reference 本身来自 Whisper ASR 假设，若 ASR 转录有误，音素冲突的解释可能受影响。"
+    ]
+  }
+}

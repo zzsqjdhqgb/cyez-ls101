@@ -235,6 +235,9 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
     if (result.canceled || result.filePaths.length === 0) return null
     return pronunciationService.importExtension(result.filePaths[0])
   })
+  ipcMain.handle(AIROUTER_CHANNELS.deletePronunciationExtension, () =>
+    pronunciationService.deleteExtension()
+  )
   ipcMain.on(
     AIROUTER_CHANNELS.generateStart,
     (event, requestId: string, request: AIRouterTextRequest) => {

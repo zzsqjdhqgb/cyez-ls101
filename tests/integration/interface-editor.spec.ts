@@ -1,10 +1,10 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import stableStringify from 'fast-json-stable-stringify'
 import type { FieldCollection, FieldNode, InterfaceDef } from '@ls101/interface-editor'
+import { createTemporaryDirectory } from '../support/temporary-directory'
 import { MOCK_PNG_BASE64, MockAiServer } from './support/mock-ai-server'
 import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
 
@@ -118,7 +118,7 @@ test.afterAll(async () => mockServer.close())
 
 test.beforeEach(async () => {
   mockServer.reset()
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-interface-'))
+  userDataDir = await createTemporaryDirectory('ls101-interface-')
   pageErrors = []
   electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()

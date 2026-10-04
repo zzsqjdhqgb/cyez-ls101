@@ -79,7 +79,7 @@ jobs:
             externals/ai/stt/downloads/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2
             externals/ai/stt/model/silero_vad.onnx
             externals/ai/stt/model/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25
-            externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8
+            externals/ai/pronunciation/model/charsiu-en_w2v2_ctc_libris_and_cv-int8
             externals/ai/qwen3-tts/downloads/releases/ls101-qwen-tts-helper-cpu-win32-x64.exe
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-runtime-manifest.json
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
@@ -101,7 +101,7 @@ jobs:
             externals/ai/stt/downloads/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2
             externals/ai/stt/model/silero_vad.onnx
             externals/ai/stt/model/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25
-            externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8
+            externals/ai/pronunciation/model/charsiu-en_w2v2_ctc_libris_and_cv-int8
             externals/ai/qwen3-tts/downloads/releases/ls101-qwen-tts-helper-cpu-win32-x64.exe
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-runtime-manifest.json
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
@@ -258,7 +258,7 @@ jobs:
             externals/ai/stt/downloads/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2
             externals/ai/stt/model/silero_vad.onnx
             externals/ai/stt/model/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25
-            externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8
+            externals/ai/pronunciation/model/charsiu-en_w2v2_ctc_libris_and_cv-int8
             externals/ai/qwen3-tts/downloads/releases/ls101-qwen-tts-helper-cpu-linux-x64
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-runtime-manifest.json
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
@@ -279,7 +279,7 @@ jobs:
             externals/ai/stt/downloads/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25.tar.bz2
             externals/ai/stt/model/silero_vad.onnx
             externals/ai/stt/model/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25
-            externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8
+            externals/ai/pronunciation/model/charsiu-en_w2v2_ctc_libris_and_cv-int8
             externals/ai/qwen3-tts/downloads/releases/ls101-qwen-tts-helper-cpu-linux-x64
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-runtime-manifest.json
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
