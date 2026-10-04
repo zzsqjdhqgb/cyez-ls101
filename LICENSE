@@ -26,6 +26,35 @@ As a sole exception, you are granted a limited, non-transferable right to:
 Any use, copying, distribution, modification, compilation, or running beyond the limited acts expressly permitted above requires the prior written permission of the copyright holder.
 
 --------------------------------------------------------------------------------
+[CN] 第三方组件
+
+本许可仅适用于著作权人自有的源代码及其编译产物。随本软件一并分发的第三方组件（包括但不限于可执行文件、动态库、模型与数据文件）**不适用**本许可，而是各自按其自身许可证授权，其许可证全文与版权声明见安装目录下的 `thirdparty-licenses/`。
+
+您对上述第三方组件的权利不受本许可限制，也无需取得著作权人的额外许可。就这些组件而言，本许可中的任何使用限制、禁止性规定或额外条件均不适用。
+
+其中，FFmpeg 是以**独立可执行程序**形式分发的，本软件仅通过标准命令行接口以子进程方式调用，未与其链接或合并。FFmpeg 按 GNU 通用公共许可证第 3 版（GPL-3.0-or-later）授权，详情见 `thirdparty-licenses/NOTICE.ffmpeg.txt`。
+
+[EN] Third-party components
+
+This licence applies only to the copyright holder's own source code and its
+compiled products. Third-party components distributed together with this
+software (including but not limited to executables, shared libraries, models
+and data files) are **not** covered by this licence. Each is licensed under its
+own terms; the full licence texts and copyright notices are provided in the
+`thirdparty-licenses/` directory of the installation.
+
+Your rights in those third-party components are not restricted by this licence,
+and no additional permission from the copyright holder is required to exercise
+them. None of the usage restrictions, prohibitions or additional conditions set
+out in this licence apply to those components.
+
+In particular, FFmpeg is distributed as an **independent executable program**.
+This software invokes it only as a child process over its standard command-line
+interface and neither links against nor combines with it. FFmpeg is licensed
+under the GNU General Public License version 3 (GPL-3.0-or-later); see
+`thirdparty-licenses/NOTICE.ffmpeg.txt`.
+
+--------------------------------------------------------------------------------
 [CN] 免责声明
 本软件及相关文档均按“原样”提供，不提供任何明示或暗示的保证，包括但不限于对适销性、特定用途的适用性和非侵权性的保证。在任何情况下，著作权人均不对因本软件、其使用或其他交易所引起的或与之相关的任何索赔、损害或其他责任（无论是合同诉讼、侵权诉讼还是其他诉讼）承担责任。
 

@@ -1,0 +1,76 @@
+Copyright and licence notice for the bundled FFmpeg executable.
+
+Component:  FFmpeg (command-line executable, "ffmpeg")
+Bundled at: node_modules/ffmpeg-static/ffmpeg      (Linux)
+            node_modules/ffmpeg-static/ffmpeg.exe  (Windows)
+Licence:    GNU General Public License, version 3 (GPL-3.0-or-later)
+Full text:  LICENSE.ffmpeg.txt
+Build info: README.ffmpeg-build.txt
+
+FFmpeg is an independent program
+-------------------------------
+FFmpeg is bundled as a **separate executable** and is only ever invoked as a
+child process over its standard command-line interface. It is not linked into,
+loaded by, or otherwise combined with this application. It is therefore an
+independent program and not a derivative work of this application, and the
+GPL's copyleft obligations do not extend to this application's own source code.
+
+Conversely, the proprietary LICENSE at the repository root does **not** apply
+to this FFmpeg executable. See the "Third-party components" section of that
+file. Recipients receive FFmpeg under the terms of the GPLv3, and nothing in
+this repository restricts their rights under that licence.
+
+What was fetched, and from where
+--------------------------------
+The executable is downloaded at dependency-install time by the `ffmpeg-static`
+npm package (GPL-3.0-or-later) rather than being built by this project. For
+Linux x64 the package downloads johnvansickle.com's rolling "release" build:
+
+  https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/linux-x64.gz
+  https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/linux-x64.README
+  https://github.com/eugeneware/ffmpeg-static/releases/download/b6.1.1/linux-x64.LICENSE
+
+The two accompanying files are stored unmodified in this directory as
+README.ffmpeg-build.txt and LICENSE.ffmpeg.txt, and were verified byte-for-byte
+against the release assets above.
+
+Identified build
+----------------
+  ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/
+  built with gcc 8 (Debian 8.3.0-6)
+  configuration: --enable-gpl --enable-version3 --enable-static ... (full line
+                 in README.ffmpeg-build.txt)
+
+Note on versioning: `ffmpeg-static@5.3.0` declares `binary-release-tag`
+"b6.1.1", and that GitHub release is titled "ffmpeg 6.1.1 binaries", but the
+Linux x64 asset it serves is FFmpeg **7.0.2** (johnvansickle's build tracks a
+rolling release). The version actually shipped is therefore taken from the
+binary itself, as recorded above, and not from the npm package metadata.
+
+Corresponding Source
+--------------------
+Status: **partially satisfied — see docs/engineering/licensing-audit.md §4.**
+
+GPLv3 section 6 requires that recipients of this binary be able to obtain its
+Corresponding Source. Neither `ffmpeg-static` nor the build's author publishes
+source for this specific build; `ffmpeg-static`'s README states:
+
+  "Please consult the individual build's project site for exact source
+   versions, which you can locate based on the version information included in
+   the README file."
+
+The source of the FFmpeg component itself is available at:
+
+  https://ffmpeg.org/releases/ffmpeg-7.0.2.tar.xz
+
+The executable also statically links a number of third-party libraries, listed
+with their versions in README.ffmpeg-build.txt. The build's author publishes
+sources for these at https://johnvansickle.com/ffmpeg/release-source/, but as
+of this writing that directory has not been updated past FFmpeg 4.1 (2018) and
+therefore does **not** correspond to the 7.0.2 build being distributed. Sources
+for those libraries must be obtained from their respective upstream projects at
+the versions recorded in README.ffmpeg-build.txt.
+
+This gap is a known, tracked risk rather than an oversight. The planned remedy
+is to build FFmpeg from official sources with a documented configuration so
+that the Corresponding Source is produced and published by this project.

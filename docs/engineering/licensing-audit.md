@@ -18,8 +18,10 @@
 3. **eSpeak 作为研究工具只存在于 `textpa/`**，经 GPL-3.0 的 Python 包 `phonemizer` 调用系统 `espeak-ng`；
    既不是 vendored 代码，也不进入打包产物。
 4. 另外发现两处与 eSpeak 无关、但风险不低于它的许可问题：
-   **随包发布的 `ffmpeg-static` 是 GPL-3.0-or-later 且未附许可证文本**（第 4 节），以及
-   **当前发音模型没有任何署名/许可文件**（第 5 节）。这两条仍待处理。
+   **随包发布的 `ffmpeg-static` 是 GPL-3.0-or-later 且当时未附许可证文本**（第 4 节，许可证与
+   carve-out 已补，对应源码仍未闭合），以及**当前发音模型没有任何署名/许可文件**（第 5 节）。
+   第 4 节与第 1 节性质不同：FFmpeg 是**独立程序**（仅 CLI 子进程调用），不污染自有代码，
+   只需合规打包；eSpeak 是静态链进同一个 `.so`，只能铲除。
 
 ## 1. 唯一的 eSpeak 污染点：sherpa-onnx 预编译库
 
@@ -186,20 +188,63 @@ mac.files:   from node_modules/sherpa-onnx-darwin-${arch} filter: '**/*'   # :10
 第 13 节处理」的工程判断 —— 这次排查说明：**产品侧真正引入 GPL eSpeak 的不是那条研究链，而是
 sherpa-onnx 的预编译库。**
 
-## 4. ffmpeg-static：随包发布的 GPL-3.0 组件
+## 4. ffmpeg-static：随包发布的 GPL-3.0 组件（部分已处置）
+
+### 4.1 性质：与 eSpeak 不是一回事
+
+**FFmpeg 是独立程序，不是衍生作品。** 它只以子进程方式通过标准 CLI 调用
+（`packages/airouter/src/main/pronunciation-assessment-service.ts:237`、
+`speech-audio-transcoder.ts:16`、`speech-recognition-service.ts:554` 解析路径后交给 Worker 执行），
+既不链接也不合并。因此 GPL 的传染性**不蔓延到自有代码**，自有许可与 FFmpeg 的 GPLv3 可以并存。
+
+这与第 1 节的 eSpeak 有本质区别：eSpeak 是**静态编译进** `libsherpa-onnx-c-api.so` 的机器码，
+那个 `.so` 本身就是衍生作品，所以只能铲除；FFmpeg 需要的只是**合规打包**。
+
+### 4.2 事实
 
 - `node_modules/ffmpeg-static/package.json`：`"version": "5.3.0"`、`"license": "GPL-3.0-or-later"`；
-- 二进制自报：`ffmpeg version 7.0.2-static`，`configuration: --enable-gpl --enable-version3 ...`；
+- 二进制自报：`ffmpeg version 7.0.2-static https://johnvansickle.com/ffmpeg/`，
+  `configuration: --enable-gpl --enable-version3 --enable-static ... --enable-libx264 --enable-libx265 ...`；
   `ffmpeg.README` 亦写明 "This static build is licensed under the GNU General Public License version 3."；
-- 随包发布：`electron-builder.yml:56` 包含 `node_modules/ffmpeg-static/{index.js,package.json,ffmpeg,ffmpeg.exe}`，
-  `asarUnpack` 也包含 `node_modules/ffmpeg-static/**`；
-- **未随包发布**：同目录下的 `ffmpeg.LICENSE`（GPLv3 全文）不在 `files` 白名单中，
-  `thirdparty-licenses/` 也没有对应条目。
+- 包**确实提供了**许可证文本：`LICENSE`（在 npm tarball 内）与 `ffmpeg.LICENSE`、`ffmpeg.README`
+  （由 `install.js` 从 release 资产一并下载）。两份 GPLv3 仅差 FSF 地址的 http/https。
+- 随包发布：`electron-builder.yml:56` 白名单只放行
+  `node_modules/ffmpeg-static/{index.js,package.json,ffmpeg,ffmpeg.exe}`，**三份许可证/说明文件全部被挡在
+  安装包之外**（已实测 `dist/linux-unpacked` 内只有 `ffmpeg`、`index.js`、`package.json`）。
 
-调用方式为独立进程（`packages/airouter/src/main/pronunciation-assessment-service.ts:237`、
-`speech-audio-transcoder.ts:16`、`speech-recognition-service.ts:554` 解析路径后交给 Worker 以子进程执行），
-不是动态链接；按通常理解这属于独立程序而非衍生作品。但 GPLv3 对**该二进制自身**的分发义务
-（随附许可证文本、提供对应源码获取方式、不得附加额外限制）依然成立。
+也就是说，**问题不在上游，而在本仓库的打包白名单**。
+
+### 4.3 已落地的处置
+
+| GPLv3 §6 义务 | 处置 | 状态 |
+| --- | --- | --- |
+| 随附许可证全文 | `thirdparty-licenses/LICENSE.ffmpeg.txt` + `README.ffmpeg-build.txt`（与 release 资产逐字节校验一致） | ✅ |
+| 不得施加额外限制 | 仓库根 `LICENSE` 新增「第三方组件 / Third-party components」一节，明确 FFmpeg 为独立程序、按 GPLv3 授权、不受本许可约束 | ✅ |
+| 提供对应源码（Corresponding Source） | 见 4.4 | ❌ **未闭合** |
+
+`thirdparty-licenses/NOTICE.ffmpeg.txt` 记录了版本、完整 configuration、精确的 release 资产 URL、
+独立程序声明，以及源码状况。
+
+### 4.4 未闭合项：对应源码
+
+GPLv3 §6 要求接收方能够取得**与该二进制对应**的源码。这一条目前无法诚实声明为已完成：
+
+- **版本对不上**：`ffmpeg-static@5.3.0` 声明 `binary-release-tag: "b6.1.1"`，该 release 标题为
+  "ffmpeg 6.1.1 binaries"，但它给 linux-x64 的资产实际是 **FFmpeg 7.0.2**
+  （johnvansickle 的构建跟踪一个滚动 release）。实际版本只能从二进制自身读取。
+- **上游明确不提供**：`ffmpeg-static` 的 README 写明
+  "Please consult the individual build's project site for exact source versions"。
+- **构建方也没有**：johnvansickle 的 `release-source/` 与 `git-source/` 最新只到
+  **ffmpeg-4.1 / 2018-11-10**，对不上 7.0.2。
+- **还叠了一层**：该二进制静态链接 30+ 个第三方库，其中 `libass-git`、`libvpx-git`、`libvidstab-git`
+  等连 commit 都未钉死。
+
+因此 §6 只能部分满足（FFmpeg 本体源码可指 `https://ffmpeg.org/releases/ffmpeg-7.0.2.tar.xz`，
+各链接库需回到各自上游），**这是已知的、被记录在案的风险，不是已解决项**。
+
+**收尾办法**：自行从官方源码编译 FFmpeg（只保留实际用到的音频能力），构建脚本入库、源码自持，
+§6 即可完全闭合，且体积可小于当前的 79.8 MB（现二进制绝大部分是我们用不到的编解码器）。
+在这之前，本仓库不应对外声称 FFmpeg 部分已完全合规。
 
 ## 5. 发音模型的许可与署名缺口
 
@@ -236,6 +281,10 @@ sherpa-onnx 的预编译库。**
   并按 `scripts/pronunciation-model-requirements.txt` 固定导出工具链。CI 的 4 处缓存路径已同步改名。
 - `thirdparty-licenses/NOTICE.charsiu-en_w2v2_ctc_libris_and_cv.txt`：新增，记录随包模型的上游
   revision、导出方式与**未决的许可状态**（见第 5 节）。
+- **FFmpeg 的许可证与 carve-out 已补**（4.3）：新增 `thirdparty-licenses/LICENSE.ffmpeg.txt`、
+  `README.ffmpeg-build.txt`（均与 `ffmpeg-static` release 资产逐字节一致）、`NOTICE.ffmpeg.txt`；
+  仓库根 `LICENSE` 新增「第三方组件」一节，明确 FFmpeg 为独立程序、按 GPLv3 授权、不受本许可约束。
+  **§6 对应源码仍未闭合**，见 4.4。
 - `textpa/Read_to_Hear_TextPA.pdf`（第三方 arXiv 论文）已从仓库移除，改为在文档中引用 DOI。
 - 仓库根新增忽略规则：`*.lssubmission`、`usage.jsonl`、`__pycache__/`、`*.pyc`、`desktop.ini`、`Thumbs.db`。
 
@@ -244,9 +293,9 @@ sherpa-onnx 的预编译库。**
 1. ~~**处置 sherpa-onnx 里的 eSpeak NG（P0）。**~~ 已在 `dev` 分支落地，见 1.5。注意**升级
    `sherpa-onnx-node` 时必须同步重新取件**：新版本的平台包会重新带上 eSpeak，而
    `vendor-sherpa-no-tts.js` 会因哈希不符而拒绝，`build.js` 的硬闸也会拦住出包。
-2. **补齐 / 清理 thirdparty-licenses（P0，部分完成）。** 已补发音模型的 NOTICE 与 sherpa-onnx
-   的 Apache-2.0 全文 + NOTICE（1.5）；仍需补 `ffmpeg-static`（GPLv3 文本 + 源码获取说明，
-   注意 1.4 第 2 条的结论：专有许可下"补文本"不足以合法分发，需要另行决策）；
+2. **补齐 / 清理 thirdparty-licenses（P0，部分完成）。** 已补发音模型的 NOTICE、sherpa-onnx
+   的 Apache-2.0 全文 + NOTICE（1.5）、以及 FFmpeg 的 GPLv3 全文 + 构建说明 + NOTICE 与
+   根 `LICENSE` 的第三方组件 carve-out（4.3）；仍需：**自行编译 FFmpeg 以闭合 §6 对应源码**（4.4），
    删除已下线模型的 `LICENSE.facebook-wav2vec2-lv-60-espeak-cv-ft.txt`（它当前仍随安装包发布，
    见 `electron-builder.yml:160-161`）；扩展包 ZIP 内也带一份 NOTICE。
    注意第 5 节的开放问题：上游 HF 仓库未声明许可，需决定是沿用作者仓库的 MIT 结论还是先取得确认。
