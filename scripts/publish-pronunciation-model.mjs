@@ -5,31 +5,32 @@
  */
 
 /*
- * 把已导出的发音模型运行时资产发布成固定的 GitHub Release 资产。
+ * 核对并暂存发音模型运行时资产，供 GitHub CLI 发布。
  *
  * 背景：`scripts/export-pronunciation-model.py` 需要 torch 工具链，不适合放进安装或 CI
  * 路径。安装路径（scripts/download-pronunciation-model.js）只从
  * `scripts/pronunciation-model-assets.json` 固定的 Release 下载并按 size/SHA-256 校验。
  *
- * 用法（默认只做本地核对并打印计划，不改远端）：
+ * 本脚本**不访问网络**：它把运行时目录里的文件按发布名摆进一个暂存目录，并写出 Release
+ * 说明，真正的上传交给 `.github/workflows/pronunciation-model.yml` 里的
+ * `gh release create`。发布名与运行时文件名不同（例如 `config.json` 发布为
+ * `charsiu-…-int8-config.json`），而 GitHub Release 的资产是扁平的、`gh` 按文件名命名，
+ * 所以必须先暂存。
+ *
+ * 用法（默认只做核对并打印计划，不写任何文件）：
  *
  *   node scripts/publish-pronunciation-model.mjs
- *   GH_TOKEN=<token> node scripts/publish-pronunciation-model.mjs --publish
+ *   node scripts/publish-pronunciation-model.mjs --stage <dir> --notes <file>
  *
  * 常用组合：
  *   --update-manifest  用本地产物的实际 size/SHA-256 刷新清单（重新导出后使用）
- *   --clobber          允许覆盖 Release 上已存在但内容不一致的资产
- *
- * 需要 token 的权限：repository contents: write。可用 GH_TOKEN 或 GITHUB_TOKEN。
- * 受限网络可用 LS101_RELEASE_API_ENDPOINT / LS101_RELEASE_UPLOAD_ENDPOINT 指向镜像。
  */
 
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
 
 import { createHash } from 'node:crypto'
-import { openAsBlob } from 'node:fs'
 import { createReadStream } from 'node:fs'
-import { stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, stat, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -39,39 +40,34 @@ const model = require('./download-pronunciation-model.js')
 const { MANIFEST_PATH, PINNED_MANIFEST, releaseAssetUrl, resolveModelRoot, validateManifest } =
   model
 
-const USER_AGENT = 'cyez-ls101-pronunciation-model-publisher'
-const SHA256_PATTERN = /^[a-f0-9]{64}$/
-
 export function parsePublishOptions(argv) {
-  const allowed = new Set(['--publish', '--dry-run', '--update-manifest', '--clobber', '--help'])
-  const unknown = argv.filter((argument) => !allowed.has(argument))
-  if (unknown.length > 0) throw new Error(`未知参数：${unknown.join(', ')}`)
-  return {
-    publish: argv.includes('--publish'),
-    updateManifest: argv.includes('--update-manifest'),
-    clobber: argv.includes('--clobber'),
-    help: argv.includes('--help')
+  const options = { stage: null, notes: null, updateManifest: false, help: false }
+  for (let index = 0; index < argv.length; index++) {
+    const argument = argv[index]
+    if (argument === '--update-manifest') {
+      options.updateManifest = true
+      continue
+    }
+    if (argument === '--help') {
+      options.help = true
+      continue
+    }
+    if (argument === '--stage' || argument === '--notes') {
+      const value = argv[++index]
+      if (value === undefined || value.startsWith('--')) {
+        throw new Error(`${argument} 需要一个路径参数`)
+      }
+      if (argument === '--stage') options.stage = value
+      else options.notes = value
+      continue
+    }
+    throw new Error(`未知参数：${argument}`)
   }
-}
-
-function resolveEndpoint(environmentValue, fallback) {
-  return String(environmentValue ?? fallback).replace(/\/+$/, '')
-}
-
-export function releaseApiEndpoint() {
-  return resolveEndpoint(process.env.LS101_RELEASE_API_ENDPOINT, 'https://api.github.com')
-}
-
-export function releaseUploadEndpoint() {
-  return resolveEndpoint(process.env.LS101_RELEASE_UPLOAD_ENDPOINT, 'https://uploads.github.com')
-}
-
-export function publishToken() {
-  return process.env.GH_TOKEN || process.env.GITHUB_TOKEN || ''
+  return options
 }
 
 export function releaseDownloadEndpoint() {
-  return resolveEndpoint(process.env.LS101_RELEASE_ENDPOINT, 'https://github.com')
+  return String(process.env.LS101_RELEASE_ENDPOINT ?? 'https://github.com').replace(/\/+$/, '')
 }
 
 async function sha256File(filename) {
@@ -150,86 +146,30 @@ export function releaseNotes(manifest, files) {
   return `${lines.join('\n')}\n`
 }
 
-function githubHeaders(accept) {
-  const token = publishToken()
-  return {
-    accept,
-    'user-agent': USER_AGENT,
-    'x-github-api-version': '2022-11-28',
-    ...(token ? { authorization: `Bearer ${token}` } : {})
-  }
-}
-
-async function request(url, options = {}) {
-  const response = await fetch(url, options)
-  if (response.status === 404) return null
-  if (!response.ok) {
-    const detail = await response.text().catch(() => '')
-    throw new Error(
-      `GitHub API ${options.method ?? 'GET'} ${url} 失败（HTTP ${response.status}）：${detail.slice(0, 300)}`
-    )
-  }
-  return response.status === 204 ? {} : response.json()
-}
-
-export async function findRelease(release, endpoint = releaseApiEndpoint()) {
-  return request(
-    `${endpoint}/repos/${release.repository}/releases/tags/${encodeURIComponent(release.tag)}`,
-    { headers: githubHeaders('application/vnd.github+json') }
-  )
-}
-
-async function createRelease(release, body, endpoint) {
-  return request(`${endpoint}/repos/${release.repository}/releases`, {
-    method: 'POST',
-    headers: {
-      ...githubHeaders('application/vnd.github+json'),
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify({
-      tag_name: release.tag,
-      name: `${release.tag}`,
-      body,
-      prerelease: release.prerelease,
-      draft: false
-    })
-  })
-}
-
-async function deleteReleaseAsset(assetApiUrl) {
-  await request(assetApiUrl, {
-    method: 'DELETE',
-    headers: githubHeaders('application/vnd.github+json')
-  })
-}
-
-export async function uploadReleaseAsset(release, releaseId, file, endpoint) {
-  const body = await openAsBlob(file.filename)
-  return request(
-    `${endpoint}/repos/${release.repository}/releases/${releaseId}/assets?name=${encodeURIComponent(file.asset.name)}`,
-    {
-      method: 'POST',
-      headers: {
-        // The upload endpoint rejects `Accept: application/octet-stream` with HTTP 415;
-        // the uploaded bytes are described by Content-Type, not by Accept.
-        ...githubHeaders('application/vnd.github+json'),
-        'content-type': 'application/octet-stream'
-      },
-      body
+/*
+ * GitHub Release 的资产是扁平的，`gh release create` 按文件名命名，而清单里的发布名与
+ * 运行时文件名不同，所以先把每个文件按发布名复制进暂存目录，再逐个复核复制结果。
+ */
+export async function stageReleaseAssets(files, stageDirectory) {
+  await mkdir(stageDirectory, { recursive: true })
+  const staged = []
+  for (const file of files) {
+    const target = path.join(stageDirectory, file.asset.name)
+    await copyFile(file.filename, target)
+    const details = await stat(target)
+    const sha256 = await sha256File(target)
+    if (details.size !== file.asset.size || sha256 !== file.asset.sha256) {
+      throw new Error(`暂存文件与清单不一致：${file.asset.name}`)
     }
-  )
+    staged.push(target)
+  }
+  return staged
 }
 
-function releaseAssetStatus(asset, pinned) {
-  if (!asset) return { state: 'missing', detail: '缺失' }
-  if (asset.size !== pinned.size) {
-    return { state: 'mismatch', detail: `大小 ${asset.size} != ${pinned.size}` }
-  }
-  const digest = typeof asset.digest === 'string' ? asset.digest.replace(/^sha256:/, '') : ''
-  if (SHA256_PATTERN.test(digest) && digest !== pinned.sha256) {
-    return { state: 'mismatch', detail: `SHA-256 ${digest} != ${pinned.sha256}` }
-  }
-  return { state: 'match', detail: `一致（${asset.size} B）` }
+export async function writeReleaseNotes(manifest, files, notesPath) {
+  await mkdir(path.dirname(path.resolve(notesPath)), { recursive: true })
+  await writeFile(notesPath, releaseNotes(manifest, files), 'utf8')
+  return notesPath
 }
 
 function formatBytes(value) {
@@ -239,20 +179,22 @@ function formatBytes(value) {
 }
 
 function printUsage() {
-  console.log(`用法：node scripts/publish-pronunciation-model.mjs [--publish] [--update-manifest] [--clobber]
+  console.log(`用法：node scripts/publish-pronunciation-model.mjs [--stage <dir>] [--notes <file>] [--update-manifest]
 
-默认只核对本地运行时资产并打印上传计划，不访问远端写接口。
-  --publish          创建/复用 Release 并上传资产（需要 GH_TOKEN 或 GITHUB_TOKEN）
-  --update-manifest  用本地产物的实际 size/SHA-256 刷新 scripts/pronunciation-model-assets.json
-  --clobber          覆盖 Release 上已存在但内容不一致的资产
-  --help             显示本帮助`)
+只做本地核对；不上传、不访问网络。上传由 GitHub CLI 完成：
+  gh release create <tag> --prerelease --title <tag> --notes-file <file> <stage>/*
+
+  --stage <dir>       把每个资产按发布名复制到该目录（上传前必须）
+  --notes <file>      把 Release 说明写入该文件（上传前必须）
+  --update-manifest   用本地产物的实际 size/SHA-256 刷新 scripts/pronunciation-model-assets.json
+  --help              显示本帮助`)
 }
 
 async function main(argv = process.argv.slice(2)) {
   const options = parsePublishOptions(argv)
   if (options.help) {
     printUsage()
-    return { published: false }
+    return { staged: false }
   }
 
   let manifest = PINNED_MANIFEST
@@ -294,65 +236,20 @@ async function main(argv = process.argv.slice(2)) {
     console.log(`  - ${entry.name}（${formatBytes(entry.size)}）-> ${entry.path}`)
   }
 
-  if (!options.publish) {
-    console.log('[publish] 干跑结束（未访问远端）。加 --publish 才会创建 Release 并上传。')
+  if (!options.stage || !options.notes) {
+    console.log('[publish] 未指定 --stage 与 --notes：只做核对，未写入任何文件。')
     console.log(
-      `[publish] 手动上传入口：https://github.com/${release.repository}/releases/new?tag=${encodeURIComponent(release.tag)}`
+      '[publish] 上传入口：.github/workflows/pronunciation-model.yml（gh release create）'
     )
-    return { published: false, plan }
+    return { staged: false, plan }
   }
 
-  if (!publishToken()) {
-    throw new Error('缺少 GH_TOKEN 或 GITHUB_TOKEN（需要 repository contents: write 权限）')
-  }
-
-  let remote = await findRelease(release)
-  if (!remote) {
-    remote = await createRelease(
-      release,
-      releaseNotes(manifest, inspection.files),
-      releaseApiEndpoint()
-    )
-    console.log(`[publish] 已创建 Release：${remote.html_url}`)
-  } else {
-    console.log(`[publish] 复用已有 Release：${remote.html_url}`)
-  }
-
-  const existing = Array.isArray(remote.assets) ? remote.assets : []
-  for (const file of inspection.files) {
-    const current = existing.find((asset) => asset.name === file.asset.name)
-    const status = releaseAssetStatus(current, file.asset)
-    if (status.state === 'match') {
-      console.log(`[publish] 跳过 ${file.asset.name}（${status.detail}）`)
-      continue
-    }
-    if (current && !options.clobber) {
-      throw new Error(
-        `Release 上已有 ${file.asset.name} 但${status.detail}；提升 release.version 发布新 tag，或用 --clobber 覆盖`
-      )
-    }
-    if (current) {
-      await deleteReleaseAsset(current.url)
-      console.log(`[publish] 已删除旧资产 ${file.asset.name}`)
-    }
-    console.log(`[publish] 上传 ${file.asset.name}（${formatBytes(file.size)}）…`)
-    await uploadReleaseAsset(release, remote.id, file, releaseUploadEndpoint())
-  }
-
-  const verified = await findRelease(release)
-  const verifiedAssets = Array.isArray(verified?.assets) ? verified.assets : []
-  for (const pinned of release.release.assets) {
-    const status = releaseAssetStatus(
-      verifiedAssets.find((asset) => asset.name === pinned.name),
-      pinned
-    )
-    if (status.state !== 'match') {
-      throw new Error(`发布后校验失败：${pinned.name} — ${status.detail}`)
-    }
-  }
-  console.log(`[publish] 发布完成并校验通过：${verified.html_url}`)
-  for (const entry of plan) console.log(`  - ${entry.url}`)
-  return { published: true, plan, releaseUrl: verified.html_url }
+  const staged = await stageReleaseAssets(inspection.files, options.stage)
+  console.log(`[publish] 已按发布名暂存 ${staged.length} 个资产到 ${options.stage}`)
+  await writeReleaseNotes(manifest, inspection.files, options.notes)
+  console.log(`[publish] 已写入 Release 说明：${options.notes}`)
+  console.log(`[publish] 接下来：gh release create ${release.tag} --notes-file ${options.notes} …`)
+  return { staged: true, plan }
 }
 
 const invokedDirectly =

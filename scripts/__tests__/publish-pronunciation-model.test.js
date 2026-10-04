@@ -4,7 +4,15 @@
  */
 
 const assert = require('node:assert/strict')
-const { mkdtempSync, rmSync, writeFileSync } = require('node:fs')
+const { createHash } = require('node:crypto')
+const {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync
+} = require('node:fs')
 const { tmpdir } = require('node:os')
 const path = require('node:path')
 const { test } = require('node:test')
@@ -38,23 +46,37 @@ function pinnedManifest() {
   }
 }
 
-test('parses publish options and defaults to a dry run', async () => {
+function writeRuntimeFile(runtime, relativePath, body) {
+  const filename = path.join(runtime, relativePath)
+  mkdirSync(path.dirname(filename), { recursive: true })
+  writeFileSync(filename, body)
+  const buffer = readFileSync(filename)
+  return {
+    filename,
+    size: buffer.length,
+    sha256: createHash('sha256').update(buffer).digest('hex')
+  }
+}
+
+test('parses options and defaults to a read-only check', async () => {
   const { parsePublishOptions } = await modulePromise
 
   assert.deepEqual(parsePublishOptions([]), {
-    publish: false,
+    stage: null,
+    notes: null,
     updateManifest: false,
-    clobber: false,
     help: false
   })
-  assert.deepEqual(parsePublishOptions(['--publish', '--clobber']), {
-    publish: true,
+  assert.deepEqual(parsePublishOptions(['--stage', '/tmp/out', '--notes', '/tmp/notes.md']), {
+    stage: '/tmp/out',
+    notes: '/tmp/notes.md',
     updateManifest: false,
-    clobber: true,
     help: false
   })
-  assert.deepEqual(parsePublishOptions(['--update-manifest']).updateManifest, true)
+  assert.equal(parsePublishOptions(['--update-manifest']).updateManifest, true)
   assert.throws(() => parsePublishOptions(['--force']), /未知参数/)
+  assert.throws(() => parsePublishOptions(['--stage']), /需要一个路径参数/)
+  assert.throws(() => parsePublishOptions(['--notes', '--help']), /需要一个路径参数/)
 })
 
 test('plans uploads against the pinned release urls', async () => {
@@ -111,55 +133,54 @@ test('applies local hashes to the manifest without touching other assets', async
   assert.deepEqual(unchanged.changes, [])
 })
 
-test('uploads release assets with a JSON Accept header', async () => {
-  const { uploadReleaseAsset } = await modulePromise
-  const directory = mkdtempSync(path.join(tmpdir(), 'ls101-publish-'))
-  const filename = path.join(directory, 'config.json')
-  writeFileSync(filename, '{"model":"charsiu"}')
-
-  const calls = []
-  const originalFetch = globalThis.fetch
-  globalThis.fetch = async (url, options) => {
-    calls.push({ url, options })
-    return new Response(JSON.stringify({ id: 7 }), {
-      status: 201,
-      headers: { 'content-type': 'application/json' }
-    })
-  }
+test('stages assets under their published names and re-verifies every copy', async () => {
+  const { stageReleaseAssets } = await modulePromise
+  const root = mkdtempSync(path.join(tmpdir(), 'ls101-stage-'))
+  const runtime = path.join(root, 'runtime')
+  const stage = path.join(root, 'stage')
 
   try {
-    const result = await uploadReleaseAsset(
-      { repository: 'owner/repo' },
-      42,
-      {
-        asset: { name: 'model-config.json', path: 'config.json' },
-        filename,
-        size: 19,
-        sha256: 'a'.repeat(64)
-      },
-      'https://uploads.example'
-    )
-    assert.deepEqual(result, { id: 7 })
-  } finally {
-    globalThis.fetch = originalFetch
-    rmSync(directory, { force: true, recursive: true })
-  }
+    const config = writeRuntimeFile(runtime, 'config.json', '{"model":"charsiu"}')
+    const onnx = writeRuntimeFile(runtime, 'onnx/model_quantized.onnx', 'weights')
 
-  assert.equal(calls.length, 1)
-  const [call] = calls
-  assert.equal(
-    call.url,
-    'https://uploads.example/repos/owner/repo/releases/42/assets?name=model-config.json'
-  )
-  assert.equal(call.options.method, 'POST')
-  // The upload endpoint rejects `Accept: application/octet-stream` with HTTP 415, so the
-  // response type stays JSON while the uploaded bytes are described by Content-Type.
-  assert.equal(call.options.headers.accept, 'application/vnd.github+json')
-  assert.equal(call.options.headers['content-type'], 'application/octet-stream')
+    const files = [
+      {
+        asset: { name: 'model-config.json', path: 'config.json', ...config },
+        ...config
+      },
+      {
+        asset: { name: 'model-onnx.onnx', path: 'onnx/model_quantized.onnx', ...onnx },
+        ...onnx
+      }
+    ]
+
+    const staged = await stageReleaseAssets(files, stage)
+    assert.deepEqual(
+      staged.map((filename) => path.basename(filename)),
+      ['model-config.json', 'model-onnx.onnx']
+    )
+    // The published name is what `gh release create` will use, so the bytes must land there.
+    assert.equal(readFileSync(path.join(stage, 'model-config.json'), 'utf8'), '{"model":"charsiu"}')
+    assert.equal(readFileSync(path.join(stage, 'model-onnx.onnx'), 'utf8'), 'weights')
+    // Runtime file names must not leak into the staging directory.
+    assert.equal(existsSync(path.join(stage, 'config.json')), false)
+
+    // A staged copy that no longer matches the pinned digest must fail loudly.
+    await assert.rejects(
+      () =>
+        stageReleaseAssets(
+          [{ ...files[0], asset: { ...files[0].asset, sha256: 'f'.repeat(64) } }],
+          path.join(root, 'bad-stage')
+        ),
+      /暂存文件与清单不一致/
+    )
+  } finally {
+    rmSync(root, { force: true, recursive: true })
+  }
 })
 
 test('release notes record provenance and immutability', async () => {
-  const { releaseNotes } = await modulePromise
+  const { releaseNotes, writeReleaseNotes } = await modulePromise
   const manifest = pinnedManifest()
   const files = manifest.release.assets.map((asset) => ({
     asset,
@@ -174,4 +195,13 @@ test('release notes record provenance and immutability', async () => {
   assert.match(notes, /scripts\/export-pronunciation-model\.py/)
   assert.match(notes, /model-onnx\.onnx/)
   assert.match(notes, /不可变/)
+
+  const root = mkdtempSync(path.join(tmpdir(), 'ls101-notes-'))
+  try {
+    const notesPath = path.join(root, 'nested', 'notes.md')
+    await writeReleaseNotes(manifest, files, notesPath)
+    assert.equal(readFileSync(notesPath, 'utf8'), notes)
+  } finally {
+    rmSync(root, { force: true, recursive: true })
+  }
 })
