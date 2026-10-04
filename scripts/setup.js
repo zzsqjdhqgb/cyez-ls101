@@ -11,6 +11,8 @@ const SCRIPTS_DIR = __dirname
 const PRODUCT_DOCS_MODE = 'product-docs'
 
 const tasks = [
+  // 必须紧跟依赖安装：yarn 重新解包平台包会还原成含 GPL eSpeak 的版本，这一步负责换掉。
+  { script: 'sherpa-no-tts.js' },
   { script: 'airouter/update-model-catalog.mjs', arguments: ['--check'] },
   {
     script: 'qwen-tts/download-release-assets.mjs',
@@ -50,12 +52,18 @@ function main() {
   if (mode === PRODUCT_DOCS_MODE) {
     console.log('[setup] product-docs mode: skip model downloads, keep required runtime assets')
   }
-  for (const task of setupTasks(mode, verificationArguments)) {
+  const plannedTasks = setupTasks(mode, verificationArguments)
+  for (const [index, task] of plannedTasks.entries()) {
+    console.log(`[setup] [${index + 1}/${plannedTasks.length}] ${formatTask(task)}`)
     execFileSync(process.execPath, [join(SCRIPTS_DIR, task.script), ...task.arguments], {
       env: { ...process.env, ...task.environment },
       stdio: 'inherit'
     })
   }
+}
+
+function formatTask(task) {
+  return `${task.script} ${task.arguments.join(' ')}`.trimEnd()
 }
 
 if (require.main === module) {

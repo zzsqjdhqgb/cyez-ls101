@@ -1,0 +1,52 @@
+Copyright and licence notice for the bundled sherpa-onnx native library.
+
+Component:  sherpa-onnx  (C API shared library)
+Upstream:   https://github.com/k2-fsa/sherpa-onnx
+Version:    1.13.6
+Licence:    Apache License 2.0 (full text: LICENSE.sherpa-onnx-no-tts.txt)
+Vendored:   thirdparty-libs/sherpa-onnx-no-tts/
+Pinned by:  scripts/sherpa-no-tts-assets.json (size + SHA-256 per platform)
+
+What is bundled, and why it replaces the npm payload
+----------------------------------------------------
+The application depends on the npm package `sherpa-onnx-node`, which ships the
+native library inside per-platform packages (`sherpa-onnx-linux-x64`,
+`sherpa-onnx-win-x64`, ...). Upstream builds those packages with the CMake
+default `SHERPA_ONNX_ENABLE_TTS=ON`, so `cmake/espeak-ng-for-piper.cmake` is
+included and eSpeak NG is linked statically into the C API library.
+
+eSpeak NG is licensed GPL-3.0-or-later. The per-platform npm packages
+nevertheless declare only `"license": "Apache-2.0"`, and no GPL notice or
+source offer accompanies them.
+
+This repository is distributed under a proprietary, all-rights-reserved
+LICENSE which is incompatible with the GPLv3 obligation to grant recipients
+the right to copy, modify and redistribute. Adding licence text alone cannot
+resolve that conflict, so the GPL code must not be shipped at all. See
+docs/engineering/licensing-audit.md.
+
+Upstream also publishes release variants built with
+`-DSHERPA_ONNX_ENABLE_TTS=OFF`, in which `include(espeak-ng-for-piper)` and
+`include(piper-phonemize)` are never executed. The vendored files are the C API
+library from those `no-tts` variants:
+
+  linux-x64  sherpa-onnx-v1.13.6-linux-x64-shared-no-tts-lib.tar.bz2
+             -> lib/libsherpa-onnx-c-api.so
+  win-x64    sherpa-onnx-v1.13.6-win-x64-shared-MT-Release-no-tts-lib.tar.bz2
+             -> lib/sherpa-onnx-c-api.dll
+
+Both are the same sherpa-onnx 1.13.6 release as the npm packages, so the C API
+version matches the `sherpa-onnx.node` addon; the no-tts build still exports the
+full `SherpaOnnx*OfflineTts*` entry points, which keep the addon's symbol
+requirements satisfied. No eSpeak NG or piper-phonemize code is present.
+
+Relationship to upstream: these are unmodified upstream build outputs. They are
+redistributed as-is at the paths above and copied into the installed platform
+package at setup time by scripts/sherpa-no-tts.js.
+
+Only the C API library is replaced. The `libonnxruntime` shared library in the
+Linux and Windows npm packages is byte-identical to the one in these release
+archives and is therefore kept as npm ships it.
+
+The application uses sherpa-onnx for speech recognition, voice activity
+detection and wave I/O only. It never calls the TTS entry points.
