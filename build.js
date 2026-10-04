@@ -8,6 +8,7 @@ const { execFileSync, execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 const builder = require('electron-builder')
+const { assertNoGplSherpaPackages } = require('./scripts/sherpa-no-tts.js')
 
 const BUILD_MODES = new Set(['local', 'dev', 'nightly', 'release'])
 const BUILD_PLATFORMS = new Set(['win', 'linux'])
@@ -169,6 +170,10 @@ async function main() {
   console.log(
     `\n[Build Info] Mode: ${options.mode} | Platform: ${options.platform} | Target: ${targetName} | Version: ${version}\n`
   )
+
+  // 依赖升级或重新安装都可能把含 GPL eSpeak NG 的 sherpa 平台包带回来，出包前必须拦住。
+  const { checked: checkedSherpaPackages } = await assertNoGplSherpaPackages()
+  console.log(`[Build Info] sherpa-onnx no-tts 检查通过：${checkedSherpaPackages} 个平台包\n`)
 
   console.log('Running application build...')
   runApplicationBuild(root)

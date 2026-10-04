@@ -5,6 +5,11 @@ const { parseOptions, setupTasks } = require('../setup.js')
 test('product documentation setup keeps runtime assets and skips full models', () => {
   assert.deepEqual(setupTasks('product-docs'), [
     {
+      script: 'sherpa-no-tts.js',
+      arguments: [],
+      environment: {}
+    },
+    {
       script: 'airouter/update-model-catalog.mjs',
       arguments: ['--check'],
       environment: {}
@@ -22,6 +27,7 @@ test('default setup retains all installation tasks', () => {
   assert.deepEqual(
     setupTasks('').map((task) => task.script),
     [
+      'sherpa-no-tts.js',
       'airouter/update-model-catalog.mjs',
       'qwen-tts/download-release-assets.mjs',
       'download-tts-assets.js',

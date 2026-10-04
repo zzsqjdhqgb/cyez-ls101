@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "sherpaOnnxVersion": "1.13.6",
+  "releaseUrl": "https://github.com/k2-fsa/sherpa-onnx/releases/tag/v1.13.6",
+  "reason": "sherpa-onnx-node 的 npm 平台包使用 CMake 默认值 SHERPA_ONNX_ENABLE_TTS=ON 编译，把 GPL-3.0-or-later 的 eSpeak NG 静态链进了 libsherpa-onnx-c-api。上游官方 Release 另行提供 SHERPA_ONNX_ENABLE_TTS=OFF 的 no-tts 变体，其中不含 eSpeak NG / piper-phonemize。本目录存放该变体中与 npm 包同版本（1.13.6）的 C API 库，安装时替换掉平台包里的对应文件。",
+  "offendingLibrary": {
+    "license": "GPL-3.0-or-later",
+    "component": "eSpeak NG（经 piper-phonemize 静态链接）",
+    "note": "本应用只使用 OfflineRecognizer / Vad / readWave，从不调用 TTS；替换只为消除 GPL 代码的分发。"
+  },
+  "markers": [
+    "espeak_Initialize",
+    "espeak_SetVoiceByName",
+    "espeak_TextToPhonemesWithTerminator",
+    "espeak_ng_PrintStatusCodeMessage",
+    "espeak-ng-data",
+    "ESPEAK_DATA_PATH",
+    "piper",
+    "eSpeakPhonemeConfig",
+    "phonemize_eSpeak",
+    "CallPhonemizeEspeak",
+    "InitEspeak"
+  ],
+  "targets": [
+    {
+      "name": "linux-x64",
+      "npmPackage": "sherpa-onnx-linux-x64",
+      "nodePlatform": "linux",
+      "nodeArch": "x64",
+      "releaseArtifact": "sherpa-onnx-v1.13.6-linux-x64-shared-no-tts-lib.tar.bz2",
+      "releaseArtifactSize": 9025276,
+      "releaseArtifactSha256": "dfeef9da664faab279582ee10c4191ea8ff5a8251141c719f9da5598768be95b",
+      "member": "sherpa-onnx-v1.13.6-linux-x64-shared-no-tts-lib/lib/libsherpa-onnx-c-api.so",
+      "packagePath": "libsherpa-onnx-c-api.so",
+      "vendoredFile": "libsherpa-onnx-c-api.so",
+      "vendoredSize": 3606240,
+      "vendoredSha256": "a2950d46ec2836e63caa54d05019ead1b258d2f634e901d57dab088b989ba13e"
+    },
+    {
+      "name": "win-x64",
+      "npmPackage": "sherpa-onnx-win-x64",
+      "nodePlatform": "win32",
+      "nodeArch": "x64",
+      "releaseArtifact": "sherpa-onnx-v1.13.6-win-x64-shared-MT-Release-no-tts-lib.tar.bz2",
+      "releaseArtifactSize": 7377291,
+      "releaseArtifactSha256": "323d80e7e83e862bbdf204260c77a8f4e9da71df0ee1ba11d2db6cb12414c34e",
+      "member": "sherpa-onnx-v1.13.6-win-x64-shared-MT-Release-no-tts-lib/lib/sherpa-onnx-c-api.dll",
+      "packagePath": "sherpa-onnx-c-api.dll",
+      "vendoredFile": "sherpa-onnx-c-api.dll",
+      "vendoredSize": 3234816,
+      "vendoredSha256": "36fc4bed08fde511c51e84db4c0fdf2fcde5c7a34c25a17c3d2f4d3911a05a07"
+    }
+  ]
+}
