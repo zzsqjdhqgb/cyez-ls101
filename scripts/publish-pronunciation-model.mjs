@@ -203,14 +203,16 @@ async function deleteReleaseAsset(assetApiUrl) {
   })
 }
 
-async function uploadReleaseAsset(release, releaseId, file, endpoint) {
+export async function uploadReleaseAsset(release, releaseId, file, endpoint) {
   const body = await openAsBlob(file.filename)
   return request(
     `${endpoint}/repos/${release.repository}/releases/${releaseId}/assets?name=${encodeURIComponent(file.asset.name)}`,
     {
       method: 'POST',
       headers: {
-        ...githubHeaders('application/octet-stream'),
+        // The upload endpoint rejects `Accept: application/octet-stream` with HTTP 415;
+        // the uploaded bytes are described by Content-Type, not by Accept.
+        ...githubHeaders('application/vnd.github+json'),
         'content-type': 'application/octet-stream'
       },
       body

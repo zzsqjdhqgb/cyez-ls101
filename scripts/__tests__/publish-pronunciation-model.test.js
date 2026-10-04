@@ -4,6 +4,9 @@
  */
 
 const assert = require('node:assert/strict')
+const { mkdtempSync, rmSync, writeFileSync } = require('node:fs')
+const { tmpdir } = require('node:os')
+const path = require('node:path')
 const { test } = require('node:test')
 
 const modulePromise = import('../publish-pronunciation-model.mjs')
@@ -106,6 +109,53 @@ test('applies local hashes to the manifest without touching other assets', async
     }
   ])
   assert.deepEqual(unchanged.changes, [])
+})
+
+test('uploads release assets with a JSON Accept header', async () => {
+  const { uploadReleaseAsset } = await modulePromise
+  const directory = mkdtempSync(path.join(tmpdir(), 'ls101-publish-'))
+  const filename = path.join(directory, 'config.json')
+  writeFileSync(filename, '{"model":"charsiu"}')
+
+  const calls = []
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options })
+    return new Response(JSON.stringify({ id: 7 }), {
+      status: 201,
+      headers: { 'content-type': 'application/json' }
+    })
+  }
+
+  try {
+    const result = await uploadReleaseAsset(
+      { repository: 'owner/repo' },
+      42,
+      {
+        asset: { name: 'model-config.json', path: 'config.json' },
+        filename,
+        size: 19,
+        sha256: 'a'.repeat(64)
+      },
+      'https://uploads.example'
+    )
+    assert.deepEqual(result, { id: 7 })
+  } finally {
+    globalThis.fetch = originalFetch
+    rmSync(directory, { force: true, recursive: true })
+  }
+
+  assert.equal(calls.length, 1)
+  const [call] = calls
+  assert.equal(
+    call.url,
+    'https://uploads.example/repos/owner/repo/releases/42/assets?name=model-config.json'
+  )
+  assert.equal(call.options.method, 'POST')
+  // The upload endpoint rejects `Accept: application/octet-stream` with HTTP 415, so the
+  // response type stays JSON while the uploaded bytes are described by Content-Type.
+  assert.equal(call.options.headers.accept, 'application/vnd.github+json')
+  assert.equal(call.options.headers['content-type'], 'application/octet-stream')
 })
 
 test('release notes record provenance and immutability', async () => {
