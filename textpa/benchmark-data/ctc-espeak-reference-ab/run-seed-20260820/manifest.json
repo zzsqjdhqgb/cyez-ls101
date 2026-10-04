@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "completed_at": "2026-08-20T15:24:12.735809+00:00",
+  "experiment": "same-logits CMUdict vs eSpeak CTC forced-alignment reference",
+  "input_evidence": {
+    "path": "textpa/benchmark-data/ctc-pause-correction-demo/run-seed-20260820/evidence-summary.json",
+    "sha256": "7fc72252c724ed039cb1bdf90eddc3412c0b20d747d9752e6986f56406b641af"
+  },
+  "model": {
+    "path": "externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8/onnx/model_quantized.onnx",
+    "sha256": "3d1479b5c70836645a4310902479f7f7e8bbc8c16c58745d918804f4f6f9d120"
+  },
+  "vocabulary": {
+    "path": "externals/ai/pronunciation/model/facebook-wav2vec2-lv-60-espeak-cv-ft-int8/vocab.json",
+    "sha256": "d732ab2456c0c017930001dc9af0b41b3b93d25b2eb9740bf9d925508d7d87d0"
+  },
+  "dictionary": {
+    "path": "node_modules/cmu-pronouncing-dictionary/index.js",
+    "sha256": "ef8b2b976d2e5801b7541ebcc7714f538d1ffa0ebb28645259536e2666bd2948"
+  },
+  "phonemizer": {
+    "language": "en-us",
+    "phonemizer": "3.4.0",
+    "espeak_ng": "1.51",
+    "generation": "whole utterance with the upstream model tokenizer settings; word ownership recovered from eSpeak delimiter hints plus ordered edit alignment",
+    "upstream_tokenizer_revision": "ae45363bf3413b374fecd9dc8bc1df0e24c3b7f4"
+  },
+  "teacher_negative_reference_check": {
+    "path": "textpa/benchmark-data/ctc-espeak-reference-ab/run-seed-20260820/teacher-negative-reference-check.json",
+    "sha256": "2957e19eb54e77d5c54d07b598bf381c4f269a87e56cdc342ed94daca94f6b66"
+  },
+  "scripts": {
+    "comparison": {
+      "path": "textpa/scripts/compare_ctc_reference_sources.py",
+      "sha256": "259b4f6367d4e807284d1aa0c8990ba25ea4c4e310bcadb03ed278f4c30261b2"
+    },
+    "ctc_demo": {
+      "path": "textpa/scripts/run_ctc_pause_correction_demo.py",
+      "sha256": "5e81e94dabf2db957d02fae7fe73b5b527fbd9a085c0b9e33eda5b2a121e2e64"
+    },
+    "phonemizer": {
+      "path": "textpa/src/textpa_repro/phonemize.py",
+      "sha256": "05e678c00359a0cb907fd96e96e39f297a8357b64a72ed1b2d56b423de0ef10f"
+    }
+  },
+  "result_count": 3,
+  "llm_requests": 0
+}

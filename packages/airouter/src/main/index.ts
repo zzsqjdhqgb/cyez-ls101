@@ -224,10 +224,10 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
   )
   ipcMain.handle(AIROUTER_CHANNELS.importPronunciationExtension, async (event) => {
     const parent = BrowserWindow.fromWebContents(event.sender)
-    const options = {
+    const options: OpenDialogOptions = {
       title: '导入 AI 语音评测扩展包',
       filters: [{ name: 'AI 语音评测扩展包', extensions: ['zip'] }],
-      properties: ['openFile'] as const
+      properties: ['openFile']
     }
     const result = parent
       ? await dialog.showOpenDialog(parent, options)
@@ -235,6 +235,9 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
     if (result.canceled || result.filePaths.length === 0) return null
     return pronunciationService.importExtension(result.filePaths[0])
   })
+  ipcMain.handle(AIROUTER_CHANNELS.deletePronunciationExtension, () =>
+    pronunciationService.deleteExtension()
+  )
   ipcMain.on(
     AIROUTER_CHANNELS.generateStart,
     (event, requestId: string, request: AIRouterTextRequest) => {

@@ -7,14 +7,12 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./pronunciation": "./src/pronunciation.ts"
+    "./pronunciation": "./src/pronunciation.ts",
+    "./speech-correction": "./src/speech-correction.ts"
   },
   "dependencies": {
     "@ls101/core-types": "workspace:*",
     "@ls101/submission-library": "workspace:*",
     "cmu-pronouncing-dictionary": "3.0.0"
-  },
-  "scripts": {
-    "typecheck": "tsc --noEmit"
   }
 }

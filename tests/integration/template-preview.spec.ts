@@ -4,9 +4,8 @@ import {
   createSchemaDraft,
   createSchemaStructure
 } from '@ls101/schema-editor'
-import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import path from 'node:path'
+import { rm } from 'node:fs/promises'
+import { createTemporaryDirectory } from '../support/temporary-directory'
 import { closeStartupReleaseNotes, launchIntegrationApp } from './support/electron-app'
 
 const TEMPLATE_ID = '71000000-0000-4000-8000-000000000001'
@@ -17,7 +16,7 @@ let userDataDir: string
 let pageErrors: string[]
 
 test.beforeEach(async () => {
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-template-preview-'))
+  userDataDir = await createTemporaryDirectory('ls101-template-preview-')
   pageErrors = []
   electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()

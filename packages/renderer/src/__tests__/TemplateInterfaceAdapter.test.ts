@@ -11,7 +11,7 @@ describe('Template Interface adapter', () => {
     const draft = await application.drafts.create({
       name: '有序题型',
       description: '',
-      promptTemplate: '生成内容',
+      prompts: [{ name: '基础出题要求', content: '生成内容' }],
       fields: {
         order: ['second', 'first'],
         nodes: {

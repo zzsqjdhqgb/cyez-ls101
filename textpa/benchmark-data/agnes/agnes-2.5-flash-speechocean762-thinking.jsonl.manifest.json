@@ -1,0 +1,112 @@
+{
+  "config": {
+    "api_key_env": "TEXTPA_API_KEY",
+    "api_style": "openai-compatible-chat-completions",
+    "base_url": "https://apihub.agnes-ai.com/v1",
+    "concurrency": 20,
+    "endpoint": "chat/completions",
+    "max_tokens": 65535,
+    "minimum_request_start_interval_seconds": 3.25,
+    "model": "agnes-2.5-flash",
+    "retries": 12,
+    "temperature": "provider default (omitted)",
+    "thinking": {
+      "chat_template_kwargs": {
+        "enable_thinking": true
+      }
+    },
+    "timeout_seconds": 300
+  },
+  "dataset": {
+    "name": "SpeechOcean762",
+    "records": 2500,
+    "split": "test"
+  },
+  "evaluation": {
+    "n": 2500,
+    "llm_only": {
+      "accuracy_field": "assessment.accuracy",
+      "accuracy_pcc": 0.31725795540953733,
+      "fluency_field": "assessment.fluency",
+      "fluency_pcc": 0.44262813094250697
+    },
+    "paper_fused": {
+      "accuracy_field": "scores.paper_cohort_accuracy",
+      "accuracy_pcc": 0.46923842902626345,
+      "fluency_field": "assessment.fluency",
+      "fluency_pcc": 0.44262813094250697
+    },
+    "deployment_fused": {
+      "accuracy_field": "scores.deployment_accuracy_1_5",
+      "accuracy_pcc": 0.48414291253917424,
+      "fluency_field": "assessment.fluency",
+      "fluency_pcc": 0.44262813094250697
+    }
+  },
+  "documentation": {
+    "free_tier_actual_text_rpm_reference": 20,
+    "model": "https://agnes-ai.com/en/docs/agnes-25-flash",
+    "thinking_note": "Chat Completions documents enable_thinking only; budget_tokens is documented for Anthropic Messages format.",
+    "anchor_note": "No calibration anchors were sent. MultiPA anchors are not transferable to this dataset, and selecting SpeechOcean test labels would leak evaluation data.",
+    "anchor_enabled": false
+  },
+  "execution": {
+    "resumptions": 2,
+    "observed_billing_errors": 0,
+    "observed_unresolved_rate_limit_errors": 0,
+    "usage": {
+      "prompt_tokens": 1459666,
+      "completion_tokens": 2175349,
+      "total_tokens": 3635015,
+      "reasoning_tokens": 1670551,
+      "text_tokens": 504798
+    }
+  },
+  "inputs": [
+    {
+      "path": "benchmark-data/upstream-reference/speechocean.zip",
+      "sha256": "eb89fd4cb86ebf84012ab47b10d507b9b3d2c8f5de2392855fd897f7d85e8faa"
+    },
+    {
+      "path": "benchmark-data/agnes/speechocean762-test-human-scores.jsonl",
+      "sha256": "bf340a6940518c24d9c42309ac41447761f4b30732a3ba47786b05bc707e6282"
+    }
+  ],
+  "output": {
+    "path": "benchmark-data/agnes/agnes-2.5-flash-speechocean762-thinking.jsonl",
+    "records": 2500,
+    "bytes": 3896496,
+    "sha256": "bae65f03b69739d1e215672aa7d302a6de2aff1d7f6db19c997bb0c4957605a6"
+  },
+  "finalized_output": {
+    "path": "benchmark-data/agnes/agnes-2.5-flash-speechocean762-thinking-final.jsonl",
+    "records": 2500,
+    "bytes": 4597270,
+    "sha256": "9f28274106eca280dc3773362dc95ffbc996179961ec61c6ce7fec04c4360ca7",
+    "canonical_ipa": {
+      "phonemizer": "3.4.0",
+      "espeak_ng": "1.51"
+    }
+  },
+  "integrity": {
+    "raw_jsonl_valid": true,
+    "raw_unique_ids": 2500,
+    "raw_missing_assessments": 0,
+    "final_jsonl_valid": true,
+    "final_unique_ids": 2500,
+    "final_missing_score_records": 0
+  },
+  "runner": {
+    "path": "scripts/run_agnes_eval.py",
+    "sha256": "fb3939d9aefda4d7c7726adbd35e5025bc8d531b63243851651705cbc38c3830"
+  },
+  "evaluator": {
+    "path": "scripts/evaluate_speechocean762.py",
+    "sha256": "394bc6b09b17a2888d2c92a7b09a1456678bc98f4460eed2b15536c5def9bece"
+  },
+  "schema_version": 1,
+  "stage": "finalized",
+  "started_at": "2026-08-19T16:56:13.935895+00:00",
+  "completed_at": "2026-08-20T05:02:47.063194400Z",
+  "status": "completed"
+}

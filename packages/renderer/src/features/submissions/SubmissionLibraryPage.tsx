@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type JSX } from 'react'
+import type { ReportExportItem, ReportExportProgress } from '@ls101/core-types'
 import { fileDialog } from '@ls101/file-dialog/renderer'
 import type {
   SubmissionLibraryEntry,
@@ -12,6 +13,7 @@ import {
   ChevronRight,
   Download,
   Eye,
+  FileDown,
   Inbox,
   Play,
   RotateCcw,
@@ -29,6 +31,7 @@ import { Page, PageHeader } from '../../components/ui/Page'
 import { toast } from '../../components/ui/toast'
 import { useSubmissionLibrary } from './SubmissionLibraryContext'
 import { SubmissionMarkdown } from './SubmissionMarkdown'
+import { buildSubmissionReportDocument, submissionReportFileName } from './submissionReportDocument'
 import { submissionErrorMessage, submissionExportName } from './submissionUi'
 import styles from './SubmissionLibraryPage.module.css'
 
@@ -51,6 +54,9 @@ export function SubmissionLibraryPage(): JSX.Element {
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
   const [exportingId, setExportingId] = useState<string | null>(null)
+  const [exportingBatchId, setExportingBatchId] = useState<string | null>(null)
+  const [exportingReportId, setExportingReportId] = useState<string | null>(null)
+  const [exportProgress, setExportProgress] = useState<ReportExportProgress | null>(null)
   const [pendingDelete, setPendingDelete] = useState<SubmissionLibraryEntry | null>(null)
   const [pendingReset, setPendingReset] = useState<SubmissionLibraryEntry | null>(null)
   const [reportTarget, setReportTarget] = useState<SubmissionLibraryEntry | null>(null)
@@ -98,15 +104,26 @@ export function SubmissionLibraryPage(): JSX.Element {
     setError(null)
     try {
       const selected = await fileDialog.readBinary({
-        title: '导入作答包',
+        title: '导入作答包或批量压缩包',
         filters: SUBMISSION_FILTER
       })
       if (!selected) return
       const result = await repository.importArchive(selected.data)
       await load()
-      if (result.status === 'duplicate') toast.info('该作答包已经在作答记录中')
-      else toast.success(`已导入 ${result.record.candidateName} 的作答包`)
+      const created = result.items.filter((item) => item.status === 'created').length
+      const duplicates = result.items.length - created
+      if (result.kind === 'bundle') {
+        if (created === 0) toast.info(`${duplicates} 份作答包都已经在作答记录中`)
+        else if (duplicates === 0) toast.success(`已导入 ${created} 份作答包`)
+        else toast.success(`已导入 ${created} 份作答包，${duplicates} 份已存在`)
+      } else if (created === 0) {
+        toast.info('该作答包已经在作答记录中')
+      } else {
+        toast.success(`已导入 ${result.items[0].record.candidateName} 的作答包`)
+      }
     } catch (reason) {
+      // 批量导入可能已经写入前面的成员，失败后仍刷新列表。
+      await load()
       setError(submissionErrorMessage(reason))
     } finally {
       setImporting(false)
@@ -128,6 +145,80 @@ export function SubmissionLibraryPage(): JSX.Element {
       setError(submissionErrorMessage(reason))
     } finally {
       setExportingId(null)
+    }
+  }
+
+  const exportBatchReports = async (batch: SubmissionSettlementBatch): Promise<void> => {
+    const bridge = window.reportExport
+    if (!bridge) {
+      setError('报告导出不可用，请重启应用后重试。')
+      return
+    }
+    setError(null)
+    setExportingBatchId(batch.batchId)
+    setExportProgress(null)
+    const unsubscribe = bridge.onProgress(setExportProgress)
+    try {
+      const items: ReportExportItem[] = []
+      for (const record of batch.records) {
+        const entry = entriesById.get(record.submissionId)
+        if (!entry) continue
+        const report = await repository.getReport(record.submissionId)
+        items.push({
+          filename: submissionReportFileName(entry.record),
+          html: buildSubmissionReportDocument(report)
+        })
+      }
+      if (items.length === 0) {
+        toast.info('该批次没有可导出的报告')
+        return
+      }
+
+      const result = await bridge.exportBatch({ items })
+      if (result.status === 'cancelled') return
+      if (result.failures.length > 0) {
+        toast.error(`已导出 ${result.exportedCount} 份，${result.failures.length} 份失败`)
+        setError(
+          `以下报告导出失败：${result.failures
+            .map((failure) => `${failure.filename}（${failure.reason}）`)
+            .join('；')}`
+        )
+      } else {
+        toast.success(`已导出 ${result.exportedCount} 份作答报告`)
+      }
+    } catch (reason) {
+      setError(submissionErrorMessage(reason))
+    } finally {
+      unsubscribe()
+      setExportingBatchId(null)
+      setExportProgress(null)
+    }
+  }
+
+  const exportEntryReport = async (entry: SubmissionLibraryEntry): Promise<void> => {
+    const bridge = window.reportExport
+    if (!bridge) {
+      setError('报告导出不可用，请重启应用后重试。')
+      return
+    }
+    setError(null)
+    setExportingReportId(entry.record.submissionId)
+    try {
+      const report = await repository.getReport(entry.record.submissionId)
+      const result = await bridge.exportSingle({
+        filename: submissionReportFileName(entry.record),
+        html: buildSubmissionReportDocument(report)
+      })
+      if (result.status === 'cancelled') return
+      if (result.status === 'failed') {
+        setError(`报告导出失败：${result.reason}`)
+        return
+      }
+      toast.success('作答报告已导出')
+    } catch (reason) {
+      setError(submissionErrorMessage(reason))
+    } finally {
+      setExportingReportId(null)
     }
   }
 
@@ -267,8 +358,13 @@ export function SubmissionLibraryPage(): JSX.Element {
           entriesById={entriesById}
           expandedBatchIds={expandedBatchIds}
           exportingId={exportingId}
+          exportingBatchId={exportingBatchId}
+          exportingReportId={exportingReportId}
+          exportProgress={exportProgress}
           onDelete={setPendingDelete}
           onExport={(record) => void exportSubmission(record)}
+          onExportBatch={(batch) => void exportBatchReports(batch)}
+          onExportReport={(entry) => void exportEntryReport(entry)}
           onReport={(entry) => void viewReport(entry)}
           onReset={setPendingReset}
           onToggle={(batchId) =>
@@ -473,20 +569,30 @@ function SettledBatches({
   entriesById,
   expandedBatchIds,
   exportingId,
+  exportingBatchId,
+  exportingReportId,
+  exportProgress,
   onToggle,
   onReport,
   onReset,
   onExport,
+  onExportBatch,
+  onExportReport,
   onDelete
 }: {
   batches: SubmissionSettlementBatch[]
   entriesById: Map<string, SubmissionLibraryEntry>
   expandedBatchIds: Set<string>
   exportingId: string | null
+  exportingBatchId: string | null
+  exportingReportId: string | null
+  exportProgress: ReportExportProgress | null
   onToggle(batchId: string): void
   onReport(entry: SubmissionLibraryEntry): void
   onReset(entry: SubmissionLibraryEntry): void
   onExport(record: SubmissionLibraryRecord): void
+  onExportBatch(batch: SubmissionSettlementBatch): void
+  onExportReport(entry: SubmissionLibraryEntry): void
   onDelete(entry: SubmissionLibraryEntry): void
 }): JSX.Element {
   if (batches.length === 0) return <EmptyState icon={Inbox} title="还没有已结算作答" />
@@ -519,6 +625,26 @@ function SettledBatches({
             </button>
             {expanded ? (
               <div className={styles.batchBody}>
+                <div className={styles.batchToolbar}>
+                  <Button
+                    disabled={exportingBatchId !== null}
+                    icon={FileDown}
+                    size="small"
+                    variant="secondary"
+                    onClick={() => onExportBatch(batch)}
+                  >
+                    {exportingBatchId === batch.batchId ? '正在生成报告' : '导出批次报告'}
+                  </Button>
+                  <span className={styles.batchHint}>
+                    {exportingBatchId === batch.batchId
+                      ? exportProgress
+                        ? `${exportProgress.completed}/${exportProgress.total}${
+                            exportProgress.current ? ` · ${exportProgress.current}` : ''
+                          }`
+                        : '正在准备报告...'
+                      : 'ZIP，每份作答一个 PDF'}
+                  </span>
+                </div>
                 <table className={styles.batchTable}>
                   <thead>
                     <tr>
@@ -559,6 +685,12 @@ function SettledBatches({
                               icon={RotateCcw}
                               label="重新评分"
                               onClick={() => onReset(entry)}
+                            />
+                            <IconButton
+                              disabled={exportingReportId !== null}
+                              icon={FileDown}
+                              label="导出报告"
+                              onClick={() => onExportReport(entry)}
                             />
                             <IconButton
                               disabled={exportingId !== null}

@@ -1,6 +1,6 @@
 {
   "name": "cyez-ls101",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "private": true,
   "workspaces": [
     "packages/*"
@@ -13,7 +13,7 @@
     "format": "prettier --write .",
     "lint": "eslint . --cache",
     "lint:fix": "eslint . --fix --cache",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc -b",
     "test": "yarn test:scripts && yarn test:vitest && yarn test:playwright && yarn test:product-docs:run",
     "test:scripts": "node --test scripts/__tests__/*.test.js",
     "test:vitest": "vitest run",
@@ -30,6 +30,11 @@
     "docs:product:publish:container": "node scripts/product-docs/container-runner.mjs publish",
     "test:smoke": "yarn build:test && playwright test --config=playwright.config.ts tests/integration/electron-app.spec.ts",
     "test:pronunciation": "node scripts/test-pronunciation.js",
+    "deepseek-proxy": "node tools/deepseek-proxy/launch.mjs",
+    "deepseek-proxy:probe": "node tools/deepseek-proxy/launch.mjs --probe",
+    "deepseek-proxy:diagnose": "node tools/deepseek-proxy/launch.mjs --diagnose",
+    "deepseek-proxy:usage": "node tools/deepseek-proxy/launch.mjs --usage",
+    "deepseek-proxy:test": "node tools/deepseek-proxy/launch.mjs --test",
     "airouter:catalog:update": "node scripts/airouter/update-model-catalog.mjs --update",
     "airouter:catalog:check": "node scripts/airouter/update-model-catalog.mjs --check",
     "qwen-tts:build-runtime": "node scripts/qwen-tts/build-runtime.mjs",
@@ -39,6 +44,8 @@
     "qwen-tts:prepare": "node scripts/qwen-tts/prepare-package.mjs",
     "qwen-asr:build-package": "node scripts/build-asr-model-package.mjs",
     "pronunciation:build-extension": "node scripts/build-pronunciation-extension-package.mjs",
+    "pronunciation:export-model": "node scripts/download-pronunciation-model.js --export",
+    "pronunciation:publish-model": "node scripts/publish-pronunciation-model.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "start": "electron-vite preview",

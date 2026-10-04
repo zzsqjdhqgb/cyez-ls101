@@ -1,7 +1,7 @@
 import type { AIRouterClient } from '@ls101/airouter'
 import { describe, expect, it, vi } from 'vitest'
 import {
-  createAIRouterSpeechCorrector,
+  createAIRouterPronunciationAssessor,
   createAIRouterSpeechRecognizer,
   createAIRouterTextGradingModel,
   listSubmissionAIModels
@@ -62,6 +62,23 @@ describe('submission AIRouter adapter', () => {
         yield { type: 'output' as const, delta: '4,"comment":"ok"}' }
       })()
     )
+    vi.mocked(client.assessPronunciation).mockResolvedValue({
+      schema_version: 2,
+      reference_text: 'Read this.',
+      audio_duration_ms: 1000,
+      frame_count: 10,
+      recognized_phones: ['R'],
+      recognized_phones_ipa: ['ɹ'],
+      gop_method: 'viterbi',
+      alignment_path_score: -0.1,
+      acoustic_model: 'test model',
+      acoustic_phone_inventory: '39 CMU phones',
+      reference_source: 'CMUdict',
+      dictionary_source: 'test dictionary',
+      uncovered_words: [],
+      phones: [],
+      words: []
+    })
     const selection = { providerId: 'provider', modelId: 'model' }
     const audio = {
       resourceKey: 'audio',
@@ -76,35 +93,37 @@ describe('submission AIRouter adapter', () => {
       createAIRouterSpeechRecognizer(selection, client).recognize({ audio })
     ).resolves.toBe('recognized')
     await expect(
-      createAIRouterTextGradingModel(selection, client).generate('prompt')
+      createAIRouterTextGradingModel(selection, client).generate('prompt', {
+        systemPrompt: 'system',
+        temperature: 0,
+        maxOutputTokens: 65_535
+      })
     ).resolves.toBe('{"score":4,"comment":"ok"}')
-  })
-
-  it('uses pronunciation assessment for fixed reading and skips free speech', async () => {
-    const client = mockClient()
-    vi.mocked(client.assessPronunciation).mockResolvedValue({
-      referenceText: 'three',
-      recognizedPhones: ['s', 'ɹ', 'iː'],
-      overallScore: 60,
-      words: [],
-      pauses: [],
-      feedbackMarkdown: 'phoneme feedback'
-    })
-    const audio = {
-      resourceKey: 'audio',
-      filename: 'answer.webm',
-      mediaType: 'audio/webm',
-      kind: 'recording' as const,
-      data: new Uint8Array([1]),
-      durationMs: 1000
-    }
-    const corrector = createAIRouterSpeechCorrector(client)
-
-    await expect(corrector.correct({ audio, referenceText: 'three' })).resolves.toBe(
-      'phoneme feedback'
+    await expect(
+      createAIRouterPronunciationAssessor(client).assess({
+        audio,
+        referenceText: 'Read this.'
+      })
+    ).resolves.toMatchObject({ reference_text: 'Read this.' })
+    expect(client.generateText).toHaveBeenCalledWith(
+      {
+        providerConfigId: 'provider',
+        modelId: 'model',
+        prompt: 'prompt',
+        systemPrompt: 'system',
+        temperature: 0,
+        maxOutputTokens: 65_535
+      },
+      { signal: undefined }
     )
-    await expect(corrector.correct({ audio })).resolves.toContain('不执行逐音素')
-    expect(client.assessPronunciation).toHaveBeenCalledOnce()
+    expect(client.assessPronunciation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        providerConfigId: 'builtin-cmu-phoneme',
+        modelId: 'en-w2v2-ctc-libris-and-cv-int8-70f5061',
+        referenceText: 'Read this.'
+      }),
+      undefined
+    )
   })
 })
 
@@ -138,6 +157,17 @@ function mockClient(): AIRouterClient {
     listPronunciationAssessmentModels: vi.fn().mockResolvedValue([]),
     assessPronunciation: vi.fn(),
     synthesizeSpeech: vi.fn(),
+    listSpeechRecognitionProviderConfigs: vi.fn().mockResolvedValue([]),
+    saveSpeechRecognitionProviderConfig: vi.fn(),
+    deleteSpeechRecognitionProviderConfig: vi.fn(),
+    readSpeechRecognitionProviderApiKey: vi.fn(),
+    listSpeechRecognitionModelPackages: vi.fn().mockResolvedValue([]),
+    importSpeechRecognitionModelPackage: vi.fn().mockResolvedValue(null),
+    deleteSpeechRecognitionModelPackage: vi.fn(),
+    listSpeechRecognitionProviderModels: vi.fn().mockResolvedValue([]),
+    getPronunciationAssessmentExtensionStatus: vi.fn(),
+    importPronunciationAssessmentExtension: vi.fn().mockResolvedValue(null),
+    deletePronunciationAssessmentExtension: vi.fn(),
     generateImage: vi.fn(),
     generateText: vi.fn()
   }

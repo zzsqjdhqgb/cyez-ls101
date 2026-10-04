@@ -17,7 +17,7 @@ const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00
 const content = {
   name: '听说综合题',
   description: '用于集成测试的题型',
-  promptTemplate: '请生成一套听说练习',
+  prompts: [{ name: '基础出题要求', content: '请生成一套听说练习' }],
   fields: {
     order: ['title', 'section'],
     nodes: {
@@ -103,7 +103,7 @@ describe('interface editor application integration', () => {
       ]
     })
     const prompts = await app.published.getPrompts(interfaceId)
-    expect(prompts.prompt).toBe(content.promptTemplate)
+    expect(prompts.prompt).toContain(content.prompts[0].content)
     expect(prompts.fullPrompt).toContain('学生在校园里活动')
     expect(JSON.parse(prompts.jsonExample)).toEqual({
       title: '校园生活',
@@ -234,14 +234,17 @@ describe('interface editor application integration', () => {
       interfaceId,
       instance.instance.instanceId,
       {
+        selectedPromptIndices: [0],
         model,
+        additionalPrompt: '出题方向偏科技类',
         imageProvider: { providerId: 'image-provider', modelId: 'image-model' }
       }
     )
     const result = await handle.completion
     expect(result.status).toBe('completed')
     expect(textGenerator.lastModel).toEqual(model)
-    expect(textGenerator.lastPrompt).toContain(content.promptTemplate)
+    expect(textGenerator.lastPrompt).toContain(content.prompts[0].content)
+    expect(textGenerator.lastPrompt).toContain('## 本次生成的补充要求\n出题方向偏科技类')
     expect(imageGenerator.generate).toHaveBeenCalledWith('AI 配图', {
       signal: expect.any(AbortSignal),
       provider: { providerId: 'image-provider', modelId: 'image-model' }
@@ -267,6 +270,58 @@ describe('interface editor application integration', () => {
     expect(generated).toEqual(PNG)
   })
 
+  it('retains the original supplemental prompt when retrying a failed text request', async () => {
+    const repository = new FileInterfaceRepository(new MemoryStore())
+    const prompts: string[] = []
+    const textGenerator: InterfaceTextGenerator = {
+      async *generate(prompt) {
+        prompts.push(prompt)
+        if (prompts.length === 1) throw new Error('temporary text failure')
+        yield {
+          type: 'output',
+          delta: '{"title":"AI 标题","section":{"picture":"AI 配图","answer":"AI answer"}}'
+        }
+      }
+    }
+    const app = createInterfaceApplication({
+      repository,
+      fileDialog: new TestFileDialog(),
+      textGenerator,
+      imageGenerator: { generate: vi.fn().mockResolvedValue({ data: PNG }) }
+    })
+    const draft = await app.drafts.create(content)
+    const published = await app.drafts.publish(draft.draftId)
+    if (published.status === 'invalid') throw new Error('expected a valid draft')
+    const interfaceId = published.interface.interfaceId
+    const blank = await app.published.createBlankInstance(interfaceId)
+    for (const selectedPromptIndices of [[], [-1], [99]]) {
+      await expect(
+        app.instances.startAIGeneration(interfaceId, blank.instance.instanceId, {
+          selectedPromptIndices
+        })
+      ).rejects.toThrow()
+    }
+    expect(prompts).toHaveLength(0)
+    const options = { selectedPromptIndices: [0], additionalPrompt: '  出题方向偏科技类  ' }
+    const handle = await app.instances.startAIGeneration(
+      interfaceId,
+      blank.instance.instanceId,
+      options
+    )
+    await expect(handle.completion).resolves.toMatchObject({ status: 'failed' })
+    await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(blank)
+
+    options.additionalPrompt = '改为体育类'
+    options.selectedPromptIndices.splice(0, 1, 99)
+    const retry = await handle.retry()
+    await expect(retry.completion).resolves.toMatchObject({ status: 'completed' })
+    expect(prompts).toHaveLength(2)
+    expect(prompts[1]).toBe(prompts[0])
+    expect(prompts[1]).toContain('## 本次生成的补充要求\n出题方向偏科技类')
+    const definition = await app.published.get(interfaceId)
+    expect(definition?.definition.prompts).toEqual(content.prompts)
+  })
+
   it('keeps the current instance unchanged after an invalid AI response and releases its lock', async () => {
     const repository = new FileInterfaceRepository(new MemoryStore())
     const app = createInterfaceApplication({
@@ -286,7 +341,9 @@ describe('interface editor application integration', () => {
       imageFiles: { questionImage: PNG }
     })
 
-    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId)
+    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId, {
+      selectedPromptIndices: [0]
+    })
 
     await expect(handle.completion).resolves.toMatchObject({ status: 'invalid-response' })
     await expect(app.instances.get(interfaceId, blank.instance.instanceId)).resolves.toEqual(before)
@@ -318,7 +375,9 @@ describe('interface editor application integration', () => {
     const interfaceId = published.interface.interfaceId
     const blank = await app.published.createBlankInstance(interfaceId)
 
-    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId)
+    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId, {
+      selectedPromptIndices: [0]
+    })
 
     await expect(handle.completion).resolves.toMatchObject({
       status: 'failed',
@@ -365,7 +424,9 @@ describe('interface editor application integration', () => {
     })
     const oldFilename = before.instance.values.questionImage
 
-    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId)
+    const handle = await app.instances.startAIGeneration(interfaceId, blank.instance.instanceId, {
+      selectedPromptIndices: [0]
+    })
     await started
     handle.cancel()
 
@@ -416,7 +477,8 @@ describe('interface editor application integration', () => {
 
     const handle = await app.instances.startAIGeneration(
       published.interface.interfaceId,
-      blank.instance.instanceId
+      blank.instance.instanceId,
+      { selectedPromptIndices: [0] }
     )
     await consumed
     handle.cancel()
@@ -459,7 +521,8 @@ describe('interface editor application integration', () => {
 
     const handle = await app.instances.startAIGeneration(
       published.interface.interfaceId,
-      blank.instance.instanceId
+      blank.instance.instanceId,
+      { selectedPromptIndices: [0] }
     )
     await started
     handle.cancel()
@@ -520,7 +583,8 @@ describe('interface editor application integration', () => {
 
     const failedHandle = await app.instances.startAIGeneration(
       interfaceId,
-      blank.instance.instanceId
+      blank.instance.instanceId,
+      { selectedPromptIndices: [0] }
     )
     await expect(failedHandle.completion).resolves.toEqual({
       status: 'failed',
@@ -600,7 +664,8 @@ describe('interface editor application integration', () => {
 
     const failedHandle = await app.instances.startAIGeneration(
       interfaceId,
-      blank.instance.instanceId
+      blank.instance.instanceId,
+      { selectedPromptIndices: [0] }
     )
 
     await expect(failedHandle.completion).resolves.toEqual({

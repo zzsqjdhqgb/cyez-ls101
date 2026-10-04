@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "request_sha256": "0db7295c7d4ee46c75d0a792190b25925f56a43cc6cbdcf92d8b639943b0c7a2",
+  "request_config": {
+    "schema_version": 1,
+    "input_sha256": "8a45d99d30395cbec63936b92682bdc55f7264279807c2f7326202249ddd6321",
+    "prompt_sha256": "4b293801d1575e1c3a94d21802d6d327e6716c47a64ed6a55d29a7f548f52cbf",
+    "endpoint": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "model": "agnes-2.5-flash",
+    "max_tokens": 65535,
+    "temperature": 0.0,
+    "thinking": true,
+    "threshold": -0.35
+  },
+  "api_response": {
+    "id": "b705080891524ce996db99f6fa70cba0",
+    "created": 1787456833,
+    "model": "agnes-2.5-flash",
+    "object": "chat.completion",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "content": "\n\n```json\n{\n  \"summary_zh\": \"低 GOP 证据提示若干可关注的音素模式，主要涉及元音前移、清浊对立弱化及 /n/、/t/ 向 /l/ 的替换倾向，但部分证据存在对齐或自然变体可能，需结合复听确认。\",\n  \"feedback_items\": [\n    {\n      \"evidence_ids\": [\"GOP-0080\", \"GOP-0012\"],\n      \"decision\": \"likely_issue\",\n      \"finding_zh\": \"\\\"books\\\" 的声母 /b/（AE 预期）在两次出现中均被声学模型更倾向于识别为清音 /p/，GOP 分别为 -6.51 与 -2.28，呈现一致的清化模式。\",\n      \"rationale_zh\": \"两条证据同词同位、同向偏移，且 GOP-0080 差距较大（-6.51），说明 /b/ 的浊音特征在该语境下较弱，值得针对声母清浊对立的发声练习。\",\n      \"practice_zh\": \"朗读 \\\"books\\\" 时特意保持声带振动感，可在手触喉部时确认 /b/ 起始即有振颤，再逐步过渡到完整词中。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0267\"],\n      \"decision\": \"likely_issue\",\n      \"finding_zh\": \"\\\"advantages\\\" 首音节 /æ/ 被识别为 /ʌ/（GOP = -7.63），元音开口度低于模型预期。\",\n      \"rationale_zh\": \"GOP 差距显著，且 /æ/→/ʌ/ 是低频学习者常见迁移模式；同词另一音素 GOP-0268 也显示次低分（-3.97），提示该词整体元音空间可能偏紧。\",\n      \"practice_zh\": \"在镜子前练习 \\\"ah\\\" 音（如 cat、bad），把下颌明显下落、口腔开大；对比 \\\"advantages\\\" /ədˈvɑːntɪdʒɪz/ 首音的开口幅度。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0261\"],\n      \"decision\": \"needs_listening\",\n      \"finding_zh\": \"\\\"to\\\" 的元音预期为 /uː/，但声学Winner为 /eɪ/（GOP = -6.84）。\",\n      \"rationale_zh\": \"差距很大，但 \\\"to\\\" 在非重读语境下常弱化为 [tə] 或 [də]，属合法语音变体；需人工复听以区分弱化现象与真实发音偏差。\",\n      \"practice_zh\": \"先用重读形式 [tuː] 清晰读出 \\\"to\\\"，确保唇形圆拢、舌位靠后；再与弱化形式 [də] 对比，体会同义词在不同位置的实际读音差异。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0102\"],\n      \"decision\": \"likely_issue\",\n      \"finding_zh\": \"\\\"storage\\\" 第二音节 /ɒ/（转写为 AH）被识别为 /iː/（GOP = -6.20），元音空间严重前移。\",\n      \"rationale_zh\": \"GOP 差距明确，且 /ɒ/→/iː/ 属于跨度很大的元音替换，可能反映学习者在非重读音节中对元音区分敏感度不足。\",\n      \"practice_zh\": \"对比练习 \\\"store\\\" /stɔː/ 与 \\\"steer\\\" /stɪər/，把 /ɒ/ 的圆唇后舌位固定住；再读 \\\"storage\\\" 时把注意力集中在第二音节的后元音开口上。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0257\", \"GOP-0256\"],\n      \"decision\": \"likely_issue\",\n      \"finding_zh\": \"\\\"want\\\" 中 /t/→/l/（GOP=-3.34）与 /n/→/l/（GOP=-3.11）两处证据同时出现，提示 /n/ 与 /t/ 都可能被侧音化替代。\",\n      \"rationale_zh\": \"同词内两个相邻音段都指向 /l/，形成重复模式；虽 GOP 未达极深，但一致性较高，值得人工复听并结合发音动作判断。\",\n      \"practice_zh\": \"分开练习 \\\"wan\\\"（注意 /n/ 舌尖抵上齿龈的鼻音终点）和 \\\"watch\\\"（/t/ 的清晰塞音释放），再合并为 \\\"want\\\"；用最小对立体区分 /n/、/l/、/t/。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0210\", \"GOP-0137\"],\n      \"decision\": \"likely_issue\",\n      \"finding_zh\": \"\\\"best\\\" 与 \\\"any\\\" 中的 /ɛ/ 均被识别为更开的 /æ/（GOP 分别为 -3.27、-2.31），呈现一致的元音前移方向。\",\n      \"rationale_zh\": \"两条证据同向偏移、同属 /ɛ/ 类元音，提示学习者可能在 /ɛ/–/æ/ 区分上存在系统性紧张，值得针对性反馈。\",\n      \"practice_zh\": \"朗读最小对立体 \\\"bed–bad\\\"、\\\"let–lat\\\"，放慢速度，刻意在 /ɛ/ 时保持口腔比 /æ/ 更闭合；然后代入 \\\"best\\\" 与 \\\"any\\\" 进行迁移练习。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0255\"],\n      \"decision\": \"needs_listening\",\n      \"finding_zh\": \"\\\"want\\\" 的元音 /ɑː/ 被识别为 /ʌ/（GOP = -2.23），开口度略高于预期。\",\n      \"rationale_zh\": \"GOP 处于中等偏低，且同词的其他证据（GOP-0256、GOP-0257）已占用，该元音差异可能受到相邻音段影响；需复听确认是否独立错误。\",\n      \"practice_zh\": \"练习 \\\"father\\\" /ˈfɑːðər/ 与 \\\"luck\\\" /lʌk/ 的对比，体会 /ɑː/ 的深后开口；再以 \\\"want\\\" 为目标，先单独拉长 /ɑː/ 再与 /w/、/nt/ 组合。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0212\"],\n      \"decision\": \"needs_listening\",\n      \"finding_zh\": \"\\\"best\\\" 词尾 /t/ 被识别为 /s/（GOP = -2.64），可能是 /t/ 的擦化或语流弱读。\",\n      \"rationale_zh\": \"GOP 中等偏低，且 /t/ 在词尾非重读位置上擦化为 [s] 在多种方言和速语中均存在，不能直接判定为错误。\",\n      \"practice_zh\": \"单独朗读 \\\"best\\\" 并保持词尾 /t/ 清晰的爆破释放（轻促的 [t] 而非 [s]）；与 fast、cast 等词尾同样是 /t/ 的词一起做对比朗读。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0268\"],\n      \"decision\": \"needs_listening\",\n      \"finding_zh\": \"\\\"advantages\\\" 第二音节的 /d/ 被识别为 /ð/（GOP = -3.97）。\",\n      \"rationale_zh\": \"GOP 中等偏低，/d/ 与 /ð/ 在某些语流连接中听觉相近，且同词 GOP-0267 已作为元音问题被单独处理；需复听确认是否为持续偏误。\",\n      \"practice_zh\": \"对比朗读 \\\"day\\\" /deɪ/ 与 \\\"the\\\" /ðiː/，把 /d/ 的舌尖抵上齿龈塞音动作做清晰，再代入 \\\"advantages\\\" 的第二音节重复练习。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0259\"],\n      \"decision\": \"needs_listening\",\n      \"finding_zh\": \"\\\"me\\\" 的元音 /iː/ 被识别为 /eɪ/（GOP = -1.19），差距较小。\",\n      \"rationale_zh\": \"GOP 仅 -1.19，处于模型不确定区间；同词前文语境或其他因素（连读、语速）可能导致此偏移，不宜直接作为发音错误反馈。\",\n      \"practice_zh\": \"单独拉长发 \\\"me\\\" [miː]，确保双唇放松、舌面前部高抬；再与 \\\"may\\\" [meɪ] 做对比朗读，巩固 /iː/ 与 /eɪ/ 的差别。\"\n    }\n  ],\n  \"withheld_differences\": [\n    {\n      \"evidence_ids\": [\"GOP-0211\"],\n      \"reason_zh\": \"\\\"best\\\" 中 /s/→/t/ 仅 GOP=-1.43，处于模型置信边界；该偏移可能与 GOP-0212 的对齐边界重叠，且 /s/ 与 /t/ 在快速语流中频谱相近，无法独立判定为发音偏误。\"\n    },\n    {\n      \"evidence_ids\": [\"GOP-0081\"],\n      \"reason_zh\": \"\\\"books\\\" 中 /ʊ/→/ʌ/ 仅 GOP=-0.98，属弱信号；英式英语中 book 的元音本就接近 [ʊ]，与 /ʌ/ 的听觉差别有限，且同词 GOP-0080 已处理声母问题，不宜重复报错。\"\n    }\n  ],\n  \"limitations_zh\": [\n    \"所有证据均为 GOP 声学偏好信号，不代表已确认的发音错误。\",\n    \"无法听到音频，不能验证连读、弱读、方言变体或 ASR 对齐偏差的真实来源。\",\n    \"\\\"to\\\" 的 UW→EY 大 GOP 可能是非重读弱化而非发音错误。\",\n    \"\\\"books\\\" 的 B→P 清化在非重读词首位置存在自然语音学上的合法性。\",\n    \"部分证据间隔很近（如 want、best 的多条）可能共享同一段声学片段，独立性受限。\",\n    \"本反馈未考虑音高、重音、语调、语速等超音段维度。\"\n  ]\n}\n```",
+          "role": "assistant",
+          "reasoning_content": "Let me carefully analyze the evidence data and organize it into the requested JSON format.\n\nLet me go through each evidence:\n\n1. **GOP-0267**: \"advantages\" - AE→AH, gop=-7.63 - large gap, clear shift from /æ/ to /ʌ/ in first syllable\n2. **GOP-0261**: \"to\" - UW→EY, gop=-6.84 - large gap, /uː/ heard as /eɪ/ - unusual but could be diphthong reduction or contextual\n3. **GOP-0080**: \"books\" - B→P, gop=-6.51 - moderate gap, voiced→voiceless - could be devoicing in context (before voiceless /b/ or in certain positions... actually books starts with B before OO which is a vowel, so B should be voiced. But B→P is very common for learners)\n\n\n4. **GOP-0102**: \"storage\" - AH→IY, gop=-6.20 - large gap, second syllable /ɒ/ shifted to /iː/ - notable\n5. **GOP-0268**: \"advantages\" - D→DH, gop=-3.97 - moderate gap, /d/ → /ð/\n6. **GOP-0257**: \"want\" - T→L, gop=-3.34 - the /t/ is being realized as /l/, which is a significant substitution\n7. **GOP-0210**: \"best\" - EH→AE, gop=-3.27 - the /ɛ/ is shifting toward /æ/, another vowel quality issue\n8. **GOP-0256**: \"want\" - N→L, gop=-3.11 - the /n/ is being produced as /l/, suggesting a possible nasality or lateralization problem\n9. **GOP-0212**: \"best\" - T→S, gop=-2.64 - the final /t/ is fricativized to /s/, indicating aspiration or affrication\n10. **GOP-0137**: \"any\" - EH→AE, gop=-2.31 - similar vowel shift to the one in \"best\"\n11. **GOP-0012**: \"books\" - B→P, gop=-2.28 - same devoicing pattern appearing again\n12. **GOP-0255**: \"want\" - AA→AH, gop=-2.23 - the /ɑː/ is raising to /ʌ/, another vowel quality issue\n13. **GOP-0211**: \"best\" - S→T, gop=-1.43 - borderline, suggests the /s/ might be aspirated\n14. **GOP-0259**: \"me\" - IY→EY, gop=-1.19 - borderline, the /iː/ is shifting to /eɪ/\n15. **GOP-0081**: \"books\" - UH→AH, gop=-0.98 - borderline, the /ʊ/ is centralizing to /ʌ/\n\nI'm noticing a few key patterns emerge here. There's repetition across multiple instances - the B→P devoicing shows up twice, and there are two examples of the vowel shift from /ɛ/ to /æ/. The /n/→/l/ substitution in \"want\" combined with the /t/→L shift and the /ɑː/→/ʌ/ movement creates a cluster of related sound changes. Let me think about whether these can be grouped together as evidence of systematic phonological processes.\n\nFor the high-confidence items, the clearest issues are the vowel substitutions in \"advantages\" where /æ/ becomes /ʌ/, and the /uː/→/eɪ/ shift in \"to\" - both have strong acoustic evidence. The /ɑː/→/ʌ/ in \"want\" also looks like a real pattern. On the borderline cases, \"best\" shows some frication of /t/ to /s/, and there are weaker signals in \"me\" and the final /s/ that might just be natural variation rather than systematic errors. - likely_issue\n- For items at the boundary or with ambiguous interpretations, I'll mark them as needs_listening\n- Anything else goes to withheld_differences\n\nLet me finalize my categorization:\n\n**likely_issue:**\n1. GOP-0267: AE→AH in \"advantages\" - clear large gap\n2. GOP-0261: UW→EY in \"to\" - clear large gap\n3. GOP-0080 + GOP-0012: B→P in \"books\" - consistent devoicing pattern (moderate gap in GOP-0080)\n4. GOP-0102: AH→IY in \"storage\" - clear large gap\n5. GOP-0257 + GOP-0256: \"want\" shows multiple segmental issues (T→L, N→L) - these are related patterns worth flagging together\n6. GOP-0210 + GOP-0137: EH→AE pattern in \"best\" and \"any\" - consistent vowel fronting\n7. GOP-0255: AA→AH in \"want\" - moderate gap\n8. GOP-0268: D→DH in \"advantages\" - moderate gap, related to GOP-0267\n\n**needs_listening:**\n9. GOP-0212: T→S in \"best\" - frication of /t/\n10. GOP-0211: S→T in \"best\" - the inverse pattern, possibly misalignment\n11. GOP-0259: IY→EY in \"me\" - borderline\n12. GOP-0081: UH→AH in \"books\" - borderline\n\n**withheld_differences:**\n13. GOP-0211: S→T could be within-model ambiguity or alignment issue\n14. GOP-0080 and GOP-0012 show B→P devoicing, which is likely natural assimilation before voiceless consonants rather than an error. For \"to\" with UW→EY, while the gap is large at -6.84, casual speech often reduces this to [tə] or [də], so I shouldn't overinterpret that without more context.\n15. GOP-0102 presents an unusual AH→IY shift in \"storage\" - /ɒ/ to /iː/ seems like a clear error worth flagging.\n16. GOP-0212 shows T→S in \"best\" with moderate evidence, and GOP-0256 pairs with GOP-0257 as part of a pattern in \"want\".\n17. GOP-0259 has IY→EY in \"me\" which is borderline, and GOP-0081's UH→AH in \"books\" is also borderline.\n\nNow I'm organizing the feedback into groups: a likely issue combining the devoicing in \"books\" with a note about natural assimilation patterns, another likely issue pairing the vowel shifts in \"advantages,\" and then individual calls for the /t/ realization in \"to,\" the /ɒ/→/i/ shift in \"storage,\" and the nasal-to-lateral substitutions in \"want.\"\n\nI'm reconsidering the grouping logic though—the evidence IDs need to appear exactly once across all sections, and I'm seeing some overlap with how the /t/ variants in \"best\" and \"want\" are distributed. Let me verify that each ID maps to only one feedback item and isn't duplicated across likely_issue, needs_listening, or withheld categories. I'm seeing a clearer pattern now—the /t/→/l/ in \"want\" might actually be the same phonological process as the /n/→/l/ substitution, both showing that lateralization issue. I'll group these together as a single feedback item. Let me reconsider the full organization with this insight in mind, starting with the likely issues like the voiced-to-voiceless shift in \"books\" and the vowel substitution in \"advantages.\"\n\nNow looking at the remaining items, I've got the /uː/ to /eɪ/ shift in \"to\" and the /ɒ/ to /iː/ change in \"storage\" as probable errors, followed by the /n/ and /t/ substitutions in \"want\" and the /ɛ/ to /æ/ fronting pattern across multiple words. The frication of /t/ to /s/ in \"best\" is borderline and needs careful consideration before including it.\n\nI'm also noting the weak signal for /s/ to /t/ in \"best\" and the /iː/ to /eɪ/ shift in \"me\" as potential issues, though the /ʊ/ to /ʌ/ change in \"books\" appears less certain and might be natural dialectal variation rather than a clear error.\n\nFor the withheld category, I'm thinking about grouping the borderline cases—specifically the voiced-to-voiceless consonant shifts in \"books\" where the initial /b/ devoicing to /p/ before a word could be a natural phonological process rather than an error, and the weaker signal in \"me\" that could stem from various factors.\n"
+        },
+        "provider_specific_fields": {
+          "matched_stop": 248046
+        }
+      }
+    ],
+    "usage": {
+      "completion_tokens": 4514,
+      "prompt_tokens": 3865,
+      "total_tokens": 8379,
+      "completion_tokens_details": {
+        "reasoning_tokens": 2073,
+        "text_tokens": 2441
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      }
+    },
+    "metadata": {
+      "weight_version": "default"
+    }
+  },
+  "feedback": {
+    "summary_zh": "低 GOP 证据提示若干可关注的音素模式，主要涉及元音前移、清浊对立弱化及 /n/、/t/ 向 /l/ 的替换倾向，但部分证据存在对齐或自然变体可能，需结合复听确认。",
+    "feedback_items": [
+      {
+        "evidence_ids": [
+          "GOP-0080",
+          "GOP-0012"
+        ],
+        "decision": "likely_issue",
+        "finding_zh": "\"books\" 的声母 /b/（AE 预期）在两次出现中均被声学模型更倾向于识别为清音 /p/，GOP 分别为 -6.51 与 -2.28，呈现一致的清化模式。",
+        "rationale_zh": "两条证据同词同位、同向偏移，且 GOP-0080 差距较大（-6.51），说明 /b/ 的浊音特征在该语境下较弱，值得针对声母清浊对立的发声练习。",
+        "practice_zh": "朗读 \"books\" 时特意保持声带振动感，可在手触喉部时确认 /b/ 起始即有振颤，再逐步过渡到完整词中。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0267"
+        ],
+        "decision": "likely_issue",
+        "finding_zh": "\"advantages\" 首音节 /æ/ 被识别为 /ʌ/（GOP = -7.63），元音开口度低于模型预期。",
+        "rationale_zh": "GOP 差距显著，且 /æ/→/ʌ/ 是低频学习者常见迁移模式；同词另一音素 GOP-0268 也显示次低分（-3.97），提示该词整体元音空间可能偏紧。",
+        "practice_zh": "在镜子前练习 \"ah\" 音（如 cat、bad），把下颌明显下落、口腔开大；对比 \"advantages\" /ədˈvɑːntɪdʒɪz/ 首音的开口幅度。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0261"
+        ],
+        "decision": "needs_listening",
+        "finding_zh": "\"to\" 的元音预期为 /uː/，但声学Winner为 /eɪ/（GOP = -6.84）。",
+        "rationale_zh": "差距很大，但 \"to\" 在非重读语境下常弱化为 [tə] 或 [də]，属合法语音变体；需人工复听以区分弱化现象与真实发音偏差。",
+        "practice_zh": "先用重读形式 [tuː] 清晰读出 \"to\"，确保唇形圆拢、舌位靠后；再与弱化形式 [də] 对比，体会同义词在不同位置的实际读音差异。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0102"
+        ],
+        "decision": "likely_issue",
+        "finding_zh": "\"storage\" 第二音节 /ɒ/（转写为 AH）被识别为 /iː/（GOP = -6.20），元音空间严重前移。",
+        "rationale_zh": "GOP 差距明确，且 /ɒ/→/iː/ 属于跨度很大的元音替换，可能反映学习者在非重读音节中对元音区分敏感度不足。",
+        "practice_zh": "对比练习 \"store\" /stɔː/ 与 \"steer\" /stɪər/，把 /ɒ/ 的圆唇后舌位固定住；再读 \"storage\" 时把注意力集中在第二音节的后元音开口上。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0257",
+          "GOP-0256"
+        ],
+        "decision": "likely_issue",
+        "finding_zh": "\"want\" 中 /t/→/l/（GOP=-3.34）与 /n/→/l/（GOP=-3.11）两处证据同时出现，提示 /n/ 与 /t/ 都可能被侧音化替代。",
+        "rationale_zh": "同词内两个相邻音段都指向 /l/，形成重复模式；虽 GOP 未达极深，但一致性较高，值得人工复听并结合发音动作判断。",
+        "practice_zh": "分开练习 \"wan\"（注意 /n/ 舌尖抵上齿龈的鼻音终点）和 \"watch\"（/t/ 的清晰塞音释放），再合并为 \"want\"；用最小对立体区分 /n/、/l/、/t/。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0210",
+          "GOP-0137"
+        ],
+        "decision": "likely_issue",
+        "finding_zh": "\"best\" 与 \"any\" 中的 /ɛ/ 均被识别为更开的 /æ/（GOP 分别为 -3.27、-2.31），呈现一致的元音前移方向。",
+        "rationale_zh": "两条证据同向偏移、同属 /ɛ/ 类元音，提示学习者可能在 /ɛ/–/æ/ 区分上存在系统性紧张，值得针对性反馈。",
+        "practice_zh": "朗读最小对立体 \"bed–bad\"、\"let–lat\"，放慢速度，刻意在 /ɛ/ 时保持口腔比 /æ/ 更闭合；然后代入 \"best\" 与 \"any\" 进行迁移练习。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0255"
+        ],
+        "decision": "needs_listening",
+        "finding_zh": "\"want\" 的元音 /ɑː/ 被识别为 /ʌ/（GOP = -2.23），开口度略高于预期。",
+        "rationale_zh": "GOP 处于中等偏低，且同词的其他证据（GOP-0256、GOP-0257）已占用，该元音差异可能受到相邻音段影响；需复听确认是否独立错误。",
+        "practice_zh": "练习 \"father\" /ˈfɑːðər/ 与 \"luck\" /lʌk/ 的对比，体会 /ɑː/ 的深后开口；再以 \"want\" 为目标，先单独拉长 /ɑː/ 再与 /w/、/nt/ 组合。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0212"
+        ],
+        "decision": "needs_listening",
+        "finding_zh": "\"best\" 词尾 /t/ 被识别为 /s/（GOP = -2.64），可能是 /t/ 的擦化或语流弱读。",
+        "rationale_zh": "GOP 中等偏低，且 /t/ 在词尾非重读位置上擦化为 [s] 在多种方言和速语中均存在，不能直接判定为错误。",
+        "practice_zh": "单独朗读 \"best\" 并保持词尾 /t/ 清晰的爆破释放（轻促的 [t] 而非 [s]）；与 fast、cast 等词尾同样是 /t/ 的词一起做对比朗读。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0268"
+        ],
+        "decision": "needs_listening",
+        "finding_zh": "\"advantages\" 第二音节的 /d/ 被识别为 /ð/（GOP = -3.97）。",
+        "rationale_zh": "GOP 中等偏低，/d/ 与 /ð/ 在某些语流连接中听觉相近，且同词 GOP-0267 已作为元音问题被单独处理；需复听确认是否为持续偏误。",
+        "practice_zh": "对比朗读 \"day\" /deɪ/ 与 \"the\" /ðiː/，把 /d/ 的舌尖抵上齿龈塞音动作做清晰，再代入 \"advantages\" 的第二音节重复练习。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0259"
+        ],
+        "decision": "needs_listening",
+        "finding_zh": "\"me\" 的元音 /iː/ 被识别为 /eɪ/（GOP = -1.19），差距较小。",
+        "rationale_zh": "GOP 仅 -1.19，处于模型不确定区间；同词前文语境或其他因素（连读、语速）可能导致此偏移，不宜直接作为发音错误反馈。",
+        "practice_zh": "单独拉长发 \"me\" [miː]，确保双唇放松、舌面前部高抬；再与 \"may\" [meɪ] 做对比朗读，巩固 /iː/ 与 /eɪ/ 的差别。"
+      }
+    ],
+    "withheld_differences": [
+      {
+        "evidence_ids": [
+          "GOP-0211"
+        ],
+        "reason_zh": "\"best\" 中 /s/→/t/ 仅 GOP=-1.43，处于模型置信边界；该偏移可能与 GOP-0212 的对齐边界重叠，且 /s/ 与 /t/ 在快速语流中频谱相近，无法独立判定为发音偏误。"
+      },
+      {
+        "evidence_ids": [
+          "GOP-0081"
+        ],
+        "reason_zh": "\"books\" 中 /ʊ/→/ʌ/ 仅 GOP=-0.98，属弱信号；英式英语中 book 的元音本就接近 [ʊ]，与 /ʌ/ 的听觉差别有限，且同词 GOP-0080 已处理声母问题，不宜重复报错。"
+      }
+    ],
+    "limitations_zh": [
+      "所有证据均为 GOP 声学偏好信号，不代表已确认的发音错误。",
+      "无法听到音频，不能验证连读、弱读、方言变体或 ASR 对齐偏差的真实来源。",
+      "\"to\" 的 UW→EY 大 GOP 可能是非重读弱化而非发音错误。",
+      "\"books\" 的 B→P 清化在非重读词首位置存在自然语音学上的合法性。",
+      "部分证据间隔很近（如 want、best 的多条）可能共享同一段声学片段，独立性受限。",
+      "本反馈未考虑音高、重音、语调、语速等超音段维度。"
+    ]
+  }
+}

@@ -3,6 +3,7 @@ import type {
   DataDirectoryBridge,
   LegacyDataBridge,
   LicenseBridge,
+  ReportExportBridge,
   StartupBridge,
   WindowControlsBridge
 } from '@ls101/core-types'
@@ -16,6 +17,7 @@ declare global {
     legacyData?: LegacyDataBridge
     license?: LicenseBridge
     windowControls?: WindowControlsBridge
+    reportExport?: ReportExportBridge
     logger?: LoggerBridge
   }
 }

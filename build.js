@@ -8,6 +8,7 @@ const { execFileSync, execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 const builder = require('electron-builder')
+const { assertNoGplSherpaPackages } = require('./scripts/sherpa-no-tts.js')
 
 const BUILD_MODES = new Set(['local', 'dev', 'nightly', 'release'])
 const BUILD_PLATFORMS = new Set(['win', 'linux'])
@@ -170,11 +171,20 @@ async function main() {
     `\n[Build Info] Mode: ${options.mode} | Platform: ${options.platform} | Target: ${targetName} | Version: ${version}\n`
   )
 
+  // 依赖升级或重新安装都可能把含 GPL eSpeak NG 的 sherpa 平台包带回来，出包前必须拦住。
+  const { checked: checkedSherpaPackages } = await assertNoGplSherpaPackages()
+  console.log(`[Build Info] sherpa-onnx no-tts 检查通过：${checkedSherpaPackages} 个平台包\n`)
+
   console.log('Running application build...')
   runApplicationBuild(root)
 
   console.log('Starting electron-builder...')
   const platform = electronBuilderPlatform(options.platform)
+  // electron-builder's bundled icons@1.1.0 toolset converts PNG icons with libvips compiled to
+  // WebAssembly, which imports a fixed 1 GiB shared WebAssembly.Memory and aborts machines with a
+  // tight commit limit ("Committing semi space failed") before converting anything. Point it at the
+  // local pure-JS toolset instead; it emits the same ICO/ICNS layout using a few dozen MiB.
+  process.env['ELECTRON_BUILDER_ICONS_TOOLSET_DIR'] = path.join(root, 'scripts', 'icon-toolset')
   const result = await builder.build({
     config: { extraMetadata: { version } },
     targets: platform.createTarget(options.dir ? 'dir' : undefined)

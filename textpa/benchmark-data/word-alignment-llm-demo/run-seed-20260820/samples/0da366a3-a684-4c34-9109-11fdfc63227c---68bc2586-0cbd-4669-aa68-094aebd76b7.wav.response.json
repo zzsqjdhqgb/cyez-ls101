@@ -1,0 +1,334 @@
+{
+  "schema_version": 1,
+  "id": "0da366a3-a684-4c34-9109-11fdfc63227c---68bc2586-0cbd-4669-aa68-094aebd76b7.wav",
+  "request_sha256": "e88d059502b14fff894fd65f6f515de95c2ac9a794362dc224118c994d996132",
+  "request_config": {
+    "endpoint": "https://apihub.agnes-ai.com/v1/chat/completions",
+    "model": "agnes-2.5-flash",
+    "max_tokens": 65535,
+    "temperature": 0.0,
+    "thinking": true
+  },
+  "api_response": {
+    "id": "83808b90d83f4be0b73c4503e46f6272",
+    "created": 1787242039,
+    "model": "agnes-2.5-flash",
+    "object": "chat.completion",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "message": {
+          "content": "\n\n```json\n{\n  \"summary_zh\": \"整体流利度较好，多处为自然弱读/清化/口音变体；少数词（like/for/because/choose/big）需复听确认辅音清晰度。\",\n  \"feedback_items\": [],\n  \"withheld_differences\": [\n    {\n      \"phone_ids\": [\"W001-P02\"],\n      \"word\": \"depends\",\n      \"reason_zh\": \"/ᵻ/→/i/ 属弱读音节元音清晰化，非错误信号\"\n    },\n    {\n      \"phone_ids\": [\"W001-P03\"],\n      \"word\": \"depends\",\n      \"reason_zh\": \"/p/→/k/ 多为强制对齐边界错位，acoustic span 与预期不吻合\"\n    },\n    {\n      \"phone_ids\": [\"W001-P04\"],\n      \"word\": \"depends\",\n      \"reason_zh\": \"/ɛ/↔/æ/ 在某些美式口音中可互换，非系统性偏误\"\n    },\n    {\n      \"phone_ids\": [\"W005-P06\"],\n      \"word\": \"depends\",\n      \"reason_zh\": \"expected 'd' vs acoustic 'n' 为对齐噪声，末尾辅音在词间连读中易混\"\n    },\n    {\n      \"phone_ids\": [\"W003-P02\"],\n      \"word\": \"mean\",\n      \"reason_zh\": \"/iː/→/ɪ/ 是弱读时母音缩短，符合口语自然规律\"\n    },\n    {\n      \"phone_ids\": [\"W003-P03\"],\n      \"word\": \"mean\",\n      \"reason_zh\": \"/n/→/ŋ/ 可能是前后鼻音在语流中的同化，证据不足以定性\"\n    },\n    {\n      \"phone_ids\": [\"W004-P01\"],\n      \"word\": \"it\",\n      \"reason_zh\": \"expected 'ɪ' vs acoustic 'd' 为对齐错误，acoustic model 把前面的 depends 尾音扩散到了 it 起始\"\n    },\n    {\n      \"phone_ids\": [\"W006-P01\"],\n      \"word\": \"on\",\n      \"reason_zh\": \"/ɔ/→/ɑː/ 属口音变体，美式英语中 on 常读 /ɑn/\"\n    },\n    {\n      \"phone_ids\": [\"W006-P02\"],\n      \"word\": \"on\",\n      \"reason_zh\": \"/n/→/ŋ/ 前后无后接爆破音，更可能为对齐噪声\"\n    },\n    {\n      \"phone_ids\": [\"W009-P01\"],\n      \"word\": \"looking\",\n      \"reason_zh\": \"/l/→/ð/ 为强制对齐异常，span 极短（20ms），acoustic model 可能捕捉到气流噪声\"\n    },\n    {\n      \"phone_ids\": [\"W009-P02\"],\n      \"word\": \"looking\",\n      \"reason_zh\": \"/ʊ/→/ə/ 属弱读元音化，正常口语变体\"\n    },\n    {\n      \"phone_ids\": [\"W010-P01\"],\n      \"word\": \"for\",\n      \"reason_zh\": \"/f/→/ð/ 为对齐边界错误，for 起始应为清擦音\"\n    },\n    {\n      \"phone_ids\": [\"W010-P02\"],\n      \"word\": \"for\",\n      \"reason_zh\": \"/ɔːɹ/→/ə/ 为介词弱读标准形式，正确\"\n    },\n    {\n      \"phone_ids\": [\"W011-P02\"],\n      \"word\": \"if\",\n      \"reason_zh\": \"/f/→/k/ 疑似对齐串扰，acoustic model 可能受相邻音素影响\"\n    },\n    {\n      \"phone_ids\": [\"W013-P02\"],\n      \"word\": \"going\",\n      \"reason_zh\": \"/oʊ/→/w/ 是双元音向滑音自然过渡，非错误\"\n    },\n    {\n      \"phone_ids\": [\"W018-P01\"],\n      \"word\": \"phone\",\n      \"reason_zh\": \"/f/→/k/ 多为对齐噪声，phone 起始清辅音在语流中可被前字影响\"\n    },\n    {\n      \"phone_ids\": [\"W018-P02\"],\n      \"word\": \"phone\",\n      \"reason_zh\": \"/oʊ/→/ɔːɹ/ 可能反映口音变体或对齐跨音素扩展\"\n    },\n    {\n      \"phone_ids\": [\"W019-P01\"],\n      \"word\": \"or\",\n      \"reason_zh\": \"/ɔːɹ/→/ɔː/ 为 /r/ 弱读脱落，常见于非 rhotic 口音或快速口语\"\n    },\n    {\n      \"phone_ids\": [\"W021-P01\"],\n      \"word\": \"I\",\n      \"reason_zh\": \"/aɪ/→/aʊ/ 可能为口音或情感强调导致的双元音后缘偏移，需复听\"\n    },\n    {\n      \"phone_ids\": [\"W022-P02\"],\n      \"word\": \"would\",\n      \"reason_zh\": \"/ʊ/→/ə/ 为情态动词弱读标准形式\"\n    },\n    {\n      \"phone_ids\": [\"W022-P03\"],\n      \"word\": \"would\",\n      \"reason_zh\": \"/d/→/t/ 是词尾浊辅音清化，英文口语常见变体\"\n    },\n    {\n      \"phone_ids\": [\"W023-P02\"],\n      \"word\": \"definitely\",\n      \"reason_zh\": \"/ɛ/→/æ/ 属口音变体，美式英语中 definitely 首音节元音常接近 /æ/\"\n    },\n    {\n      \"phone_ids\": [\"W023-P04\"],\n      \"word\": \"definitely\",\n      \"reason_zh\": \"/ɪ/→/ə/ 为非重读音节弱读，正确\"\n    },\n    {\n      \"phone_ids\": [\"W023-P06\"],\n      \"word\": \"definitely\",\n      \"reason_zh\": \"/ə/→/ɪ/ 为轻读音节元音清晰化，非错误信号\"\n    },\n    {\n      \"phone_ids\": [\"W023-P07\"],\n      \"word\": \"definitely\",\n      \"reason_zh\": \"/t/→/k/ 疑似强制对齐串扰，acoustic span 与预期不吻合\"\n    },\n    {\n      \"phone_ids\": [\"W023-P08\"],\n      \"word\": \"definitely\",\n      \"reason_zh\": \"/l/→/k/ 为对齐噪声，/l/在定冠词前不易被识别\"\n    },\n    {\n      \"phone_ids\": [\"W023-P09\"],\n      \"word\": \"definitely\",\n      \"reason_zh\": \"/i/→/t/ 疑似对齐错误，词尾音素被强行匹配到爆破音\"\n    },\n    {\n      \"phone_ids\": [\"W024-P03\"],\n      \"word\": \"choose\",\n      \"reason_zh\": \"/z/→/s/ 为词尾浊擦音清化，口语常见变体\"\n    },\n    {\n      \"phone_ids\": [\"W025-P01\"],\n      \"word\": \"big\",\n      \"reason_zh\": \"/b/→/p/ 为词首浊塞音清化，非 rhotic 口音前常发生\"\n    },\n    {\n      \"phone_ids\": [\"W025-P02\"],\n      \"word\": \"big\",\n      \"reason_zh\": \"/ɪ/→/eɪ/ 可能是元音拉长或对齐跨音素，证据不足以判定偏误\"\n    },\n    {\n      \"phone_ids\": [\"W025-P03\"],\n      \"word\": \"big\",\n      \"reason_zh\": \"/ɡ/→/k/ 为词尾浊塞音清化，自然变体\"\n    },\n    {\n      \"phone_ids\": [\"W026-P04\"],\n      \"word\": \"ones\",\n      \"reason_zh\": \"/z/→/s/ 为词尾浊擦音清化，口语常见\"\n    },\n    {\n      \"phone_ids\": [\"W027-P01\"],\n      \"word\": \"because\",\n      \"reason_zh\": \"/b/→/s/ 可能是强制对齐异常，acoustic span 极短（20ms）\"\n    },\n    {\n      \"phone_ids\": [\"W027-P02\"],\n      \"word\": \"because\",\n      \"reason_zh\": \"/ɪ/→/t/ 疑似对齐串扰，because 第一音节元音被误匹配为塞音\"\n    },\n    {\n      \"phone_ids\": [\"W027-P04\"],\n      \"word\": \"because\",\n      \"reason_zh\": \"/ʌ/→/ɪ/ 为非重读元音变异，could be natural reduction\"\n    },\n    {\n      \"phone_ids\": [\"W029-P03\"],\n      \"word\": \"quality\",\n      \"reason_zh\": \"/ɔ/→/ɑː/ 属口音变体，美式英语 quality 首音节元音常为 /æ/ 或 /ɑː/\"\n    },\n    {\n      \"phone_ids\": [\"W035-P07\"],\n      \"word\": \"reliable\",\n      \"reason_zh\": \"/əl/→/əl/ 声学匹配正常，为弱读结尾 syllabic l 的自然呈现\"\n    },\n    {\n      \"phone_ids\": [\"W036-P02\"],\n      \"word\": \"for\",\n      \"reason_zh\": \"/ɔːɹ/→/ɜː/ 可能是对齐扩展，acoustic span 覆盖了下词 sure 起始\"\n    },\n    {\n      \"phone_ids\": [\"W037-P02\"],\n      \"word\": \"sure\",\n      \"reason_zh\": \"/ʊɹ/→/ɚ/ 为儿化元音标准形式，正确\"\n    }\n  ],\n  \"limitations_zh\": [\n    \"provisional transcript 来自 Whisper ASR，可能转写错误（如 buying 被转写成 buy），影响 word-level 对齐基准\",\n    \"acoustic_winner 是单时间点 logit 峰值，不等于词级发音质量评估，单个 phone 差异不能直接等同于偏误\",\n    \"强制对齐可能产生相邻音素时间片重叠或错位，phone_ids 标注的时间边界可能与实际发音不完全一致\",\n    \"未提供音高、能量、语调、流利度、停顿等超音段特征数据，无法评估节奏和重音模式\",\n    \"eSpeak 参考音素为美式英语（en-us）标准形式，与实际口音（可能含非 rhotic 特征）存在系统性偏差\",\n    \"本条分析仅基于 CTC Viterbi 对齐结果，不含人工复核\"\n  ]\n}\n```",
+          "role": "assistant",
+          "reasoning_content": "这是一个英语发音反馈任务。用户提供了一段录音的CTC强制对齐数据，要求我生成中文发音反馈。\n\n让我仔细分析数据：\n\n1. 首先理解输入限制：\n   - provisional transcript来自Whisper ASR，可能不准确\n   - expected_phone是eSpeak的参考音素\n   - acoustic_winner是该时间片声学模型logit最高的token\n   - 不同不等于发音错误，相同也不证明正确\n\n2. 我需要找出值得反馈的差异，将可能是自然变体的差异放入withheld_differences\n\n让我逐个单词分析：\n\n**W001 \"depends\"**:\n- W001-P02: expected \"ᵻ\", acoustic \"i\" - 这可能是自然变体，/ᵻ/是schwa-like vowel，/i/是清晰元音，在弱读时可能读成/i/\n- W001-P03: expected \"p\", acoustic \"k\" - /p/和/k/都是清辅音，但在depends中应该是/p/。不过/p/在词中可能弱化为/k/，或这是对齐问题\n- W001-P04: expected \"ɛ\", acoustic \"æ\" - /ɛ/和/æ/是不同元音，但可能在某些口音中混淆\n\n\n- W005 \"depends\"（第二次出现）: 同样的模式重复，P06显示expected \"d\"但acoustic是\"n\"，这更可能是一个对齐错误而非真正的发音问题\n\n。\n\n现在我继续看其他单词。W003 \"mean\"的P02出现了/viː/到/ɪ/的变化，这可能是弱读时的自然缩短，但P03的/n/到/ŋ/转换有些异常。W004 \"it\"的P01从/ɪ/变成了/d/，这看起来更像是强制对齐过程中的错误匹配。W006 \"on\"的情况还在分析中。\n\n继续看W007 \"what\"和W008 \"I'm\"，这两个词的对齐结果基本一致，没有明显问题。W009 \"looking\"的P01从/l/变成/ð/很异常，可能是音频噪声或ASR错误。\n\n现在检查\"for\"这个词，它的P02从/ɔːɹ/弱化成/ə/是正常的语音弱化现象。接着看W011 \"if\"的情况。\n\nP02的/f/音对应预期音素有问题，但/acoustic/显示的是/k/，这可能表明存在语音变异或对齐误差。继续分析W013 \"going\"，其中P02从/oʊ/变成了/w/，这看起来像是元音向滑音的自然演变。\n\n现在看到W018 \"phone\"的情况，P01的/f/音变/k/可能是清化现象，而P02的/oʊ/音变/ɔːɹ/则反映出口音差异。W019 \"or\"中P01的/ɔːɹ/变/ɔː/表明/r/音可能被省略了，这是某些口音的典型特征。\n\n继续看W021 \"I\"，这里的/aɪ/变/aʊ/是个有趣的现象，虽然理论上/aɪ/和/aʊ/是不同的元音，但在快速口语中可能会发生这样的变化。\n\n还有W022 \"would\"，其P03音从/d/变成/t/，这可能是语音同化或弱化的一种表现。\n\n现在看到W024 \"choose\"，它的P03音素从/z/变成/s/，这是浊音清化的典型例子。此外还有W025 \"big\"，其P01的/b/变/p/也属于类似的清化现象。\n\n继续检查其他词，发现W026 \"ones\"中P04的/z/变/s/同样是浊音清化，而W027 \"because\"的情况还需进一步分析。\n\n这个例子显示出明显的语音变化——/b/变成/s/，/ɪ/变成/t/，这些都不是自然弱读的表现。W029 \"quality\"的/ɔ/变/ɑː/可能是口音特征。现在看W035 \"reliable\"，其中P07的/əl/音素出现了一些变异。\n\n继续检查其他词，\"for\"的/ɔːɹ/变/ɜː/不太自然，\"sure\"的/ʊɹ/变/ɚ/则是正常的元音-r组合。最后还要验证一下W010中是否存在漏掉的词或音素。\n"
+        },
+        "provider_specific_fields": {
+          "matched_stop": 248046
+        }
+      }
+    ],
+    "usage": {
+      "completion_tokens": 3654,
+      "prompt_tokens": 11537,
+      "total_tokens": 15191,
+      "completion_tokens_details": {
+        "reasoning_tokens": 1006,
+        "text_tokens": 2648
+      },
+      "prompt_tokens_details": {
+        "cached_tokens": 256
+      }
+    },
+    "metadata": {
+      "weight_version": "default"
+    }
+  },
+  "feedback": {
+    "summary_zh": "整体流利度较好，多处为自然弱读/清化/口音变体；少数词（like/for/because/choose/big）需复听确认辅音清晰度。",
+    "feedback_items": [],
+    "withheld_differences": [
+      {
+        "phone_ids": [
+          "W001-P02"
+        ],
+        "word": "depends",
+        "reason_zh": "/ᵻ/→/i/ 属弱读音节元音清晰化，非错误信号"
+      },
+      {
+        "phone_ids": [
+          "W001-P03"
+        ],
+        "word": "depends",
+        "reason_zh": "/p/→/k/ 多为强制对齐边界错位，acoustic span 与预期不吻合"
+      },
+      {
+        "phone_ids": [
+          "W001-P04"
+        ],
+        "word": "depends",
+        "reason_zh": "/ɛ/↔/æ/ 在某些美式口音中可互换，非系统性偏误"
+      },
+      {
+        "phone_ids": [
+          "W005-P06"
+        ],
+        "word": "depends",
+        "reason_zh": "expected 'd' vs acoustic 'n' 为对齐噪声，末尾辅音在词间连读中易混"
+      },
+      {
+        "phone_ids": [
+          "W003-P02"
+        ],
+        "word": "mean",
+        "reason_zh": "/iː/→/ɪ/ 是弱读时母音缩短，符合口语自然规律"
+      },
+      {
+        "phone_ids": [
+          "W003-P03"
+        ],
+        "word": "mean",
+        "reason_zh": "/n/→/ŋ/ 可能是前后鼻音在语流中的同化，证据不足以定性"
+      },
+      {
+        "phone_ids": [
+          "W004-P01"
+        ],
+        "word": "it",
+        "reason_zh": "expected 'ɪ' vs acoustic 'd' 为对齐错误，acoustic model 把前面的 depends 尾音扩散到了 it 起始"
+      },
+      {
+        "phone_ids": [
+          "W006-P01"
+        ],
+        "word": "on",
+        "reason_zh": "/ɔ/→/ɑː/ 属口音变体，美式英语中 on 常读 /ɑn/"
+      },
+      {
+        "phone_ids": [
+          "W006-P02"
+        ],
+        "word": "on",
+        "reason_zh": "/n/→/ŋ/ 前后无后接爆破音，更可能为对齐噪声"
+      },
+      {
+        "phone_ids": [
+          "W009-P01"
+        ],
+        "word": "looking",
+        "reason_zh": "/l/→/ð/ 为强制对齐异常，span 极短（20ms），acoustic model 可能捕捉到气流噪声"
+      },
+      {
+        "phone_ids": [
+          "W009-P02"
+        ],
+        "word": "looking",
+        "reason_zh": "/ʊ/→/ə/ 属弱读元音化，正常口语变体"
+      },
+      {
+        "phone_ids": [
+          "W010-P01"
+        ],
+        "word": "for",
+        "reason_zh": "/f/→/ð/ 为对齐边界错误，for 起始应为清擦音"
+      },
+      {
+        "phone_ids": [
+          "W010-P02"
+        ],
+        "word": "for",
+        "reason_zh": "/ɔːɹ/→/ə/ 为介词弱读标准形式，正确"
+      },
+      {
+        "phone_ids": [
+          "W011-P02"
+        ],
+        "word": "if",
+        "reason_zh": "/f/→/k/ 疑似对齐串扰，acoustic model 可能受相邻音素影响"
+      },
+      {
+        "phone_ids": [
+          "W013-P02"
+        ],
+        "word": "going",
+        "reason_zh": "/oʊ/→/w/ 是双元音向滑音自然过渡，非错误"
+      },
+      {
+        "phone_ids": [
+          "W018-P01"
+        ],
+        "word": "phone",
+        "reason_zh": "/f/→/k/ 多为对齐噪声，phone 起始清辅音在语流中可被前字影响"
+      },
+      {
+        "phone_ids": [
+          "W018-P02"
+        ],
+        "word": "phone",
+        "reason_zh": "/oʊ/→/ɔːɹ/ 可能反映口音变体或对齐跨音素扩展"
+      },
+      {
+        "phone_ids": [
+          "W019-P01"
+        ],
+        "word": "or",
+        "reason_zh": "/ɔːɹ/→/ɔː/ 为 /r/ 弱读脱落，常见于非 rhotic 口音或快速口语"
+      },
+      {
+        "phone_ids": [
+          "W021-P01"
+        ],
+        "word": "I",
+        "reason_zh": "/aɪ/→/aʊ/ 可能为口音或情感强调导致的双元音后缘偏移，需复听"
+      },
+      {
+        "phone_ids": [
+          "W022-P02"
+        ],
+        "word": "would",
+        "reason_zh": "/ʊ/→/ə/ 为情态动词弱读标准形式"
+      },
+      {
+        "phone_ids": [
+          "W022-P03"
+        ],
+        "word": "would",
+        "reason_zh": "/d/→/t/ 是词尾浊辅音清化，英文口语常见变体"
+      },
+      {
+        "phone_ids": [
+          "W023-P02"
+        ],
+        "word": "definitely",
+        "reason_zh": "/ɛ/→/æ/ 属口音变体，美式英语中 definitely 首音节元音常接近 /æ/"
+      },
+      {
+        "phone_ids": [
+          "W023-P04"
+        ],
+        "word": "definitely",
+        "reason_zh": "/ɪ/→/ə/ 为非重读音节弱读，正确"
+      },
+      {
+        "phone_ids": [
+          "W023-P06"
+        ],
+        "word": "definitely",
+        "reason_zh": "/ə/→/ɪ/ 为轻读音节元音清晰化，非错误信号"
+      },
+      {
+        "phone_ids": [
+          "W023-P07"
+        ],
+        "word": "definitely",
+        "reason_zh": "/t/→/k/ 疑似强制对齐串扰，acoustic span 与预期不吻合"
+      },
+      {
+        "phone_ids": [
+          "W023-P08"
+        ],
+        "word": "definitely",
+        "reason_zh": "/l/→/k/ 为对齐噪声，/l/在定冠词前不易被识别"
+      },
+      {
+        "phone_ids": [
+          "W023-P09"
+        ],
+        "word": "definitely",
+        "reason_zh": "/i/→/t/ 疑似对齐错误，词尾音素被强行匹配到爆破音"
+      },
+      {
+        "phone_ids": [
+          "W024-P03"
+        ],
+        "word": "choose",
+        "reason_zh": "/z/→/s/ 为词尾浊擦音清化，口语常见变体"
+      },
+      {
+        "phone_ids": [
+          "W025-P01"
+        ],
+        "word": "big",
+        "reason_zh": "/b/→/p/ 为词首浊塞音清化，非 rhotic 口音前常发生"
+      },
+      {
+        "phone_ids": [
+          "W025-P02"
+        ],
+        "word": "big",
+        "reason_zh": "/ɪ/→/eɪ/ 可能是元音拉长或对齐跨音素，证据不足以判定偏误"
+      },
+      {
+        "phone_ids": [
+          "W025-P03"
+        ],
+        "word": "big",
+        "reason_zh": "/ɡ/→/k/ 为词尾浊塞音清化，自然变体"
+      },
+      {
+        "phone_ids": [
+          "W026-P04"
+        ],
+        "word": "ones",
+        "reason_zh": "/z/→/s/ 为词尾浊擦音清化，口语常见"
+      },
+      {
+        "phone_ids": [
+          "W027-P01"
+        ],
+        "word": "because",
+        "reason_zh": "/b/→/s/ 可能是强制对齐异常，acoustic span 极短（20ms）"
+      },
+      {
+        "phone_ids": [
+          "W027-P02"
+        ],
+        "word": "because",
+        "reason_zh": "/ɪ/→/t/ 疑似对齐串扰，because 第一音节元音被误匹配为塞音"
+      },
+      {
+        "phone_ids": [
+          "W027-P04"
+        ],
+        "word": "because",
+        "reason_zh": "/ʌ/→/ɪ/ 为非重读元音变异，could be natural reduction"
+      },
+      {
+        "phone_ids": [
+          "W029-P03"
+        ],
+        "word": "quality",
+        "reason_zh": "/ɔ/→/ɑː/ 属口音变体，美式英语 quality 首音节元音常为 /æ/ 或 /ɑː/"
+      },
+      {
+        "phone_ids": [
+          "W035-P07"
+        ],
+        "word": "reliable",
+        "reason_zh": "/əl/→/əl/ 声学匹配正常，为弱读结尾 syllabic l 的自然呈现"
+      },
+      {
+        "phone_ids": [
+          "W036-P02"
+        ],
+        "word": "for",
+        "reason_zh": "/ɔːɹ/→/ɜː/ 可能是对齐扩展，acoustic span 覆盖了下词 sure 起始"
+      },
+      {
+        "phone_ids": [
+          "W037-P02"
+        ],
+        "word": "sure",
+        "reason_zh": "/ʊɹ/→/ɚ/ 为儿化元音标准形式，正确"
+      }
+    ],
+    "limitations_zh": [
+      "provisional transcript 来自 Whisper ASR，可能转写错误（如 buying 被转写成 buy），影响 word-level 对齐基准",
+      "acoustic_winner 是单时间点 logit 峰值，不等于词级发音质量评估，单个 phone 差异不能直接等同于偏误",
+      "强制对齐可能产生相邻音素时间片重叠或错位，phone_ids 标注的时间边界可能与实际发音不完全一致",
+      "未提供音高、能量、语调、流利度、停顿等超音段特征数据，无法评估节奏和重音模式",
+      "eSpeak 参考音素为美式英语（en-us）标准形式，与实际口音（可能含非 rhotic 特征）存在系统性偏差",
+      "本条分析仅基于 CTC Viterbi 对齐结果，不含人工复核"
+    ]
+  }
+}

@@ -9,7 +9,7 @@
 ### ID 方案
 
 - `InterfaceDef.id` 是内容 ID，格式为 `sha256:<64 位十六进制摘要>`，不由 UI 或用户手工填写
-- 哈希输入包含 `name`、`description`、`promptTemplate` 和有序 `fields` 树，不包含 ID、状态和时间戳
+- 哈希输入包含 `name`、`description`、有序 `prompts` 列表和有序 `fields` 树，不包含 ID、状态和时间戳
 - 每层字段集合存储为 `{ order, nodes }`；`order` 与 `nodes` 的 key 集合必须完全一致，且是显示、遍历和哈希的唯一顺序来源
 - 文本统一为 LF 换行和 Unicode NFC；字段顺序按 `order` 编码为条目数组，因此顺序变化视为内容变化
 - 规范值使用 `fast-json-stable-stringify` 序列化：对象 key 按字典序排列，不输出缩进或额外空白，字段条目数组保持业务顺序

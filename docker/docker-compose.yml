@@ -10,10 +10,12 @@ services:
     volumes:
       # 将当前目录（项目根目录）挂载到容器的 /workspace
       - ../:/workspace
-      # 持久化 OpenCode 的配置和缓存，避免重启后需要重新登录
-      - opencode-data-plain:/root/.local
-      - opencode-config-plain:/root/.config/opencode
+      # 持久化 CLI 配置和 Electron keyring，避免重启后需要重新登录
+      - local_data:/root/.local
       - codex_home:/root/.codex
+      - claude_home:/root/.claude
+      # DeepSeek Harness 的 profile、插件和运行时配置
+      - dsh_home:/root/.dsh
       - yarn:/workspace/.yarn
       - yarn-cache:/yarn/store
       - node_modules:/workspace/node_modules
@@ -28,12 +30,16 @@ services:
     # 保持容器运行并支持交互式终端
     stdin_open: true
     tty: true
+    # dsh web 默认监听 3080；通过环境变量可更换宿主机端口。
+    ports:
+      - "${DSH_PORT:-3080}:3000"
     # 自动重启（可选）
 
 volumes:
-  opencode-data-plain:
-  opencode-config-plain:
+  local_data:
   codex_home:
+  claude_home:
+  dsh_home:
   yarn:
   yarn-cache:
   node_modules:

@@ -1,0 +1,16 @@
+# 发音模型 ONNX 导出工具链（scripts/export-pronunciation-model.py）。
+#
+# 这些版本是固定值，不是建议值：导出产物（尤其是 INT8 量化后的
+# onnx/model_quantized.onnx）按字节参与 SHA-256 校验，升级任何一个依赖都可能改变
+# 导出结果，必须同时刷新 scripts/pronunciation-model-assets.json 里的资产哈希并
+# 发布新的 release.version（verify 模式会给出刷新后的清单）。
+#
+# CI 侧由 .github/workflows/pronunciation-model.yml 安装；本地重导出可用：
+#   python -m pip install -r scripts/pronunciation-model-requirements.txt
+#   node scripts/download-pronunciation-model.js --export
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.14.1+cpu
+transformers==5.18.0
+onnx==1.23.1
+onnxruntime==1.30.0
+numpy==2.4.6

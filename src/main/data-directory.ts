@@ -19,6 +19,7 @@ import {
   type DataDirectoryCandidate,
   type DataDirectoryInfo
 } from '@ls101/core-types'
+import { LEGACY_MIGRATION_RESIDUE_DIRECTORIES } from './legacy-data'
 
 const FORMAT_VERSION = 1
 const BOOTSTRAP_FILENAME = 'data-location.json'
@@ -410,7 +411,7 @@ async function scheduleMigration(
   }
   const pendingCleanups = currentBootstrap?.pendingCleanups ?? []
   const base = {
-    formatVersion: FORMAT_VERSION,
+    formatVersion: FORMAT_VERSION as typeof FORMAT_VERSION,
     state: 'migrating' as const,
     migrationId,
     source,
@@ -810,8 +811,10 @@ async function retryOldDataDirectoryDeletion(
       }
       await persistClaim(oldDataDirectory)
     }
-    await rm(oldDataDirectory.deletionPath, { recursive: true, force: true })
-    if (await pathExists(oldDataDirectory.deletionPath)) return oldDataDirectory
+    const deletionPath = oldDataDirectory.deletionPath
+    if (!deletionPath) throw new Error('旧数据删除路径缺失')
+    await rm(deletionPath, { recursive: true, force: true })
+    if (await pathExists(deletionPath)) return oldDataDirectory
     return undefined
   } catch (error) {
     console.warn(`Failed to delete old data directory: ${oldDataDirectory.path}`, error)
@@ -1004,7 +1007,9 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
       value.legacyDirectories.some(
         (directory) =>
           typeof directory !== 'string' ||
-          !LEGACY_DIRECTORIES.includes(directory as (typeof LEGACY_DIRECTORIES)[number])
+          !LEGACY_MIGRATION_RESIDUE_DIRECTORIES.includes(
+            directory as (typeof LEGACY_MIGRATION_RESIDUE_DIRECTORIES)[number]
+          )
       )
     ) {
       throw new Error('旧数据迁移目录列表无效')
@@ -1302,7 +1307,7 @@ async function normalizePotentialDirectory(directory: string): Promise<string> {
 }
 
 function assertMigrationPaths(
-  bootstrap: CopyingBootstrap | LegacyCopyingBootstrap,
+  bootstrap: CopyingBootstrap | LegacyCopyingBootstrap | PendingCleanup,
   target: string
 ): void {
   const expected = stagingPath(target, bootstrap.migrationId)

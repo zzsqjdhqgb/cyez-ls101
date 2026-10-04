@@ -1,9 +1,9 @@
 import { expect, test, type ElectronApplication, type Page } from '@playwright/test'
 import type { ExamPackage } from '@ls101/core-types'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { strToU8, unzipSync, zipSync } from 'fflate'
+import { createTemporaryDirectory } from '../support/temporary-directory'
 import { APPLICATION_STARTUP_TIMEOUT, launchIntegrationApp } from './support/electron-app'
 
 let electronApp: ElectronApplication
@@ -63,14 +63,14 @@ async function expectValidStyleBindings(currentPage: Page): Promise<void> {
 }
 
 test.beforeEach(async () => {
-  userDataDir = await mkdtemp(path.join(tmpdir(), 'ls101-integration-'))
+  userDataDir = await createTemporaryDirectory('ls101-integration-')
   pageErrors = []
   electronApp = await launchIntegrationApp(userDataDir)
   page = await electronApp.firstWindow()
   page.on('pageerror', (error) => pageErrors.push(error.message))
   await page.waitForLoadState('domcontentloaded')
   await expect(page.locator('.startupPlaceholder')).toBeVisible()
-  await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.1' })).toBeVisible({
+  await expect(page.getByRole('dialog', { name: '曹二听说101 v0.4.2' })).toBeVisible({
     timeout: APPLICATION_STARTUP_TIMEOUT
   })
   await expect(page.getByRole('heading', { name: /旧数据/ })).toHaveCount(0)
@@ -130,6 +130,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       license: methods('license'),
       nodeProcess: typeof runtimeWindow.process,
       nodeRequire: typeof runtimeWindow.require,
+      reportExport: methods('reportExport'),
       startup: methods('startup'),
       windowControls: methods('windowControls')
     }
@@ -138,6 +139,7 @@ test('starts a hardened application window and exposes every preload bridge', as
   expect(rendererState).toEqual({
     airouter: [
       'deleteImageProviderConfig',
+      'deletePronunciationAssessmentExtension',
       'deleteProviderConfig',
       'deleteSpeechModelPackage',
       'deleteSpeechProviderConfig',
@@ -196,6 +198,7 @@ test('starts a hardened application window and exposes every preload bridge', as
     license: ['activate', 'deactivate', 'getStatus', 'openActivationGuide'],
     nodeProcess: 'undefined',
     nodeRequire: 'undefined',
+    reportExport: ['exportBatch', 'exportSingle', 'onProgress'],
     startup: ['whenReady'],
     windowControls: ['close', 'getMaximized', 'minimize', 'onMaximizedChange', 'toggleMaximize']
   })
@@ -423,10 +426,10 @@ test('navigates through every primary application area', async () => {
   await expectValidStyleBindings(page)
 
   await page.getByRole('button', { name: /版本说明/ }).click()
-  const releaseNotes = page.getByRole('dialog', { name: '曹二听说101 v0.4.1' })
+  const releaseNotes = page.getByRole('dialog', { name: '曹二听说101 v0.4.2' })
   await expect(releaseNotes).toBeVisible()
-  await expect(page.getByRole('heading', { level: 1, name: '曹二听说101 v0.4.1' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: '启动与稳定性' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: '曹二听说101 v0.4.2' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '发音评测与语音纠错' })).toBeVisible()
   await expect(page.getByRole('heading', { name: '升级说明' })).toBeAttached()
   await expect(page.getByText(/^已安装 \S+$/)).toBeVisible()
   expect(
@@ -497,6 +500,65 @@ test('exports a submission containing a large resource through the renderer ZIP 
     format: 'ls101-submission',
     meta: { candidate: { candidateId: 'worker-001', displayName: '测试考生' } }
   })
+})
+
+test('exports report PDFs through the report-export bridge', async () => {
+  const exportPath = path.join(userDataDir, 'reports.zip')
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showSaveDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePath })
+    })
+  }, exportPath)
+
+  const outcome = await page.evaluate(async () => {
+    const progress: Array<{ phase: string; completed: number; total: number }> = []
+    const unsubscribe = window.reportExport.onProgress((value) =>
+      progress.push({ phase: value.phase, completed: value.completed, total: value.total })
+    )
+    try {
+      const result = await window.reportExport.exportBatch({
+        items: [
+          {
+            filename: '测试考生-worker-001-报告.pdf',
+            html: '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"></head><body><h1>作答报告</h1><p>集成测试</p></body></html>'
+          }
+        ]
+      })
+      return { progress, result }
+    } finally {
+      unsubscribe()
+    }
+  })
+
+  expect(outcome.result).toEqual({ status: 'exported', exportedCount: 1, failures: [] })
+  expect(outcome.progress.at(-1)).toEqual({ phase: 'saving', completed: 1, total: 1 })
+
+  const archive = unzipSync(await readFile(exportPath))
+  const filenames = Object.keys(archive)
+  expect(filenames).toEqual(['测试考生-worker-001-报告.pdf'])
+  expect(Buffer.from(archive[filenames[0]]).subarray(0, 5).toString('latin1')).toBe('%PDF-')
+})
+
+test('exports a single report PDF through the report-export bridge', async () => {
+  const exportPath = path.join(userDataDir, 'single-report.pdf')
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showSaveDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePath })
+    })
+  }, exportPath)
+
+  const outcome = await page.evaluate(() =>
+    window.reportExport.exportSingle({
+      filename: '测试考生-worker-001-报告.pdf',
+      html: '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"></head><body><h1>作答报告</h1></body></html>'
+    })
+  )
+
+  expect(outcome).toEqual({ status: 'exported' })
+  const pdf = await readFile(exportPath)
+  expect(pdf.subarray(0, 5).toString('latin1')).toBe('%PDF-')
 })
 
 test('guides microphone setup through recording and playback before the exam', async () => {
@@ -795,13 +857,13 @@ test('opens and copies bundled Shanghai speaking templates', async () => {
   const zhongkaoRow = page
     .getByText('上海中考口语标准题型', { exact: true })
     .locator('xpath=ancestor::article')
-  await expect(zhongkaoRow.getByText('v2', { exact: true })).toBeVisible()
+  await expect(zhongkaoRow.getByText('v3', { exact: true })).toBeVisible()
   await expect(zhongkaoRow.getByText('中考', { exact: true })).toBeVisible()
 
   const builtinRow = page
     .getByText('上海高考口语标准题型', { exact: true })
     .locator('xpath=ancestor::article')
-  await expect(builtinRow.getByText('v3', { exact: true })).toBeVisible()
+  await expect(builtinRow.getByText('v4', { exact: true })).toBeVisible()
   await expect(builtinRow.getByRole('button', { name: '编辑' })).toHaveCount(0)
   await expect(builtinRow.getByRole('button', { name: /删除/ })).toHaveCount(0)
   await builtinRow.getByRole('button', { name: '查看' }).click()

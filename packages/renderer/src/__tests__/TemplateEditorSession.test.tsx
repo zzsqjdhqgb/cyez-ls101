@@ -2,10 +2,14 @@
 
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { TemplateApplication, TemplateDocument } from '@ls101/template-editor'
+import type { FunctionLocator, TemplateApplication, TemplateDocument } from '@ls101/template-editor'
 import { useTemplateEditorSession } from '../features/templates/useTemplateEditorSession'
 
 const TEMPLATE_ID = '10000000-0000-4000-8000-000000000001'
+const FUNCTION_LOCATOR: FunctionLocator = {
+  library: { source: 'builtin', libraryId: 'builtin:basic' },
+  functionId: 'builtin:page'
+}
 
 afterEach(cleanup)
 
@@ -65,9 +69,7 @@ describe('Template editor session', () => {
   it('loads a built-in release as a read-only document and rejects every write path', async () => {
     const source = template()
     const app = application(source)
-    const { result } = renderHook(() =>
-      useTemplateEditorSession(app, TEMPLATE_ID, 'builtin')
-    )
+    const { result } = renderHook(() => useTemplateEditorSession(app, TEMPLATE_ID, 'builtin'))
 
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(app.builtinTemplates.get).toHaveBeenCalledWith(TEMPLATE_ID)
@@ -88,10 +90,7 @@ describe('Template editor session', () => {
     })
     await act(async () => {
       saved = await result.current.save()
-      inserted = await result.current.insertFunctionCall(
-        { source: 'builtin', libraryId: 'builtin:basic' },
-        'root'
-      )
+      inserted = await result.current.insertFunctionCall(FUNCTION_LOCATOR, 'root')
     })
 
     expect(applied).toBe(false)
@@ -180,16 +179,13 @@ describe('Template editor session', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
     let completed = false
     await act(async () => {
-      completed = await result.current.insertFunctionCall(
-        { source: 'builtin', libraryId: 'builtin:basic' },
-        'root'
-      )
+      completed = await result.current.insertFunctionCall(FUNCTION_LOCATOR, 'root')
     })
 
     expect(completed).toBe(true)
     expect(app.templates.insertFunctionCall).toHaveBeenCalledWith(
       TEMPLATE_ID,
-      { source: 'builtin', libraryId: 'builtin:basic' },
+      FUNCTION_LOCATOR,
       'root',
       undefined
     )
@@ -228,10 +224,7 @@ describe('Template editor session', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
     act(() => result.current.apply({ type: 'set-template-name', value: '本地修改' }))
     await act(async () => {
-      await result.current.insertFunctionCall(
-        { source: 'builtin', libraryId: 'builtin:basic' },
-        'root'
-      )
+      await result.current.insertFunctionCall(FUNCTION_LOCATOR, 'root')
     })
 
     expect(app.templates.save).toHaveBeenCalledWith(
@@ -239,7 +232,7 @@ describe('Template editor session', () => {
     )
     expect(app.templates.insertFunctionCall).toHaveBeenCalledWith(
       TEMPLATE_ID,
-      { source: 'builtin', libraryId: 'builtin:basic' },
+      FUNCTION_LOCATOR,
       'root',
       undefined
     )

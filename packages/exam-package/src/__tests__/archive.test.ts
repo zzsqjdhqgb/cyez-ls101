@@ -9,6 +9,9 @@ import {
   encodeExamPackage,
   encodeSubmissionPackage,
   ExamPackageArchiveError,
+  hasArchiveManifest,
+  listArchiveEntries,
+  readArchiveEntry,
   validateExamPackage,
   validateSubmissionPackage
 } from '../index'
@@ -515,5 +518,59 @@ describe('SubmissionPackage ZIP archive', () => {
     await expect(
       decodeSubmissionPackage(zipSync({ 'manifest.json': strToU8('{broken') }))
     ).rejects.toThrow('Invalid UTF-8 JSON file')
+  })
+})
+
+describe('归档条目清单与按需解压', () => {
+  it('列出条目和体积而不解压内容', async () => {
+    const bytes = await encodeSubmissionPackage(submissionPackage(), {
+      picture: pictureBytes,
+      'answer-audio-0': recordingBytes
+    })
+    const entries = await listArchiveEntries(bytes)
+
+    expect(entries.map((entry) => entry.name).sort()).toEqual([
+      'manifest.json',
+      'recordings/answer-audio-0/recording-0.ogg',
+      'resources/picture/picture.png'
+    ])
+    expect(entries.every((entry) => entry.uncompressedBytes > 0)).toBe(true)
+    expect(hasArchiveManifest(entries)).toBe(true)
+  })
+
+  it('识别没有单包清单的外层容器', async () => {
+    const bundle = zipSync({
+      'first.lssubmission': new Uint8Array([1, 2, 3]),
+      'second.lssubmission': new Uint8Array([4, 5, 6])
+    })
+    const entries = await listArchiveEntries(bundle)
+
+    expect(hasArchiveManifest(entries)).toBe(false)
+    expect(entries.map((entry) => entry.name)).toEqual(['first.lssubmission', 'second.lssubmission'])
+  })
+
+  it('拒绝不可读的归档和不安全路径', async () => {
+    await expect(listArchiveEntries(new Uint8Array([1, 2, 3]))).rejects.toThrow(
+      ExamPackageArchiveError
+    )
+    await expect(
+      listArchiveEntries(zipSync({ '../escape.txt': strToU8('escape') }))
+    ).rejects.toThrow('Unsafe archive path')
+  })
+
+  it('按需只解压指定条目并拒绝越界请求', async () => {
+    const bytes = await encodeSubmissionPackage(submissionPackage(), {
+      picture: pictureBytes,
+      'answer-audio-0': recordingBytes
+    })
+
+    await expect(readArchiveEntry(bytes, 'resources/picture/picture.png')).resolves.toEqual(
+      pictureBytes
+    )
+    await expect(readArchiveEntry(bytes, 'recordings/answer-audio-0/recording-0.ogg')).resolves.toEqual(
+      recordingBytes
+    )
+    await expect(readArchiveEntry(bytes, 'missing.bin')).rejects.toThrow('Missing required file')
+    await expect(readArchiveEntry(bytes, '../picture.png')).rejects.toThrow('Unsafe archive path')
   })
 })

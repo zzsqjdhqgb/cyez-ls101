@@ -27,7 +27,8 @@ interface ZipManifest {
 }
 
 export async function encodeInterfaceZip(value: InterfaceExchangePackage): Promise<Uint8Array> {
-  await inspectInterfacePackage(value)
+  const inspection = await inspectInterfacePackage(value)
+  value = { ...value, interface: inspection.interface, builtin: inspection.builtin }
   const files: Record<string, Uint8Array> = {}
   const manifest: ZipManifest = {
     format: 'ls101-interface-zip',
@@ -90,13 +91,19 @@ export async function decodeInterfaceZip(data: Uint8Array): Promise<InterfaceExc
     if (!expectedPaths.has(path)) throw invalidZip(`Unexpected file in Interface ZIP: ${path}`)
   }
 
-  return {
+  const value: InterfaceExchangePackage = {
     format: 'ls101-interface',
     version: 2,
     exportedAt: manifest.exportedAt,
     interface: def,
     ...(manifest.builtin ? { builtin: manifest.builtin } : {}),
     instances
+  }
+  const inspection = await inspectInterfacePackage(value)
+  return {
+    ...value,
+    interface: inspection.interface,
+    ...(inspection.builtin ? { builtin: inspection.builtin } : {})
   }
 }
 

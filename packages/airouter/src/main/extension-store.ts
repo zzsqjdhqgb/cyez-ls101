@@ -140,6 +140,15 @@ export class AIRouterExtensionStore {
     )
   }
 
+  deletePackage(extensionId: string, version: string): Promise<void> {
+    return rm(this.packageDir(extensionId, version), {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100
+    })
+  }
+
   private packageDir(extensionId: string, version: string): string {
     validateSegment(extensionId)
     validateSegment(version)
@@ -216,6 +225,7 @@ function isAsset(value: unknown): value is AIRouterExtensionManifest['assets'][n
     typeof value.path === 'string' &&
     isSafePath(value.path) &&
     typeof value.kind === 'string' &&
+    typeof value.size === 'number' &&
     Number.isSafeInteger(value.size) &&
     value.size > 0 &&
     value.size <= MAX_ASSET_BYTES &&

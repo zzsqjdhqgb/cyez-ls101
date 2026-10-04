@@ -74,18 +74,20 @@ interface AIRouterSpeechRecognitionResult {
 
 ## 发音评测
 
-发音评测与语音识别是两个独立能力。首版内置模型为 `facebook/wav2vec2-lv-60-espeak-cv-ft` 的固定 ONNX INT8 转换版本，Provider 和模型 ID 为：
+发音评测与语音识别是两个独立能力。内置模型为英文 CMU 音素 CTC 模型 `charsiu/en_w2v2_ctc_libris_and_cv` 的固定 ONNX INT8 转换版本，Provider 和模型 ID 为：
 
 ```text
-Provider: builtin-facebook-phoneme
-Model: wav2vec2-lv-60-espeak-cv-ft-int8-c69750f
+Provider: builtin-cmu-phoneme
+Model: en-w2v2-ctc-libris-and-cv-int8-70f5061
 ```
 
-模型输入是 16 kHz 单声道音频，输出逐帧音素 logits。main process 在 Worker 中完成 FFmpeg 解码、输入归一化和 ONNX 推理，再将结果交给 `@ls101/grading-engine/pronunciation` 做强制对齐。固定朗读文本由 CMUdict 生成美式英语参考音素，模型输出和参考音素都保留原生 eSpeak IPA token。
+模型输入是 16 kHz 单声道音频，输出逐帧音素 logits。main process 在 Worker 中完成 FFmpeg 解码、输入归一化和 ONNX 推理，再将结果交给 `@ls101/grading-engine/pronunciation` 做整句 CTC Viterbi 强制对齐。业务侧传入 ASR 临时转写，CMUdict 生成去重音的 CMU/ARPAbet 参考序列；模型词表直接提供 39 个 uppercase CMU/ARPAbet token，`[PAD]` 作为 CTC blank，`[SIL]`、`[UNK]` 和任何复合 token 都不进入声学竞争集合。早期多语言 eSpeak 词表（IPA token）仍被兼容识别，但已不再随包发布。
 
-发音评测结果不是普通 ASR 转写：它包含逐词/逐音素时间区间、参考音素、可能的替代音素、置信度、整体匹配度和 Markdown 反馈。当前结果明确标记为实验性；未经中国学生语料校准时，低置信度偏差会被过滤，但仍需结合原始录音复听。
+发音评测结果不是普通 ASR 转写，也不直接生成学习者反馈。schema 2 结果包含完整扁平 `phones` 和完整 `words`：每个音素记录 CMU/IPA 参考、对齐段声学赢家、排除参考后的最强替代项、平均 log posterior、Viterbi GOP、相对证据强度和时间范围。下游严格按 `gop_log_ratio <= -0.35` 选择全部候选，再执行冻结的局部上下文 LLM 后处理。GOP 和 `confidence` 都不是校准后的错误概率。
 
-模型资产不默认写入源码仓库。运行 `node scripts/download-pronunciation-model.js` 可按固定 revision 和 SHA-256 断点下载；构建时复制到 `resources/assets/pronunciation`。完成构建后可以用以下命令验证真实录音：
+文本流请求支持可选的 `systemPrompt`、`temperature` 和单次 `maxOutputTokens`。AI 语音纠错使用固定 system message、`temperature=0`、`maxOutputTokens=65535`；AIRouter 会在已配置模型输出上限内约束单次请求。
+
+模型资产不默认写入源码仓库。运行 `node scripts/download-pronunciation-model.js` 会从 `scripts/pronunciation-model-assets.json` 固定的 GitHub Release 下载 4 个运行时资产并按 size 与 SHA-256 校验（已存在且校验通过时直接跳过，不需要 Python）；打包时由 `scripts/build-pronunciation-extension-package.mjs` 把它们打成 `dist/charsiu-en-w2v2-pronunciation-1.0.0.zip` 扩展包。重新导出模型才需要 Python 与 torch：`node scripts/download-pronunciation-model.js --export` 按固定 revision 与 SHA-256 下载上游权重与 tokenizer 并调用 `scripts/export-pronunciation-model.py`，随后用 `node scripts/publish-pronunciation-model.mjs --publish` 发布新 Release。完成构建后可以用以下命令验证真实录音：
 
 ```text
 node scripts/test-pronunciation.js <audio-file> --text "Reference sentence"
