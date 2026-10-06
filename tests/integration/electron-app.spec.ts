@@ -162,6 +162,7 @@ test('starts a hardened application window and exposes every preload bridge', as
       'listSpeechRecognitionProviderConfigs',
       'listSpeechRecognitionProviderModels',
       'listSpeechVoices',
+      'probeIndexTtsGpu',
       'probeQwenTtsCuda',
       'readImageProviderApiKey',
       'readProviderApiKey',
