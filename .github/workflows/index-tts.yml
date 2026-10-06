@@ -59,6 +59,14 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v6
 
+      - name: Require the IndexTTS scripts
+        shell: bash
+        run: |
+          if [ ! -f scripts/index-tts/build-package.mjs ]; then
+            echo "::error title=Wrong branch::scripts/index-tts is missing. This workflow is registered on the default branch so it can be dispatched, but the pipeline itself lives on the feature branch. Re-run it with 'Use workflow from: feat/index-tts-2.5'."
+            exit 1
+          fi
+
       - name: Build the platform matrix
         id: matrix
         shell: bash
