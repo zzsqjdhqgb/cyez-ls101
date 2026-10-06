@@ -54,9 +54,30 @@ jobs:
       tag: ${{ steps.config.outputs.tag }}
       version: ${{ steps.config.outputs.version }}
       revision: ${{ steps.config.outputs.revision }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v6
+
+      - name: Build the platform matrix
+        id: matrix
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.platform }}
+        run: |
+          node --input-type=module - <<'EOF' >> "$GITHUB_OUTPUT"
+          const all = [
+            { runner: 'ubuntu-22.04', platform: 'linux-x64' },
+            { runner: 'windows-2022', platform: 'win32-x64' }
+          ]
+          const requested = process.env.REQUESTED
+          const selected = requested === 'all' ? all : all.filter((entry) => entry.platform === requested)
+          if (selected.length === 0) {
+            console.error(`no runner matches the requested platform: ${requested}`)
+            process.exit(1)
+          }
+          console.log(`matrix=${JSON.stringify(selected)}`)
+          EOF
 
       - name: Validate the asset pins
         shell: bash
@@ -97,16 +118,12 @@ jobs:
 
   build:
     needs: metadata
-    if: ${{ inputs.platform == 'all' || inputs.platform == matrix.platform }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - runner: ubuntu-22.04
-            platform: linux-x64
-          - runner: windows-2022
-            platform: win32-x64
+        # Built by the metadata job so the platform input can narrow it.
+        include: ${{ fromJSON(needs.metadata.outputs.matrix) }}
     steps:
       - name: Check out the repository
         uses: actions/checkout@v6
