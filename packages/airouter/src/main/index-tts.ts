@@ -1,6 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
-import { stat } from 'node:fs/promises'
+import { createHash, randomUUID } from 'node:crypto'
+import { createReadStream } from 'node:fs'
+import { chmod, copyFile, mkdir, rename, rm, stat } from 'node:fs/promises'
+import os from 'node:os'
 import path from 'node:path'
 import type {
   AIRouterGeneratedAudio,
@@ -12,8 +14,11 @@ import { IndexTtsProtocolDecoder, type IndexTtsProtocolMessage } from './index-t
 import {
   INDEX_TTS_HELPER_SHA256,
   isAllowedHelperDigest,
-  selectHelperAsset,
-  type ResolvedIndexTtsHelper
+  runtimeAssetBasename,
+  runtimeStagingDirectory,
+  selectRuntimeAssets,
+  type IndexTtsRuntimeAssetKind,
+  type ResolvedIndexTtsRuntime
 } from './index-tts-runtime'
 
 export type AIRouterIndexTtsBackend = 'cpu' | 'cuda'
@@ -22,6 +27,8 @@ export interface IndexTtsSynthesizerOptions {
   spawnProcess?: typeof spawn
   helperPaths?: Partial<Record<AIRouterIndexTtsBackend, string>>
   helperAllowlist?: Record<string, readonly string[]>
+  /** Writable root for the staged runtime; defaults to `os.tmpdir()/ls101-index-tts-runtime`. */
+  runtimeRoot?: string
   startupTimeoutMs?: number
   synthesisTimeoutMs?: number
 }
@@ -33,6 +40,7 @@ const DEFAULT_SYNTHESIS_TIMEOUT_MS = 600_000
 const DEFAULT_WEIGHT_TYPE = 'f32'
 const DEFAULT_LANGUAGE = 'auto'
 const HELPER_PLATFORM_KEY = `${process.platform}-${process.arch}`
+const DEFAULT_RUNTIME_ROOT = path.join(os.tmpdir(), 'ls101-index-tts-runtime')
 const VALID_WEIGHT_TYPES = new Set(['native', 'f32', 'f16', 'bf16', 'q8_0'])
 const LANGUAGE_PATTERN = /^[a-z]{2,8}$/
 
@@ -58,6 +66,15 @@ interface PendingRequest {
   reject: (error: unknown) => void
 }
 
+/** A resolved runtime asset: what the package declared plus where its bytes currently live. */
+interface RuntimeSourceFile {
+  assetPath: string
+  kind: IndexTtsRuntimeAssetKind
+  sha256: string
+  name: string
+  sourcePath: string
+}
+
 interface HelperSession {
   key: string
   process: ChildProcessWithoutNullStreams
@@ -72,10 +89,13 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
   private readonly sessions = new Map<string, Promise<HelperSession>>()
   private readonly activeSessions = new Set<HelperSession>()
   private readonly queues = new Map<string, Promise<void>>()
+  private readonly stagingQueues = new Map<string, Promise<void>>()
   private readonly spawnProcess: typeof spawn
+  private readonly runtimeRoot: string
 
   constructor(private readonly options: IndexTtsSynthesizerOptions = {}) {
     this.spawnProcess = options.spawnProcess ?? spawn
+    this.runtimeRoot = options.runtimeRoot ?? DEFAULT_RUNTIME_ROOT
   }
 
   async synthesize(request: AIRouterLocalSpeechRequest): Promise<AIRouterGeneratedAudio> {
@@ -119,7 +139,6 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     }
     const parameters = parseRuntimeParameters(model.parameters, this.options)
     const backend: AIRouterIndexTtsBackend = request.provider.backend === 'cpu' ? 'cpu' : 'cuda'
-    const helper = await this.resolveHelper(request, model.id, backend)
     const [modelPath, referencePath] = await Promise.all([
       request.resolveAssetPath(modelAsset),
       request.resolveAssetPath(referenceAsset)
@@ -127,35 +146,97 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     const key = sessionKey(modelPath, backend, parameters)
     return this.enqueue(key, async () => {
       if (request.signal?.aborted) throw abortError()
-      const session = await this.getSession(key, modelPath, helper, parameters)
+      const session = await this.getSession(key, modelPath, parameters, () =>
+        this.stageRuntime(request, model.id, backend)
+      )
       return this.dispatch(session, request.text, referencePath, parameters, request.signal)
     })
   }
 
   /**
-   * Resolves the runtime helper before anything is spawned. The executable travels inside the
-   * model package, so its declared digest has to match the application-side allowlist first.
+   * Resolves and stages the runtime before anything is spawned. Every runtime asset travels inside
+   * the model package, so its declared digest has to match the application-side allowlist and the
+   * bytes copied into the staging directory have to match that digest before the helper may run.
+   * The staged copy is what gets executed; the blob store's own permissions are never relied upon.
    */
-  private async resolveHelper(
+  private async stageRuntime(
     request: AIRouterLocalSpeechRequest,
     modelId: string,
     backend: AIRouterIndexTtsBackend
-  ): Promise<ResolvedIndexTtsHelper> {
+  ): Promise<ResolvedIndexTtsRuntime> {
     const override = this.options.helperPaths?.[backend]
-    if (override) return { path: override, sha256: '', backend }
-    const selected = selectHelperAsset(request.manifest, modelId, backend, HELPER_PLATFORM_KEY)
+    if (override) return { backend, helperPath: override }
+    const label = backend === 'cuda' ? 'CUDA' : 'CPU'
+    const selected = selectRuntimeAssets(request.manifest, modelId, backend, HELPER_PLATFORM_KEY)
     if (!selected) {
-      const label = backend === 'cuda' ? 'CUDA' : 'CPU'
       throw new Error(`IndexTTS 模型包未提供 ${HELPER_PLATFORM_KEY} 的 ${label} 运行时`)
     }
-    const helperPath = await request.resolveAssetPath(selected.assetPath)
     const allowlist = this.options.helperAllowlist ?? INDEX_TTS_HELPER_SHA256
-    if (!isAllowedHelperDigest(HELPER_PLATFORM_KEY, selected.sha256, allowlist)) {
-      throw new Error(
-        `IndexTTS 运行时未通过白名单校验（${HELPER_PLATFORM_KEY}）：${selected.assetPath}`
-      )
+    for (const asset of selected) {
+      if (!isAllowedHelperDigest(HELPER_PLATFORM_KEY, asset.sha256, allowlist)) {
+        throw new Error(
+          `IndexTTS 运行时未通过白名单校验（${HELPER_PLATFORM_KEY}）：${asset.assetPath}`
+        )
+      }
     }
-    return { path: helperPath, sha256: selected.sha256, backend }
+    const files: RuntimeSourceFile[] = []
+    const names = new Set<string>()
+    for (const asset of selected) {
+      const name = runtimeAssetBasename(asset.assetPath)
+      if (!name) throw new Error(`IndexTTS 运行时资产路径无效：${asset.assetPath}`)
+      if (names.has(name)) throw new Error(`IndexTTS 运行时资产重名：${name}`)
+      names.add(name)
+      const sourcePath = await request.resolveAssetPath(asset.assetPath)
+      const stats = await stat(sourcePath).catch(() => null)
+      if (!stats?.isFile()) {
+        throw new Error(
+          `缺少 IndexTTS 原生运行时：${sourcePath}；请先执行 yarn index-tts:build-runtime`
+        )
+      }
+      files.push({ ...asset, name, sourcePath })
+    }
+    const stagingDirectory = runtimeStagingDirectory(
+      this.runtimeRoot,
+      HELPER_PLATFORM_KEY,
+      request.manifest.package.id,
+      request.manifest.package.version
+    )
+    return this.stageIntoDirectory(stagingDirectory, files, backend)
+  }
+
+  /**
+   * Reuses the staging directory while every staged file still matches its declared digest and
+   * mode, otherwise restages atomically: the files are copied and verified in a temporary sibling
+   * directory that then replaces the target in one rename. Requests racing for the same directory
+   * are serialised.
+   */
+  private async stageIntoDirectory(
+    stagingDirectory: string,
+    files: RuntimeSourceFile[],
+    backend: AIRouterIndexTtsBackend
+  ): Promise<ResolvedIndexTtsRuntime> {
+    const helper = files.find((file) => file.kind === 'runtime-helper')
+    if (!helper) throw new Error('IndexTTS 运行时缺少 helper 资产')
+    return this.withStagingLock(stagingDirectory, async () => {
+      if (!(await stagedRuntimeValid(stagingDirectory, files))) {
+        await materializeRuntime(stagingDirectory, files)
+      }
+      return { backend, helperPath: path.join(stagingDirectory, helper.name) }
+    })
+  }
+
+  private withStagingLock<T>(directory: string, task: () => Promise<T>): Promise<T> {
+    const previous = this.stagingQueues.get(directory) ?? Promise.resolve()
+    const operation = previous.catch(() => undefined).then(task)
+    const tail = operation.then(
+      () => undefined,
+      () => undefined
+    )
+    this.stagingQueues.set(directory, tail)
+    void tail.finally(() => {
+      if (this.stagingQueues.get(directory) === tail) this.stagingQueues.delete(directory)
+    })
+    return operation
   }
 
   private enqueue<T>(key: string, task: () => Promise<T>): Promise<T> {
@@ -175,12 +256,12 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
   private getSession(
     key: string,
     modelPath: string,
-    helper: ResolvedIndexTtsHelper,
-    parameters: IndexTtsRuntimeParameters
+    parameters: IndexTtsRuntimeParameters,
+    stage: () => Promise<ResolvedIndexTtsRuntime>
   ): Promise<HelperSession> {
     const existing = this.sessions.get(key)
     if (existing) return existing
-    const created = this.startSession(key, modelPath, helper, parameters)
+    const created = this.startSession(key, modelPath, parameters, stage)
     this.sessions.set(key, created)
     void created.catch(() => {
       if (this.sessions.get(key) === created) this.sessions.delete(key)
@@ -191,14 +272,15 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
   private async startSession(
     key: string,
     modelPath: string,
-    helper: ResolvedIndexTtsHelper,
-    parameters: IndexTtsRuntimeParameters
+    parameters: IndexTtsRuntimeParameters,
+    stage: () => Promise<ResolvedIndexTtsRuntime>
   ): Promise<HelperSession> {
-    const helperPath = helper.path
+    const runtime = await stage()
+    const helperPath = runtime.helperPath
     await assertExecutableExists(helperPath)
     const args = [
       '--backend',
-      helper.backend,
+      runtime.backend,
       '--model',
       modelPath,
       '--weight-type',
@@ -452,6 +534,76 @@ async function assertExecutableExists(filePath: string): Promise<void> {
   if (!stats?.isFile()) {
     throw new Error(`缺少 IndexTTS 原生运行时：${filePath}；请先执行 yarn index-tts:build-runtime`)
   }
+}
+
+/** Mode a staged runtime file gets on POSIX: helpers and shared objects are executable. */
+function runtimeFileMode(kind: IndexTtsRuntimeAssetKind, name: string): number {
+  if (kind === 'runtime-helper') return 0o755
+  return /\.so(\.\d+)*$/i.test(name) ? 0o755 : 0o644
+}
+
+/** True while every staged file exists, still hashes to its declared digest and keeps its mode. */
+async function stagedRuntimeValid(
+  stagingDirectory: string,
+  files: RuntimeSourceFile[]
+): Promise<boolean> {
+  for (const file of files) {
+    const stagedPath = path.join(stagingDirectory, file.name)
+    const stats = await stat(stagedPath).catch(() => null)
+    if (!stats?.isFile()) return false
+    if (process.platform !== 'win32') {
+      const expectedMode = runtimeFileMode(file.kind, file.name)
+      if ((stats.mode & 0o777) !== expectedMode) return false
+    }
+    if ((await sha256File(stagedPath)) !== file.sha256) return false
+  }
+  return true
+}
+
+/**
+ * Copies the verified runtime into a temporary sibling directory and swaps it in with one rename,
+ * so a reader never observes a half-copied helper or library.
+ */
+async function materializeRuntime(
+  stagingDirectory: string,
+  files: RuntimeSourceFile[]
+): Promise<void> {
+  const temporaryDirectory = `${stagingDirectory}.tmp-${randomUUID().replaceAll('-', '')}`
+  await rm(temporaryDirectory, { recursive: true, force: true })
+  await mkdir(temporaryDirectory, { recursive: true })
+  try {
+    for (const file of files) {
+      const stagedPath = path.join(temporaryDirectory, file.name)
+      await copyFile(file.sourcePath, stagedPath)
+      if ((await sha256File(stagedPath)) !== file.sha256) {
+        throw new Error(`IndexTTS 运行时文件校验失败：${file.assetPath}`)
+      }
+      if (process.platform !== 'win32') {
+        await chmod(stagedPath, runtimeFileMode(file.kind, file.name))
+      }
+    }
+    await mkdir(path.dirname(stagingDirectory), { recursive: true })
+    try {
+      await rename(temporaryDirectory, stagingDirectory)
+    } catch {
+      // The target exists and is not an empty directory: replace it, then rename.
+      await rm(stagingDirectory, { recursive: true, force: true })
+      await rename(temporaryDirectory, stagingDirectory)
+    }
+  } catch (error) {
+    await rm(temporaryDirectory, { recursive: true, force: true })
+    throw error
+  }
+}
+
+async function sha256File(filePath: string): Promise<string | null> {
+  const hash = createHash('sha256')
+  try {
+    for await (const chunk of createReadStream(filePath)) hash.update(chunk as Buffer)
+  } catch {
+    return null
+  }
+  return hash.digest('hex')
 }
 
 function findModel(

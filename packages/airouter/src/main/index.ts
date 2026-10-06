@@ -6,6 +6,7 @@ import {
   type OpenDialogOptions,
   type WebContents
 } from 'electron'
+import path from 'node:path'
 import { AIROUTER_CHANNELS } from '../shared'
 import type {
   AIRouterConnectionTestInput,
@@ -71,7 +72,9 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
   const service = new AIRouterService(options)
   const imageService = new AIRouterImageService(options)
   const qwenTtsSynthesizer = new QwenTtsSynthesizer()
-  const indexTtsSynthesizer = new IndexTtsSynthesizer()
+  const indexTtsSynthesizer = new IndexTtsSynthesizer({
+    runtimeRoot: path.join(options.baseDir, 'models', 'tts', 'runtime')
+  })
   const speechService = new AIRouterSpeechService({
     baseDir: options.baseDir,
     appVersion: app.getVersion(),

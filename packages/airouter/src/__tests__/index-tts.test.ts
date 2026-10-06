@@ -1,5 +1,7 @@
 import { EventEmitter } from 'node:events'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { createHash } from 'node:crypto'
+import { constants } from 'node:fs'
+import { access, chmod, mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { PassThrough } from 'node:stream'
@@ -73,11 +75,13 @@ class FakeHelper extends EventEmitter {
 
 describe('IndexTtsSynthesizer', () => {
   let directory: string
+  let runtimeRoot: string
   let helperPath: string
   let request: AIRouterLocalSpeechRequest
 
   beforeEach(async () => {
     directory = await mkdtemp(path.join(tmpdir(), 'index-tts-test-'))
+    runtimeRoot = await mkdtemp(path.join(tmpdir(), 'index-tts-runtime-'))
     helperPath = path.join(directory, 'helper')
     await Promise.all([
       writeFile(helperPath, 'mock'),
@@ -89,7 +93,10 @@ describe('IndexTtsSynthesizer', () => {
   })
 
   afterEach(async () => {
-    await rm(directory, { recursive: true, force: true })
+    await Promise.all([
+      rm(directory, { recursive: true, force: true }),
+      rm(runtimeRoot, { recursive: true, force: true })
+    ])
   })
 
   it('keeps one CPU helper alive for repeated synthesis with manifest parameters', async () => {
@@ -527,12 +534,13 @@ describe('IndexTtsSynthesizer', () => {
       )
     )
     const manifest = withHelperAssets(request, [
-      { path: cudaAsset },
-      { path: cpuAsset },
-      { path: genericCudaAsset }
+      { path: cudaAsset, sha256: sha256('mock') },
+      { path: cpuAsset, sha256: sha256('mock') },
+      { path: genericCudaAsset, sha256: sha256('mock') }
     ])
     const synthesizer = new IndexTtsSynthesizer({
-      helperAllowlist: { [PLATFORM_KEY]: [HELPER_SHA256] },
+      runtimeRoot,
+      helperAllowlist: { [PLATFORM_KEY]: [sha256('mock')] },
       spawnProcess: spawnProcess as unknown as typeof spawn
     })
 
@@ -547,9 +555,10 @@ describe('IndexTtsSynthesizer', () => {
       manifest
     })
 
+    const stagingDirectory = path.join(runtimeRoot, PLATFORM_KEY, 'index-package-1.0.0')
     expect(spawnProcess.mock.calls.map((call) => call[0])).toEqual([
-      path.join(directory, cudaAsset),
-      path.join(directory, cpuAsset)
+      path.join(stagingDirectory, cudaAsset),
+      path.join(stagingDirectory, cpuAsset)
     ])
     expect(spawnProcess.mock.calls.map((call) => call[1][1])).toEqual(['cuda', 'cpu'])
     synthesizer.dispose()
@@ -632,6 +641,168 @@ describe('IndexTtsSynthesizer', () => {
 
     expect(spawnProcess.mock.calls[0][0]).toBe(helperPath)
     expect(request.resolveAssetPath).not.toHaveBeenCalledWith(asset)
+    synthesizer.dispose()
+  })
+
+  it('rejects a runtime library that is not on the application allowlist before spawning', async () => {
+    const spawnProcess = vi.fn()
+    const helperAsset = `${PLATFORM_KEY}-helper-cuda`
+    const libraryAsset = 'libcublas.so.12'
+    await Promise.all([
+      writeFile(path.join(directory, helperAsset), 'mock'),
+      writeFile(path.join(directory, libraryAsset), 'library')
+    ])
+    const helperDigest = sha256('mock')
+    const libraryDigest = sha256('library')
+    const synthesizer = new IndexTtsSynthesizer({
+      runtimeRoot,
+      helperAllowlist: { [PLATFORM_KEY]: [helperDigest] },
+      spawnProcess: spawnProcess as unknown as typeof spawn
+    })
+
+    await expect(
+      synthesizer.synthesize({
+        ...request,
+        provider: { ...request.provider, backend: 'cuda' },
+        manifest: withRuntimeLibraries(
+          withHelperAssets(request, [{ path: helperAsset, sha256: helperDigest }]),
+          [{ path: libraryAsset, sha256: libraryDigest }]
+        )
+      })
+    ).rejects.toThrow(`IndexTTS 运行时未通过白名单校验（${PLATFORM_KEY}）：${libraryAsset}`)
+    expect(spawnProcess).not.toHaveBeenCalled()
+  })
+
+  it('rejects a runtime library whose copied bytes do not match the declared digest', async () => {
+    const spawnProcess = vi.fn()
+    const helperAsset = `${PLATFORM_KEY}-helper-cuda`
+    const libraryAsset = 'libaudiocpp.so.0'
+    await Promise.all([
+      writeFile(path.join(directory, helperAsset), 'mock'),
+      writeFile(path.join(directory, libraryAsset), 'trojanised')
+    ])
+    const helperDigest = sha256('mock')
+    const declaredLibraryDigest = sha256('library')
+    const synthesizer = new IndexTtsSynthesizer({
+      runtimeRoot,
+      helperAllowlist: { [PLATFORM_KEY]: [helperDigest, declaredLibraryDigest] },
+      spawnProcess: spawnProcess as unknown as typeof spawn
+    })
+
+    await expect(
+      synthesizer.synthesize({
+        ...request,
+        provider: { ...request.provider, backend: 'cuda' },
+        manifest: withRuntimeLibraries(
+          withHelperAssets(request, [{ path: helperAsset, sha256: helperDigest }]),
+          [{ path: libraryAsset, sha256: declaredLibraryDigest }]
+        )
+      })
+    ).rejects.toThrow(`IndexTTS 运行时文件校验失败：${libraryAsset}`)
+    expect(spawnProcess).not.toHaveBeenCalled()
+    await expect(
+      stat(path.join(runtimeRoot, PLATFORM_KEY, 'index-package-1.0.0'))
+    ).rejects.toMatchObject({ code: 'ENOENT' })
+  })
+
+  it.skipIf(process.platform === 'win32')(
+    'stages an executable helper next to its libraries outside the blob store',
+    async () => {
+      const helper = new FakeHelper()
+      const spawnProcess = vi.fn(
+        (_command: string, _args: string[]) => helper as unknown as ChildProcessWithoutNullStreams
+      )
+      const helperAsset = `${PLATFORM_KEY}-helper-cuda`
+      const sharedLibraryAsset = 'libaudiocpp.so.0'
+      const dataLibraryAsset = 'cublas64_12.dll'
+      const blobDirectory = path.join(directory, 'blobs', 'sha256', 'ab')
+      const blobHelperPath = path.join(blobDirectory, 'cafebabe')
+      await mkdir(blobDirectory, { recursive: true })
+      await Promise.all([
+        writeFile(blobHelperPath, 'mock'),
+        writeFile(path.join(directory, sharedLibraryAsset), 'shared-library'),
+        writeFile(path.join(directory, dataLibraryAsset), 'data-library')
+      ])
+      await chmod(blobHelperPath, 0o600)
+      const helperDigest = sha256('mock')
+      const sharedLibraryDigest = sha256('shared-library')
+      const dataLibraryDigest = sha256('data-library')
+      const synthesizer = new IndexTtsSynthesizer({
+        runtimeRoot,
+        helperAllowlist: {
+          [PLATFORM_KEY]: [helperDigest, sharedLibraryDigest, dataLibraryDigest]
+        },
+        spawnProcess: spawnProcess as unknown as typeof spawn
+      })
+
+      await synthesizer.synthesize({
+        ...request,
+        provider: { ...request.provider, backend: 'cuda' },
+        manifest: withRuntimeLibraries(
+          withHelperAssets(request, [{ path: helperAsset, sha256: helperDigest }]),
+          [
+            { path: sharedLibraryAsset, sha256: sharedLibraryDigest },
+            { path: dataLibraryAsset, sha256: dataLibraryDigest }
+          ]
+        ),
+        resolveAssetPath: vi.fn(async (assetPath: string) =>
+          assetPath === helperAsset ? blobHelperPath : path.join(directory, assetPath)
+        )
+      })
+
+      const stagedDirectory = path.join(runtimeRoot, PLATFORM_KEY, 'index-package-1.0.0')
+      const stagedHelper = path.join(stagedDirectory, helperAsset)
+      expect(spawnProcess.mock.calls[0][0]).toBe(stagedHelper)
+      expect(spawnProcess.mock.calls[0][0]).not.toBe(blobHelperPath)
+      expect((await stat(stagedHelper)).mode & 0o777).toBe(0o755)
+      expect((await stat(path.join(stagedDirectory, sharedLibraryAsset))).mode & 0o777).toBe(0o755)
+      expect((await stat(path.join(stagedDirectory, dataLibraryAsset))).mode & 0o777).toBe(0o644)
+      await expect(access(stagedHelper, constants.X_OK)).resolves.toBeUndefined()
+      expect((await stat(blobHelperPath)).mode & 0o777).toBe(0o600)
+      synthesizer.dispose()
+    }
+  )
+
+  it('reuses the staged runtime and stages a different package version separately', async () => {
+    const helperAsset = `${PLATFORM_KEY}-helper-cuda`
+    await writeFile(path.join(directory, helperAsset), 'mock')
+    const digest = sha256('mock')
+    const manifest = withHelperAssets(request, [{ path: helperAsset, sha256: digest }])
+    const spawnProcess = vi.fn(
+      (_command: string, _args: string[]) =>
+        new FakeHelper() as unknown as ChildProcessWithoutNullStreams
+    )
+    const synthesizer = new IndexTtsSynthesizer({
+      runtimeRoot,
+      helperAllowlist: { [PLATFORM_KEY]: [digest] },
+      spawnProcess: spawnProcess as unknown as typeof spawn
+    })
+    const cudaRequest: AIRouterLocalSpeechRequest = {
+      ...request,
+      provider: { ...request.provider, backend: 'cuda' },
+      manifest
+    }
+
+    await synthesizer.synthesize(cudaRequest)
+    const stagedHelper = spawnProcess.mock.calls[0][0]
+    const first = await stat(stagedHelper)
+    synthesizer.dispose()
+
+    await synthesizer.synthesize(cudaRequest)
+    expect(spawnProcess.mock.calls[1][0]).toBe(stagedHelper)
+    const second = await stat(stagedHelper)
+    expect(second.ino).toBe(first.ino)
+    expect(second.mtimeMs).toBe(first.mtimeMs)
+    synthesizer.dispose()
+
+    await synthesizer.synthesize({
+      ...cudaRequest,
+      manifest: { ...manifest, package: { ...manifest.package, version: '1.1.0' } }
+    })
+    expect(spawnProcess.mock.calls[2][0]).toBe(
+      path.join(runtimeRoot, PLATFORM_KEY, 'index-package-1.1.0', helperAsset)
+    )
+    expect(spawnProcess).toHaveBeenCalledTimes(3)
     synthesizer.dispose()
   })
 })
@@ -735,6 +906,28 @@ function withHelperAssets(
       artifacts: { ...model.artifacts, 'runtime-helper': helpers.map((helper) => helper.path) }
     }))
   }
+}
+
+function withRuntimeLibraries(
+  manifest: AIRouterLocalSpeechRequest['manifest'],
+  libraries: Array<{ path: string; sha256: string }>
+): AIRouterLocalSpeechRequest['manifest'] {
+  return {
+    ...manifest,
+    assets: [
+      ...manifest.assets,
+      ...libraries.map((library) => ({
+        path: library.path,
+        kind: 'runtime-library',
+        size: 4,
+        sha256: library.sha256
+      }))
+    ]
+  }
+}
+
+function sha256(content: string): string {
+  return createHash('sha256').update(content).digest('hex')
 }
 
 function createWav(): Buffer {
