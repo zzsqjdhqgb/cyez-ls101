@@ -1,0 +1,297 @@
+name: IndexTTS Assets
+
+# Two-step flow:
+#   1. mode=digest  -> builds the CUDA helper, reports its SHA-256 and the allowlist entry to add.
+#   2. mode=package -> full package (after the digest is committed) and, optionally, a release.
+#
+# Caching: sccache keeps compiled objects across runs (GitHub Actions cache backend), the audio.cpp
+# checkout is cached per pinned revision, and the CMake build tree is cached so reruns are incremental.
+# Only the weights download is uncached (4.5 GB, verified against the pin every run).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: digest reports the helper digest; package builds and splits the model package
+        required: true
+        type: choice
+        options:
+          - digest
+          - package
+        default: digest
+      platform:
+        description: Target platform
+        required: true
+        type: choice
+        options:
+          - all
+          - linux-x64
+          - win32-x64
+        default: win32-x64
+      publish:
+        description: Publish the split volumes to a GitHub Release (mode=package only)
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: index-tts-assets-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # Lets mozilla-actions/sccache-action use the GitHub Actions cache backend across runs.
+  SCCACHE_GHA_ENABLED: 'true'
+  # A restored build tree turns the compile into an incremental one.
+  LS101_INDEX_TTS_KEEP_BUILD: '1'
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.config.outputs.tag }}
+      version: ${{ steps.config.outputs.version }}
+      revision: ${{ steps.config.outputs.revision }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Require the IndexTTS scripts
+        shell: bash
+        run: |
+          if [ ! -f scripts/index-tts/build-package.mjs ]; then
+            echo "::error title=Wrong branch::scripts/index-tts is missing. This workflow is registered on the default branch so it can be dispatched, but the pipeline itself lives on the feature branch. Re-run it with 'Use workflow from: feat/index-tts-2.5'."
+            exit 1
+          fi
+
+      - name: Build the platform matrix
+        id: matrix
+        shell: bash
+        env:
+          REQUESTED: ${{ inputs.platform }}
+        run: |
+          node --input-type=module - <<'EOF' >> "$GITHUB_OUTPUT"
+          const all = [
+            { runner: 'ubuntu-22.04', platform: 'linux-x64' },
+            { runner: 'windows-2022', platform: 'win32-x64' }
+          ]
+          const requested = process.env.REQUESTED
+          const selected = requested === 'all' ? all : all.filter((entry) => entry.platform === requested)
+          if (selected.length === 0) {
+            console.error(`no runner matches the requested platform: ${requested}`)
+            process.exit(1)
+          }
+          console.log(`matrix=${JSON.stringify(selected)}`)
+          EOF
+
+      - name: Validate the asset pins
+        shell: bash
+        run: |
+          node --input-type=module - <<'EOF'
+          import { readFile, stat } from 'node:fs/promises'
+          import { createHash } from 'node:crypto'
+
+          const assets = JSON.parse(await readFile('scripts/index-tts/assets.json', 'utf8'))
+          const fail = (message) => { console.error(message); process.exit(1) }
+          const sha256 = async (file) => createHash('sha256').update(await readFile(file)).digest('hex')
+
+          if (!assets.package?.version) fail('package.version is required')
+          if (!/^[0-9a-f]{64}$/.test(assets.model?.sha256 ?? '')) fail('model.sha256 must be 64 hex characters')
+          if (!Number.isSafeInteger(assets.model?.size)) fail('model.size must be an integer')
+          if (!/^[0-9a-f]{40}$/.test(assets.runtime?.revision ?? '')) fail('runtime.revision must be a commit SHA')
+
+          for (const voice of assets.voices ?? []) {
+            const info = await stat(voice.file).catch(() => null)
+            if (!info?.isFile()) fail(`missing voice file: ${voice.file}`)
+            if (info.size !== voice.size) fail(`${voice.id}: size ${info.size} != pinned ${voice.size}`)
+            if ((await sha256(voice.file)) !== voice.sha256) fail(`${voice.id}: digest mismatch`)
+          }
+
+          console.log(`pins verified: model ${assets.model.size} B, ${assets.voices.length} voice(s)`)
+          EOF
+
+      - name: Read the release identity
+        id: config
+        shell: bash
+        run: |
+          VERSION=$(node -e "console.log(require('./scripts/index-tts/assets.json').package.version)")
+          REVISION=$(node -e "console.log(require('./scripts/index-tts/assets.json').runtime.revision)")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=index-tts-model-v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "revision=$REVISION" >> "$GITHUB_OUTPUT"
+          echo "mode=${{ inputs.mode }} platform=${{ inputs.platform }} revision=$REVISION"
+
+  build:
+    needs: metadata
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Built by the metadata job so the platform input can narrow it.
+        include: ${{ fromJSON(needs.metadata.outputs.matrix) }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Free disk space
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Set up CUDA compiler cache
+        uses: mozilla-actions/sccache-action@v0.0.11
+        with:
+          version: v0.17.0
+
+      - name: Set up CUDA toolkit
+        uses: Jimver/cuda-toolkit@v0.2.36
+        with:
+          cuda: '12.8.1'
+          method: network
+          sub-packages: >-
+            ${{ runner.os == 'Windows' && '["nvcc","cudart","cublas","cublas_dev","nvjitlink","thrust"]' || '["nvcc"]' }}
+
+      - name: Show the native toolchain
+        shell: bash
+        run: |
+          cmake --version
+          git --version
+          node --version
+
+      - name: Restore the pinned audio.cpp checkout
+        uses: actions/cache@v4
+        with:
+          path: externals/ai/index-tts/downloads/audio.cpp
+          key: index-tts-audiocpp-${{ needs.metadata.outputs.revision }}
+
+      - name: Check out the pinned audio.cpp revision
+        shell: bash
+        env:
+          REVISION: ${{ needs.metadata.outputs.revision }}
+        run: |
+          REPOSITORY=$(node -e "console.log(require('./scripts/index-tts/assets.json').runtime.repository)")
+          CHECKOUT=externals/ai/index-tts/downloads/audio.cpp
+          if [ ! -d "$CHECKOUT/.git" ]; then
+            mkdir -p "$(dirname "$CHECKOUT")"
+            git clone --filter=blob:none "$REPOSITORY" "$CHECKOUT"
+          fi
+          git -C "$CHECKOUT" fetch --filter=blob:none origin "$REVISION" || true
+          git -C "$CHECKOUT" checkout "$REVISION"
+          git -C "$CHECKOUT" rev-parse HEAD
+
+      - name: Restore the CMake build tree
+        uses: actions/cache@v4
+        with:
+          path: externals/ai/index-tts/build-cuda
+          key: index-tts-build-${{ runner.os }}-${{ needs.metadata.outputs.revision }}-${{ hashFiles('native/index-tts/CMakeLists.txt', 'scripts/index-tts/build-runtime.mjs') }}
+          restore-keys: |
+            index-tts-build-${{ runner.os }}-${{ needs.metadata.outputs.revision }}-
+
+      - name: Build the CUDA helper
+        shell: bash
+        env:
+          LS101_INDEX_TTS_SOURCE_DIR: ${{ github.workspace }}/externals/ai/index-tts/downloads/audio.cpp
+        run: node scripts/index-tts/build-runtime.mjs --backend cuda
+
+      - name: Report the runtime digest
+        shell: bash
+        run: |
+          node scripts/index-tts/verify-allowlist.mjs --platform ${{ matrix.platform }} --report >> "$GITHUB_STEP_SUMMARY"
+          sccache --show-stats || true
+
+      - name: Require the runtime digest in the application allowlist
+        if: inputs.mode == 'package'
+        shell: bash
+        run: node scripts/index-tts/verify-allowlist.mjs --platform ${{ matrix.platform }}
+
+      - name: Download the pinned weights
+        if: inputs.mode == 'package'
+        shell: bash
+        run: node scripts/index-tts/download-model.mjs
+
+      - name: Build the model package
+        if: inputs.mode == 'package'
+        shell: bash
+        run: node scripts/index-tts/build-package.mjs --platform ${{ matrix.platform }}
+
+      - name: Show the packaged outputs
+        if: inputs.mode == 'package'
+        shell: bash
+        run: ls -l dist
+
+      - name: Upload the helper for local experiments
+        if: inputs.mode == 'digest'
+        uses: actions/upload-artifact@v6
+        with:
+          name: index-tts-helper-${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 7
+          path: externals/ai/index-tts/runtime/${{ matrix.platform }}/*
+
+      - name: Upload the split volumes
+        if: inputs.mode == 'package'
+        uses: actions/upload-artifact@v6
+        with:
+          name: index-tts-package-${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            dist/*-part-*
+            dist/*-volumes.json
+            dist/manifest.json
+
+  release:
+    needs: [metadata, build]
+    if: ${{ inputs.mode == 'package' && inputs.publish }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Collect the packaged volumes
+        uses: actions/download-artifact@v7
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Require an unused release tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
+             gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "release tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.metadata.outputs.tag }}
+          name: IndexTTS 2.5 ${{ needs.metadata.outputs.version }}
+          prerelease: true
+          draft: false
+          files: |
+            release-assets/*-part-*
+            release-assets/*-volumes.json
+          body: |
+            IndexTTS 2.5 fp16 model package with its CUDA runtime.
+
+            Each `*-part-NNN` file is one byte range of a single ZIP; concatenate them in order and
+            verify the result against `archiveSha256` in the matching `*-volumes.json` before importing.
+            The application only executes the bundled helper when its digest is listed in
+            `packages/airouter/src/main/index-tts-runtime.ts`.
