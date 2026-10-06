@@ -652,7 +652,9 @@ function isRuntime(value: unknown, packageKind: 'tts' | 'asr'): boolean {
   return (
     (packageKind === 'asr'
       ? candidate.engine === 'qwen3-asr'
-      : candidate.engine === 'pocket-tts' || candidate.engine === 'qwen-tts') &&
+      : candidate.engine === 'pocket-tts' ||
+        candidate.engine === 'qwen-tts' ||
+        candidate.engine === 'index-tts') &&
     candidate.engineApiVersion === ENGINE_API_VERSION &&
     (candidate.minimumAppVersion === undefined || isSemanticVersion(candidate.minimumAppVersion))
   )

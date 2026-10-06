@@ -1,12 +1,18 @@
 export type AIRouterProviderType = 'openai-compatible' | 'anthropic'
 export type AIRouterImageProviderType = 'manual' | 'openai-compatible'
-export type AIRouterSpeechProviderType = 'openai-compatible' | 'pocket-tts' | 'qwen-tts'
+export type AIRouterSpeechProviderType =
+  | 'openai-compatible'
+  | 'pocket-tts'
+  | 'qwen-tts'
+  | 'index-tts'
 export type AIRouterLocalSpeechProviderType = Exclude<
   AIRouterSpeechProviderType,
   'openai-compatible'
 >
 export type AIRouterSpeechProviderKind = 'online' | 'local'
-export type AIRouterQwenTtsBackend = 'cpu' | 'cuda'
+export type AIRouterSpeechBackend = 'cpu' | 'cuda'
+export type AIRouterQwenTtsBackend = AIRouterSpeechBackend
+export type AIRouterIndexTtsBackend = AIRouterSpeechBackend
 export type AIRouterSpeechRole = 'default' | 'man' | 'woman'
 export type AIRouterSpeechAudioFormat = 'wav' | 'mp3' | 'opus' | 'pcm-s16le'
 
@@ -345,7 +351,7 @@ export interface AIRouterSpeechProviderConfig {
   modelPackageVersion: string
   models: AIRouterModelConfig[]
   voices: AIRouterSpeechVoiceConfig[]
-  backend?: AIRouterQwenTtsBackend
+  backend?: AIRouterSpeechBackend
 }
 
 export interface AIRouterSpeechProviderConfigInput {
@@ -358,7 +364,7 @@ export interface AIRouterSpeechProviderConfigInput {
   modelPackageVersion?: string
   models: AIRouterModelConfig[]
   voices: AIRouterSpeechVoiceConfig[]
-  backend?: AIRouterQwenTtsBackend
+  backend?: AIRouterSpeechBackend
   apiKey?: string
   clearApiKey?: boolean
 }
@@ -494,6 +500,21 @@ export interface AIRouterQwenTtsCudaProbeResult {
   message?: string
 }
 
+export type AIRouterGpuWeightType = 'f32' | 'f16' | 'q8_0'
+
+export interface AIRouterGpuProbeResult {
+  available: boolean
+  name?: string
+  computeCapability?: string
+  vramMiB?: number
+  driverVersion?: string
+  /** Highest CUDA version the installed driver reports support for, when observable. */
+  cudaRuntimeVersion?: string
+  recommendedBackend: AIRouterSpeechBackend
+  recommendedWeightType: AIRouterGpuWeightType
+  summary: string
+}
+
 export interface AIRouterSpeechVoiceListInput {
   config: AIRouterSpeechProviderConfigInput
   modelId: string
@@ -535,6 +556,7 @@ export interface AIRouterClient {
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
   probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
+  probeIndexTtsGpu(): Promise<AIRouterGpuProbeResult>
   listSpeechRecognitionProviderConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
   saveSpeechRecognitionProviderConfig(
     config: AIRouterSpeechRecognitionProviderConfigInput
@@ -608,6 +630,7 @@ export interface AIRouterBridge {
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
   probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
+  probeIndexTtsGpu(): Promise<AIRouterGpuProbeResult>
   listSpeechRecognitionProviderConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
   saveSpeechRecognitionProviderConfig(
     config: AIRouterSpeechRecognitionProviderConfigInput
