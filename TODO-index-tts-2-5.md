@@ -444,19 +444,37 @@ manifest 示例（路线 A：单文件 GGUF + 参考音色；路线 B 仅 `artif
    （`index`/`name`/`size`/`sha256`/`totalBytes`/`archiveSha256`）；`scripts/download-asset.js` 扩展为
    「多卷下载 → 逐卷校验 → 顺序合并 → 整体 sha256 校验」后落盘。这样应用内导入路径（yauzl 读单个 .zip）完全不变。
 
-### 5.2 发布流程（CI）
+### 5.2 发布流程（CI，`.github/workflows/index-tts.yml`）
+
+**两步式**（因为白名单在应用里，第一次必须先把摘要取回来）：
 
 ```
-build helper（矩阵：ubuntu-22.04 / windows-2022 × cuda12.8）
-  → 下载 GGUF（HF audio-cpp/audio.cpp-gguf，或 ModelScope 镜像）
-  → 生成 manifest.json：assets 含 runtime-helper / runtime-library / tts-model / voice-reference，
-     每项带 size + sha256；models[].artifacts['runtime-helper'] 按 <platform>-<arch> 列出
-  → ZIP64 store-only 打包 → 按 <2 GiB 切片 + volumes.json
-  → 发布 index-tts-model-v<ver>（不可变 tag）
-  → 把 helper 的 sha256 写入 packages/airouter/src/main/index-tts-runtime.ts 白名单，并随应用发版
+① workflow_dispatch: mode=digest
+   矩阵（ubuntu-22.04→linux-x64 / windows-2022→win32-x64）× CUDA 12.8.1
+   → 只构建 CUDA helper，不下载权重、不出包
+   → 把摘要与「要粘贴的白名单代码块」写进 GitHub Step Summary
+   → 附件：该平台的 helper 二进制，便于本地实验
+
+② 把摘要提交进 packages/airouter/src/main/index-tts-runtime.ts
+
+③ workflow_dispatch: mode=package [, publish=true]
+   → 严格白名单闸门（未命中直接失败，避免发布应用拒绝执行的包）
+   → 下载并校验 GGUF（HF 主源 → ModelScope 回退，每次比对 pin）
+   → 生成 manifest.json（runtime-helper / runtime-library / tts-model / voice-reference，各带 size+sha256）
+   → ZIP64 store-only 打包 → 按 <2 GiB 切片 + volumes.json
+   → publish=true 时校验 tag 未被占用并发布 index-tts-model-v<ver>
 ```
 
-> 最后一步是这条设计的固有代价：**白名单在应用里，运行时更新必须发应用版本**（已知并接受）。
+**缓存策略**（首跑慢、复跑快）：
+
+| 层             | 手段                                                          | 说明                                                                                                                            |
+| -------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 编译对象       | `mozilla-actions/sccache-action` + `SCCACHE_GHA_ENABLED=true` | 走 GitHub Actions 缓存后端，**跨运行**复用 nvcc/gcc 产物；`build-runtime.mjs` 已把 `SCCACHE_PATH` 接到 C/CXX/CUDA 三个 launcher |
+| audio.cpp 检出 | `actions/cache@v4`，键 = pinned revision                      | blobless clone，省一次网络往返                                                                                                  |
+| CMake 构建树   | `actions/cache@v4`，键 = OS + revision + CMakeLists/脚本哈希  | 需 `LS101_INDEX_TTS_KEEP_BUILD=1` 才不删构建目录（已作为 workflow 级 env）                                                      |
+| 权重 4.5 GB    | **不缓存**                                                    | 每次按 pin 校验下载（分钟级），避免占用仓库 10 GB 缓存配额                                                                      |
+
+> 白名单在应用里是这条设计的固有代价：**白名单变更必须发应用版本**（已知并接受）。
 
 体积 vs 现有上限：
 

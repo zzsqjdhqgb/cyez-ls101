@@ -70,10 +70,32 @@ export function parseOptions(argv) {
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
     if (flag === '--platform') options.platform = argv[++index]
+    else if (flag === '--report') options.report = true
     else if (flag === '--help' || flag === '-h') options.help = true
     else throw new Error(`未知参数：${flag}`)
   }
   return options
+}
+
+/** Markdown for a CI step summary: the digest plus the exact allowlist entry to add. */
+export function formatReport(result) {
+  const entry = `  '${result.platform}': [\n    '${result.digest}'\n  ]`
+  return [
+    `## IndexTTS runtime digest (${result.platform})`,
+    '',
+    `- helper: \`${result.helperPath}\` (${result.size} B)`,
+    `- sha256: \`${result.digest}\``,
+    `- allowlisted: ${result.ok ? 'yes' : 'no'}`,
+    '',
+    'Add this to `packages/airouter/src/main/index-tts-runtime.ts` (then rebuild the app):',
+    '',
+    '```ts',
+    'export const INDEX_TTS_HELPER_SHA256: Record<string, readonly string[]> = {',
+    entry,
+    '}',
+    '```',
+    ''
+  ].join('\n')
 }
 
 const invokedDirectly =
@@ -83,10 +105,17 @@ if (invokedDirectly) {
   try {
     const options = parseOptions(process.argv.slice(2))
     if (options.help) {
-      console.log('用法：node scripts/index-tts/verify-allowlist.mjs [--platform <key>]')
+      console.log(
+        '用法：node scripts/index-tts/verify-allowlist.mjs [--platform <key>] [--report]\n' +
+          '  --report  只输出摘要与白名单片段（供 CI 汇总），不因未白名单而失败'
+      )
       process.exit(0)
     }
     const result = await verifyAllowlist(options)
+    if (options.report) {
+      console.log(formatReport(result))
+      process.exit(0)
+    }
     console.log(`[index-tts] helper ${result.helperPath} (${result.size} B)`)
     console.log(`[index-tts] sha256 ${result.digest}`)
     if (!result.ok) {

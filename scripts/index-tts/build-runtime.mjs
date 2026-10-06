@@ -81,7 +81,10 @@ function requireSource() {
 }
 
 function configureAndBuild(backend, buildDir) {
-  rmSync(buildDir, { recursive: true, force: true })
+  // A cached build tree makes reruns incremental; the compiler cache (sccache) still does most of the
+  // work, so the default stays a clean configure.
+  const keepBuild = ['1', 'true'].includes(process.env.LS101_INDEX_TTS_KEEP_BUILD?.trim() ?? '')
+  if (!keepBuild) rmSync(buildDir, { recursive: true, force: true })
   const configureArgs = [
     ...(cmakeGenerator ? ['-G', cmakeGenerator] : []),
     '-S',
