@@ -59,6 +59,17 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@v6
 
+      - name: Require platform=all when publishing
+        if: inputs.publish
+        shell: bash
+        env:
+          REQUESTED_PLATFORM: ${{ inputs.platform }}
+        run: |
+          if [ "$REQUESTED_PLATFORM" != 'all' ]; then
+            echo "::error title=Partial publish::publish=true requires platform=all, but this run requested '$REQUESTED_PLATFORM'. Publishing one platform alone would consume the shared tag index-tts-model-v<version> with partial volumes, and the unused-tag guard would then refuse to publish the remaining platform under that tag. Use platform=all, or publish=false for a local test build."
+            exit 1
+          fi
+
       - name: Require the IndexTTS scripts
         shell: bash
         run: |
@@ -158,8 +169,14 @@ jobs:
         with:
           cuda: '12.8.1'
           method: network
+          # The action requires a suffix when the job uses a matrix.
+          log-file-suffix: '${{ matrix.platform }}.txt'
+          # Same component allowlist as the qwen-tts runtime job. Visual Studio integration is
+          # deliberately skipped: the Windows build uses Ninja instead (see below).
           sub-packages: >-
             ${{ runner.os == 'Windows' && '["nvcc","cudart","cublas","cublas_dev","nvjitlink","thrust"]' || '["nvcc"]' }}
+          non-cuda-sub-packages: >-
+            ${{ runner.os == 'Windows' && '[]' || '["libcublas","libcublas-dev","libnvjitlink"]' }}
 
       - name: Show the native toolchain
         shell: bash
@@ -198,10 +215,23 @@ jobs:
             index-tts-build-${{ runner.os }}-${{ needs.metadata.outputs.revision }}-
 
       - name: Build the CUDA helper
+        if: runner.os != 'Windows'
         shell: bash
         env:
           LS101_INDEX_TTS_SOURCE_DIR: ${{ github.workspace }}/externals/ai/index-tts/downloads/audio.cpp
         run: node scripts/index-tts/build-runtime.mjs --backend cuda
+
+      # Mirrors the qwen-tts runtime job: the Visual Studio generator would need the CUDA MSBuild
+      # toolset ("No CUDA toolset found"), so Windows builds use Ninja after VsDevCmd sets up MSVC.
+      - name: Build the CUDA helper on Windows
+        if: runner.os == 'Windows'
+        shell: cmd
+        env:
+          LS101_INDEX_TTS_CMAKE_GENERATOR: Ninja
+          LS101_INDEX_TTS_SOURCE_DIR: ${{ github.workspace }}\externals\ai\index-tts\downloads\audio.cpp
+        run: |
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64
+          node scripts/index-tts/build-runtime.mjs --backend cuda
 
       - name: Report the runtime digest
         shell: bash
@@ -249,6 +279,7 @@ jobs:
             dist/*-part-*
             dist/*-volumes.json
             dist/manifest.json
+            dist/*-licenses/*
 
   release:
     needs: [metadata, build]
@@ -288,10 +319,14 @@ jobs:
           files: |
             release-assets/*-part-*
             release-assets/*-volumes.json
+            release-assets/*-licenses/*
           body: |
             IndexTTS 2.5 fp16 model package with its CUDA runtime.
 
             Each `*-part-NNN` file is one byte range of a single ZIP; concatenate them in order and
             verify the result against `archiveSha256` in the matching `*-volumes.json` before importing.
+            The `*-licenses/` directory carries the bilibili Model Use License Agreement (en/zh) and the
+            disclaimer required for this quantized Derivative Work; both are also inside the ZIP under
+            `licenses/`.
             The application only executes the bundled helper when its digest is listed in
             `packages/airouter/src/main/index-tts-runtime.ts`.
