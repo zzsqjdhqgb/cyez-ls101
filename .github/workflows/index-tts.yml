@@ -171,12 +171,14 @@ jobs:
           method: network
           # The action requires a suffix when the job uses a matrix.
           log-file-suffix: '${{ matrix.platform }}.txt'
-          # Same component allowlist as the qwen-tts runtime job. Visual Studio integration is
-          # deliberately skipped: the Windows build uses Ninja instead (see below).
+          # Same component allowlist as the qwen-tts runtime job plus cuFFT: audio.cpp's
+          # engine_runtime links CUDA::cudart and CUDA::cufft (CMakeLists.txt:2547), while
+          # ggml's CUDA backend needs cuBLAS. Visual Studio integration is deliberately skipped:
+          # the Windows build uses Ninja instead (see below).
           sub-packages: >-
-            ${{ runner.os == 'Windows' && '["nvcc","cudart","cublas","cublas_dev","nvjitlink","thrust"]' || '["nvcc"]' }}
+            ${{ runner.os == 'Windows' && '["nvcc","cudart","cublas","cublas_dev","cufft","cufft_dev","nvjitlink","thrust"]' || '["nvcc"]' }}
           non-cuda-sub-packages: >-
-            ${{ runner.os == 'Windows' && '[]' || '["libcublas","libcublas-dev","libnvjitlink"]' }}
+            ${{ runner.os == 'Windows' && '[]' || '["libcublas","libcublas-dev","libcufft","libcufft-dev","libnvjitlink"]' }}
 
       - name: Show the native toolchain
         shell: bash
@@ -233,6 +235,91 @@ jobs:
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64
           node scripts/index-tts/build-runtime.mjs --backend cuda
 
+      # Same staging the qwen-tts runtime job does, extended with the libraries audio.cpp actually
+      # links: the helper loads these from its own directory, and they must travel inside the model
+      # package (they become runtime-library assets).
+      - name: Stage Windows CUDA runtime dependencies
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $sourceDirectory = Join-Path $env:CUDA_PATH 'bin'
+          $destinationDirectory = 'externals/ai/index-tts/runtime/${{ matrix.platform }}'
+          # engine_runtime links CUDA::cudart and CUDA::cufft, ggml's CUDA backend needs cuBLAS.
+          foreach ($name in @('cudart64_12.dll', 'cufft64_12.dll', 'cublas64_12.dll', 'cublasLt64_12.dll', 'nvJitLink_120_0.dll')) {
+            $source = Join-Path $sourceDirectory $name
+            if (!(Test-Path -LiteralPath $source -PathType Leaf)) {
+              throw "CUDA runtime dependency is missing: $source"
+            }
+            if ((Get-Item -LiteralPath $source).Length -lt 1MB) {
+              throw "CUDA runtime dependency is unexpectedly small: $source"
+            }
+            Copy-Item -LiteralPath $source -Destination (Join-Path $destinationDirectory $name)
+          }
+
+      # Linux spelling of the same step, driven by ldd so anything the linker pulled in from the
+      # toolkit travels with the package instead of relying on the user having CUDA installed.
+      - name: Stage Linux CUDA runtime libraries
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime_dir="externals/ai/index-tts/runtime/${{ matrix.platform }}"
+          # Normalise a possible trailing slash so the prefix match below cannot miss.
+          cuda_path="${CUDA_PATH%/}"
+          staged=0
+          for binary in "$runtime_dir"/ls101-index-tts-helper-cuda "$runtime_dir"/libaudiocpp.so*; do
+            [ -e "$binary" ] || continue
+            while read -r dependency; do
+              [ -n "$dependency" ] || continue
+              if [ "$dependency" = "not" ]; then
+                echo "::error title=Unresolved dependency::ldd reports an unresolved dependency for $binary" >&2
+                ldd "$binary" >&2
+                exit 1
+              fi
+              case "$dependency" in
+                "${cuda_path}"/*)
+                  name="$(basename "$dependency")"
+                  if [ ! -e "$runtime_dir/$name" ]; then
+                    cp -L "$dependency" "$runtime_dir/$name"
+                    echo "staged $name"
+                    staged=$((staged + 1))
+                  fi
+                  ;;
+              esac
+            done < <(ldd "$binary" | awk '/=>/ { print $3 }')
+          done
+          if [ "$staged" -eq 0 ]; then
+            echo "::error title=No CUDA libraries staged::No CUDA runtime library was found next to the helper; check the link line." >&2
+            exit 1
+          fi
+          ls -l "$runtime_dir"
+
+      # Mirrors the qwen-tts smoke test: the built binary must at least parse its own arguments.
+      - name: Smoke-test the helper
+        shell: bash
+        env:
+          HELPER_PATH: externals/ai/index-tts/runtime/${{ matrix.platform }}/ls101-index-tts-helper-cuda${{ runner.os == 'Windows' && '.exe' || '' }}
+        run: |
+          node <<'NODE'
+          const { spawnSync } = require('node:child_process')
+          const { statSync } = require('node:fs')
+
+          const helper = process.env.HELPER_PATH
+          const stats = statSync(helper)
+          if (!stats.isFile() || stats.size < 100_000) {
+            throw new Error(`Built helper is unexpectedly small: ${stats.size} bytes`)
+          }
+          const result = spawnSync(helper, [], { encoding: 'utf8' })
+          if (result.status !== 2 || !result.stderr?.includes('--backend') || !result.stderr?.includes('--model')) {
+            const status = result.status === null ? 'null' : `${result.status} (0x${(result.status >>> 0).toString(16)})`
+            throw new Error(
+              `Helper smoke test failed (status=${status}, signal=${result.signal ?? 'none'}): ` +
+                `${result.stderr || result.stdout || result.error || 'no process output'}`
+            )
+          }
+          console.log(`Validated ${helper} (${stats.size} bytes)`)
+          NODE
+
       - name: Report the runtime digest
         shell: bash
         run: |
@@ -280,6 +367,42 @@ jobs:
             dist/*-volumes.json
             dist/manifest.json
             dist/*-licenses/*
+
+  # The protocol between the app and the helper is the one contract that must not drift. This job
+  # compiles the real helper with its stub engine (no CUDA, no weights) and runs the same contract
+  # test the developer runs locally.
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Enable Corepack
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare yarn@4.15.0 --activate
+
+      - name: Install dependencies
+        shell: bash
+        run: yarn install --immutable
+
+      - name: Compile the helper with the stub engine
+        shell: bash
+        run: |
+          g++ -O2 -std=c++17 -Wall -Wextra -Wpedantic -DLS101_INDEX_TTS_STUB_ENGINE \
+            -o /tmp/ls101-index-tts-helper-cuda native/index-tts/main.cpp
+
+      - name: Run the helper contract test
+        shell: bash
+        env:
+          LS101_INDEX_TTS_STUB: /tmp/ls101-index-tts-helper-cuda
+        run: yarn vitest run packages/airouter/src/__tests__/index-tts-contract.test.ts
 
   release:
     needs: [metadata, build]
