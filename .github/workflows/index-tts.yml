@@ -1,0 +1,207 @@
+name: IndexTTS Assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Target platform
+        required: true
+        type: choice
+        options:
+          - all
+          - linux-x64
+          - win32-x64
+        default: all
+      publish:
+        description: Publish the split volumes to a GitHub Release
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: index-tts-assets-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.config.outputs.tag }}
+      version: ${{ steps.config.outputs.version }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Validate the asset pins
+        shell: bash
+        run: |
+          node --input-type=module - <<'EOF'
+          import { readFile } from 'node:fs/promises'
+          import { createHash } from 'node:crypto'
+          import { stat } from 'node:fs/promises'
+
+          const assets = JSON.parse(await readFile('scripts/index-tts/assets.json', 'utf8'))
+          const fail = (message) => { console.error(message); process.exit(1) }
+          const sha256 = async (file) => createHash('sha256').update(await readFile(file)).digest('hex')
+
+          if (!assets.package?.version) fail('package.version is required')
+          if (!/^[0-9a-f]{64}$/.test(assets.model?.sha256 ?? '')) fail('model.sha256 must be 64 hex characters')
+          if (!Number.isSafeInteger(assets.model?.size)) fail('model.size must be an integer')
+          if (!/^[0-9a-f]{40}$/.test(assets.runtime?.revision ?? '')) fail('runtime.revision must be a commit SHA')
+
+          for (const voice of assets.voices ?? []) {
+            const info = await stat(voice.file).catch(() => null)
+            if (!info?.isFile()) fail(`missing voice file: ${voice.file}`)
+            if (info.size !== voice.size) fail(`${voice.id}: size ${info.size} != pinned ${voice.size}`)
+            if ((await sha256(voice.file)) !== voice.sha256) fail(`${voice.id}: digest mismatch`)
+          }
+
+          console.log(`pins verified: model ${assets.model.size} B, ${assets.voices.length} voice(s)`)
+          EOF
+
+      - name: Read the release identity
+        id: config
+        shell: bash
+        run: |
+          VERSION=$(node -e "console.log(require('./scripts/index-tts/assets.json').package.version)")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=index-tts-model-v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "release tag: index-tts-model-v$VERSION"
+
+  package:
+    needs: metadata
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            platform: linux-x64
+          - runner: windows-2022
+            platform: win32-x64
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Free disk space
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Set up CUDA compiler cache
+        uses: mozilla-actions/sccache-action@v0.0.11
+        with:
+          version: v0.17.0
+
+      - name: Set up CUDA toolkit
+        uses: Jimver/cuda-toolkit@v0.2.36
+        with:
+          cuda: '12.8.1'
+          method: network
+          sub-packages: >-
+            ${{ runner.os == 'Windows' && '["nvcc","cudart","cublas","cublas_dev","nvjitlink","thrust"]' || '["nvcc"]' }}
+
+      - name: Show the native toolchain
+        shell: bash
+        run: |
+          cmake --version
+          git --version
+          node --version
+
+      - name: Check out the pinned audio.cpp revision
+        shell: bash
+        run: |
+          REVISION=$(node -e "console.log(require('./scripts/index-tts/assets.json').runtime.revision)")
+          REPOSITORY=$(node -e "console.log(require('./scripts/index-tts/assets.json').runtime.repository)")
+          git clone --filter=blob:none "$REPOSITORY" externals/ai/index-tts/downloads/audio.cpp
+          git -C externals/ai/index-tts/downloads/audio.cpp checkout "$REVISION"
+          git -C externals/ai/index-tts/downloads/audio.cpp rev-parse HEAD
+
+      - name: Build the CUDA helper
+        shell: bash
+        env:
+          LS101_INDEX_TTS_SOURCE_DIR: ${{ github.workspace }}/externals/ai/index-tts/downloads/audio.cpp
+        run: node scripts/index-tts/build-runtime.mjs --backend cuda
+
+      - name: Require the runtime digest in the application allowlist
+        shell: bash
+        run: node scripts/index-tts/verify-allowlist.mjs --platform ${{ matrix.platform }}
+
+      - name: Download the pinned weights
+        shell: bash
+        run: node scripts/index-tts/download-model.mjs
+
+      - name: Build the model package
+        shell: bash
+        run: node scripts/index-tts/build-package.mjs --platform ${{ matrix.platform }}
+
+      - name: Show the packaged outputs
+        shell: bash
+        run: ls -l dist
+
+      - name: Upload the split volumes
+        uses: actions/upload-artifact@v6
+        with:
+          name: index-tts-package-${{ matrix.platform }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            dist/*-part-*
+            dist/*-volumes.json
+            dist/manifest.json
+
+  release:
+    needs: [metadata, package]
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v6
+
+      - name: Collect the packaged volumes
+        uses: actions/download-artifact@v7
+        with:
+          path: release-assets
+          merge-multiple: true
+
+      - name: Require an unused release tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
+        run: |
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
+             gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "release tag already exists: $RELEASE_TAG" >&2
+            exit 1
+          fi
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ needs.metadata.outputs.tag }}
+          name: IndexTTS 2.5 ${{ needs.metadata.outputs.version }}
+          prerelease: true
+          draft: false
+          files: |
+            release-assets/*-part-*
+            release-assets/*-volumes.json
+          body: |
+            IndexTTS 2.5 fp16 model package with its CUDA runtime.
+
+            Each `*-part-NNN` file is one byte range of a single ZIP; concatenate them in order and
+            verify the result against `archiveSha256` in the matching `*-volumes.json` before importing.
+            The application only executes the bundled helper when its digest is listed in
+            `packages/airouter/src/main/index-tts-runtime.ts`.
