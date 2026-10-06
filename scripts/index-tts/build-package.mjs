@@ -6,20 +6,32 @@
 
 /*
  * Builds the IndexTTS 2.5 model package: one ZIP containing the fp16 weights, the runtime helper plus
- * its shared libraries, both reference voices, and the package manifest — then slices it into volumes
- * that respect the release asset size limit.
+ * its shared libraries, both reference voices, the package manifest, and the bilibili licence
+ * agreement plus disclaimer — then slices it into volumes that respect the release asset size limit.
  *
  * The runtime ships inside the package by decision; the application only carries the helper's digest
  * allowlist (packages/airouter/src/main/index-tts-runtime.ts) and refuses to execute anything else.
  */
 
-import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { hashFile, splitVolumes, writeStoreZip } from './zip64-store.mjs'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const defaultRoot = path.resolve(here, '..', '..')
+
+/**
+ * The bilibili Model Use License Agreement §3.4(b) requires the agreement to be retained in every
+ * distributed copy, and §4.1(a) requires a disclaimer when a Derivative Work is distributed. The
+ * packaged weights are a quantized (f16) Derivative Work, so both travel inside the ZIP and next to
+ * it, where the release job can attach them.
+ */
+const LICENSE_FILES = [
+  'thirdparty-licenses/LICENSE.bilibili-index-tts.txt',
+  'thirdparty-licenses/LICENSE.bilibili-index-tts.zh.txt',
+  'thirdparty-licenses/DISCLAIMER.bilibili-index-tts.txt'
+]
 
 /** GitHub rejects release assets above 2 GiB; leave 1 MiB of headroom. */
 const DEFAULT_VOLUME_BYTES = 2 * 1024 * 1024 * 1024 - 1024 * 1024
@@ -43,6 +55,10 @@ export async function buildPackage(options = {}) {
   const assets = JSON.parse(
     await readFile(options.assetsPath ?? path.join(here, 'assets.json'), 'utf8')
   )
+  // Read from the real repository root, so fixture roots in tests still resolve the app version.
+  const appVersion = JSON.parse(
+    await readFile(path.join(defaultRoot, 'package.json'), 'utf8')
+  ).version
   const packageVersion = options.packageVersion ?? assets.package.version
   const platform = options.platform ?? `${process.platform}-${process.arch}`
   const volumeBytes = options.volumeBytes ?? DEFAULT_VOLUME_BYTES
@@ -82,10 +98,26 @@ export async function buildPackage(options = {}) {
     const voicePath = path.join(root, voice.file)
     await assertFile(voicePath, `缺少参考音色：${voicePath}`)
     const info = await hashFile(voicePath)
+    assertPinned(info, voice, voicePath, '参考音色')
     voices.push({ ...voice, archivePath: `voices/${path.basename(voice.file)}`, ...info })
   }
 
+  const licenses = []
+  for (const relativePath of LICENSE_FILES) {
+    const licensePath = path.join(root, relativePath)
+    await assertFile(
+      licensePath,
+      `缺少许可与免责声明文件：${licensePath}；分发包必须随附 bilibili 模型使用许可协议与免责声明`
+    )
+    licenses.push({
+      archivePath: `licenses/${path.basename(relativePath)}`,
+      ...(await hashFile(licensePath)),
+      sourcePath: licensePath
+    })
+  }
+
   const modelInfo = await hashFile(modelPath)
+  assertPinned(modelInfo, assets.model, modelPath, '权重文件')
   const helperInfo = await hashFile(helperPath)
 
   /** archive path -> source path, preserving insertion order for the archive. */
@@ -106,6 +138,9 @@ export async function buildPackage(options = {}) {
   for (const voice of voices) {
     addAsset(voice.archivePath, 'voice-reference', voice, path.join(root, voice.file))
   }
+  for (const license of licenses) {
+    addAsset(license.archivePath, 'license', license, license.sourcePath)
+  }
 
   const manifest = {
     format: 'ls101.tts-model-package',
@@ -120,7 +155,9 @@ export async function buildPackage(options = {}) {
     runtime: {
       engine: 'index-tts',
       engineApiVersion: 1,
-      minimumAppVersion: options.minimumAppVersion ?? '0.5.0'
+      // Defaults to the application version that builds the package, so the artifact is importable by
+      // the app it was built from instead of a hardcoded future version.
+      minimumAppVersion: options.minimumAppVersion ?? appVersion
     },
     assets: manifestAssets,
     models: [
@@ -161,15 +198,26 @@ export async function buildPackage(options = {}) {
     ...[...sources].map(([name, sourcePath]) => ({ name, path: sourcePath }))
   ]
 
+  const prefix = path.basename(outputPath, '.zip')
   const archive = await writeStoreZip({
     outputPath,
     entries,
     onProgress: options.onProgress
   })
 
+  // The licence files also sit next to the ZIP, so the release job can attach them as standalone
+  // assets instead of forcing downloaders to unpack a 5 GB archive first.
+  const licenseDirectory = path.join(path.dirname(outputPath), `${prefix}-licenses`)
+  await mkdir(licenseDirectory, { recursive: true })
+  for (const license of licenses) {
+    await copyFile(
+      license.sourcePath,
+      path.join(licenseDirectory, path.basename(license.archivePath))
+    )
+  }
+
   let volumes = null
   if (!options.noSplit) {
-    const prefix = path.basename(outputPath, '.zip')
     const split = await splitVolumes({ archivePath: outputPath, volumeBytes, prefix })
     const archiveHash = await hashFile(outputPath)
     volumes = {
@@ -195,6 +243,7 @@ export async function buildPackage(options = {}) {
   return {
     outputPath,
     manifestPath,
+    licenseDirectory,
     manifest,
     manifestSha256: manifestHash.sha256,
     archiveBytes: archive.bytes,
@@ -206,6 +255,21 @@ export async function buildPackage(options = {}) {
 async function assertFile(filePath, message) {
   const info = await stat(filePath).catch(() => null)
   if (!info?.isFile()) throw new Error(message)
+}
+
+/**
+ * The manifest is only as trustworthy as the pins it rests on: a file whose size or digest no longer
+ * matches scripts/index-tts/assets.json must never be packaged. Unpinned fields are skipped so test
+ * fixtures stay usable.
+ */
+function assertPinned(info, pinned, filePath, label) {
+  const sizeMatches = pinned?.size === undefined || pinned.size === info.size
+  const digestMatches = pinned?.sha256 === undefined || pinned.sha256 === info.sha256
+  if (sizeMatches && digestMatches) return
+  const expected = `${pinned?.size ?? '未固定'} / ${pinned?.sha256 ?? '未固定'}`
+  throw new Error(
+    `${label}与 assets.json 的 pin 不一致：${filePath}（实际 ${info.size} / ${info.sha256}，固定 ${expected}）`
+  )
 }
 
 export function parseOptions(argv) {
@@ -242,6 +306,7 @@ if (invokedDirectly) {
   try {
     const result = await buildPackage(options)
     console.log(`[index-tts] package written: ${result.outputPath} (${result.entryCount} entries)`)
+    console.log(`[index-tts] license files written to: ${result.licenseDirectory}`)
     console.log(`[index-tts] manifest sha256: ${result.manifestSha256}`)
     if (result.volumes) {
       console.log(

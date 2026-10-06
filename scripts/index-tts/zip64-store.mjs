@@ -91,6 +91,28 @@ function needsZip64(size, offset, force) {
   return force || size >= UINT32_MAX || offset >= UINT32_MAX
 }
 
+/**
+ * A ZIP64 end-of-central-directory record is mandatory as soon as any 32-bit EOCD field overflows,
+ * and also when the 16-bit entry count exceeds 0xFFFF: the plain EOCD cannot describe that archive
+ * and readers would silently truncate the central directory. Kept pure so the entry-count branch can
+ * be covered without building a 65 536-entry archive.
+ *
+ * @param {number} entryCount
+ * @param {number} centralSize
+ * @param {number} centralOffset central directory start offset
+ * @param {boolean} [force] emit ZIP64 records even for small archives (test hook)
+ */
+export function needsZip64EndOfCentralDirectory(
+  entryCount,
+  centralSize,
+  centralOffset,
+  force = false
+) {
+  return (
+    force || entryCount > UINT16_MAX || centralSize >= UINT32_MAX || centralOffset >= UINT32_MAX
+  )
+}
+
 function buildZip64Extra(sizes) {
   const fields = []
   if (sizes.uncompressedSize !== undefined) fields.push(sizes.uncompressedSize)
@@ -160,7 +182,16 @@ export async function writeStoreZip(options) {
       if (extra.length) await write(extra)
 
       const stream = createReadStream(entry.path, { highWaterMark: CHUNK_BYTES })
-      for await (const chunk of stream) await write(chunk)
+      let writtenBytes = 0
+      for await (const chunk of stream) {
+        writtenBytes += chunk.length
+        await write(chunk)
+      }
+      // Guards against a source file that changed between the hashing pass and this pass: the header
+      // already carries the hashed size and CRC-32, so continuing would emit a corrupt archive.
+      if (writtenBytes !== entry.size) {
+        throw new Error(`归档写入字节数与校验值不一致：${entry.name}`)
+      }
 
       central.push({ entry, nameBytes, zip64, localOffset, extra })
     }
@@ -199,7 +230,12 @@ export async function writeStoreZip(options) {
     }
     const centralSize = offset - centralStart
 
-    const useZip64End = forceZip64 || centralStart >= UINT32_MAX || centralSize >= UINT32_MAX
+    const useZip64End = needsZip64EndOfCentralDirectory(
+      prepared.length,
+      centralSize,
+      centralStart,
+      forceZip64
+    )
     if (useZip64End) {
       const eocd64Offset = offset
       const eocd64 = Buffer.alloc(56)
@@ -227,9 +263,11 @@ export async function writeStoreZip(options) {
     writeUInt32(eocd, 0, EOCD_SIGNATURE)
     writeUInt16(eocd, 4, 0)
     writeUInt16(eocd, 6, 0)
-    const fitsInUint16 = prepared.length < UINT16_MAX
-    writeUInt16(eocd, 8, useZip64End || !fitsInUint16 ? UINT16_MAX : prepared.length)
-    writeUInt16(eocd, 10, useZip64End || !fitsInUint16 ? UINT16_MAX : prepared.length)
+    // UINT16_MAX is both the largest count and the "see ZIP64" sentinel; the ZIP64 record above
+    // carries the real count whenever this branch is taken.
+    const entryCount = useZip64End ? UINT16_MAX : prepared.length
+    writeUInt16(eocd, 8, entryCount)
+    writeUInt16(eocd, 10, entryCount)
     writeUInt32(eocd, 12, useZip64End ? UINT32_MAX : centralSize)
     writeUInt32(eocd, 16, useZip64End ? UINT32_MAX : centralStart)
     writeUInt16(eocd, 20, 0)
@@ -238,6 +276,9 @@ export async function writeStoreZip(options) {
     output.end()
     await once(output, 'finish')
   } catch (error) {
+    // Abort the partial archive, but swallow the stream's own teardown errors (a buffered write may
+    // still be in flight): the original error is the one the caller needs to see.
+    output.on('error', () => {})
     output.destroy()
     throw error
   }
