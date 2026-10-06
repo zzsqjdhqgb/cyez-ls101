@@ -87,10 +87,19 @@ function recommend(info: NvidiaSmiInfo): AIRouterGpuProbeResult {
   }
 
   const tight = info.vramMiB !== undefined && info.vramMiB < COMFORTABLE_VRAM_MIB
+  const notes: string[] = []
+  if (tight) notes.push('显存偏紧，长文本会自动分段，建议 8 GB 以上')
+  // Say so instead of implying the machine was verified against the architecture and driver floors.
+  if (capability === undefined || !Number.isFinite(capability)) {
+    notes.push('未能识别计算能力（驱动未上报），请自行确认显卡受支持')
+  }
+  if (driverMajor === undefined || !Number.isFinite(driverMajor)) {
+    notes.push('未能识别驱动版本，请确认不低于 R570')
+  }
   return {
     ...base,
     summary: `检测到 ${describe(info)}，可使用 CUDA 合成与 fp16 模型包（4.55 GB）${
-      tight ? '；显存偏紧，长文本会自动分段，建议 8 GB 以上' : ''
+      notes.length ? `；${notes.join('；')}` : ''
     }。`
   }
 }
@@ -142,21 +151,27 @@ function runNvidiaSmi(args: string[], options: AIRouterGpuProbeOptions): Promise
 }
 
 function parseQueryOutput(text: string): NvidiaSmiInfo | null {
-  const line = text
-    .split(/\r?\n/)
-    .map((entry) => entry.trim())
-    .find((entry) => entry.length > 0)
-  if (!line) return null
-  const fields = line.split(',').map((field) => field.trim())
-  if (fields.length < 4) return null
-  const [name, computeCapability, memory, driverVersion] = fields
-  const vramMiB = Number.parseInt(memory, 10)
-  return {
-    name: name || undefined,
-    computeCapability: computeCapability || undefined,
-    vramMiB: Number.isFinite(vramMiB) ? vramMiB : undefined,
-    driverVersion: driverVersion || undefined
+  const candidates: NvidiaSmiInfo[] = []
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim()
+    if (!line) continue
+    const fields = line.split(',').map((field) => field.trim())
+    if (fields.length < 4) continue
+    const [name, computeCapability, memory, driverVersion] = fields
+    const vramMiB = Number.parseInt(memory, 10)
+    // Some drivers report "N/A" for the capability; keep the device but leave the architecture
+    // unknown so the caller does not treat it as verified.
+    const capability = /^[0-9]+(\.[0-9]+)?$/.test(computeCapability) ? computeCapability : undefined
+    candidates.push({
+      name: name || undefined,
+      computeCapability: capability,
+      vramMiB: Number.isFinite(vramMiB) ? vramMiB : undefined,
+      driverVersion: /^[0-9]+(\.[0-9.]*)?$/.test(driverVersion) ? driverVersion : undefined
+    })
   }
+  if (candidates.length === 0) return null
+  // Prefer a device whose architecture could be read: multi-GPU hosts list one device per line.
+  return candidates.find((candidate) => candidate.computeCapability !== undefined) ?? candidates[0]
 }
 
 function parseLegacyOutput(text: string): NvidiaSmiInfo | null {

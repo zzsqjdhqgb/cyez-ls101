@@ -34,9 +34,7 @@ function fakeSpawn(results: FakeResult[]): typeof import('node:child_process').s
 describe('probeNvidiaGpu', () => {
   it('recommends CUDA with the fp16 package on a 16 GB Blackwell card', async () => {
     const result = await probeNvidiaGpu({
-      spawnProcess: fakeSpawn([
-        { stdout: 'NVIDIA GeForce RTX 5080, 12.0, 16376, 580.65\n' }
-      ])
+      spawnProcess: fakeSpawn([{ stdout: 'NVIDIA GeForce RTX 5080, 12.0, 16376, 580.65\n' }])
     })
 
     expect(result).toMatchObject({
@@ -132,5 +130,40 @@ describe('probeNvidiaGpu', () => {
     expect(result.cudaRuntimeVersion).toBe('13.0')
     expect(result.vramMiB).toBe(16376)
     expect(result.recommendedBackend).toBe('cuda')
+  })
+
+  it('warns instead of silently trusting an unreadable compute capability', async () => {
+    const result = await probeNvidiaGpu({
+      spawnProcess: fakeSpawn([{ stdout: 'NVIDIA GeForce RTX 5080, N/A, 16376, 580.65\n' }])
+    })
+
+    expect(result.available).toBe(true)
+    expect(result.computeCapability).toBeUndefined()
+    expect(result.recommendedBackend).toBe('cuda')
+    expect(result.summary).toContain('未能识别计算能力')
+  })
+
+  it('warns instead of silently trusting an unreadable driver version', async () => {
+    const result = await probeNvidiaGpu({
+      spawnProcess: fakeSpawn([{ stdout: 'NVIDIA GeForce RTX 4060, 8.9, 8188, N/A\n' }])
+    })
+
+    expect(result.driverVersion).toBeUndefined()
+    expect(result.summary).toContain('未能识别驱动版本')
+  })
+
+  it('picks the readable device on a multi-GPU host', async () => {
+    const result = await probeNvidiaGpu({
+      spawnProcess: fakeSpawn([
+        {
+          stdout:
+            'NVIDIA GeForce RTX 5080, N/A, 16376, 580.65\nNVIDIA GeForce RTX 4060, 8.9, 8188, 572.16\n'
+        }
+      ])
+    })
+
+    expect(result.name).toBe('NVIDIA GeForce RTX 4060')
+    expect(result.computeCapability).toBe('8.9')
+    expect(result.summary).not.toContain('未能识别计算能力')
   })
 })

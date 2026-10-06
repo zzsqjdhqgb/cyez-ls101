@@ -7,15 +7,18 @@
 /*
  * Release-time gate for the runtime allowlist.
  *
- * The application only executes a package helper whose SHA-256 is compiled into
- * packages/airouter/src/main/index-tts-runtime.ts. Publishing a package without that digest would ship
- * something the app refuses to run, so this check runs in CI before packaging and prints the exact line
- * to add when the digest is missing.
+ * The application refuses to execute a packaged helper unless every runtime asset — the helper AND
+ * the shared libraries it loads from its own directory — has its SHA-256 compiled into
+ * packages/airouter/src/main/index-tts-runtime.ts. Checking only the helper would let a package ship
+ * a trojanised libaudiocpp/CUDA library next to a byte-identical helper.
+ *
+ * This scans the staged runtime directory (exactly the set build-package.mjs ships) and fails with a
+ * ready-to-paste allowlist block when anything is missing.
  */
 
 import { createHash } from 'node:crypto'
 import { createReadStream } from 'node:fs'
-import { readFile, stat } from 'node:fs/promises'
+import { readFile, readdir, stat } from 'node:fs/promises'
 import { once } from 'node:events'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -36,33 +39,83 @@ export function parseAllowlist(source) {
   return platformKeys
 }
 
-export async function verifyAllowlist(options = {}) {
-  const root = options.root ?? defaultRoot
-  const platform = options.platform ?? `${process.platform}-${process.arch}`
-  const helperName =
-    options.helperName ?? `ls101-index-tts-helper-cuda${platform.startsWith('win32') ? '.exe' : ''}`
-  const helperPath =
-    options.helperPath ?? path.join(root, 'externals/ai/index-tts/runtime', platform, helperName)
-
-  const info = await stat(helperPath).catch(() => null)
-  if (!info?.isFile()) throw new Error(`缺少 IndexTTS 运行时：${helperPath}`)
-  const digest = await sha256File(helperPath)
-
-  const allowlistSource = await readFile(
-    options.allowlistPath ?? path.join(root, ALLOWLIST_FILE),
-    'utf8'
-  )
-  const allowlist = parseAllowlist(allowlistSource)
-  const allowed = allowlist[platform.toLowerCase()] ?? []
-  return { helperPath, digest, size: info.size, platform, allowed, ok: allowed.includes(digest) }
-}
-
 async function sha256File(filePath) {
   const hash = createHash('sha256')
   const stream = createReadStream(filePath)
   stream.on('data', (chunk) => hash.update(chunk))
   await once(stream, 'end')
   return hash.digest('hex')
+}
+
+/**
+ * Verifies every file in the staged runtime directory against the app allowlist.
+ * @returns {Promise<{ platform: string, directory: string, assets: object[], ok: boolean }>}
+ */
+export async function verifyAllowlist(options = {}) {
+  const root = options.root ?? defaultRoot
+  const platform = options.platform ?? `${process.platform}-${process.arch}`
+  const directory =
+    options.runtimeDirectory ?? path.join(root, 'externals/ai/index-tts/runtime', platform)
+
+  const names = await readdir(directory).catch(() => null)
+  if (!names) throw new Error(`缺少 IndexTTS 运行时目录：${directory}`)
+  const allowlistSource = await readFile(
+    options.allowlistPath ?? path.join(root, ALLOWLIST_FILE),
+    'utf8'
+  )
+  const allowed = new Set(
+    (parseAllowlist(allowlistSource)[platform.toLowerCase()] ?? []).map((digest) =>
+      digest.toLowerCase()
+    )
+  )
+
+  const assets = []
+  for (const name of [...names].sort()) {
+    const assetPath = path.join(directory, name)
+    const info = await stat(assetPath).catch(() => null)
+    if (!info?.isFile()) continue
+    const digest = await sha256File(assetPath)
+    assets.push({
+      name,
+      assetPath,
+      size: info.size,
+      digest,
+      allowed: allowed.has(digest.toLowerCase())
+    })
+  }
+  if (assets.length === 0) throw new Error(`运行期目录为空：${directory}`)
+  return { platform, directory, assets, ok: assets.every((asset) => asset.allowed) }
+}
+
+/** Markdown for a CI step summary: every runtime digest plus the allowlist block to paste. */
+export function formatReport(result) {
+  const block = [
+    '```ts',
+    'export const INDEX_TTS_HELPER_SHA256: Record<string, readonly string[]> = {',
+    `  '${result.platform}': [`,
+    ...result.assets.map((asset) => `    '${asset.digest}', // ${asset.name}`),
+    '  ]',
+    '}',
+    '```'
+  ].join('\n')
+  return [
+    `## IndexTTS runtime digests (${result.platform})`,
+    '',
+    `- directory: \`${result.directory}\``,
+    `- allowlisted: ${result.ok ? 'yes' : 'no'} (${result.assets.filter((a) => a.allowed).length}/${result.assets.length})`,
+    '',
+    '| file | bytes | sha256 | allowlisted |',
+    '| --- | --- | --- | --- |',
+    ...result.assets.map(
+      (asset) =>
+        `| ${asset.name} | ${asset.size} | \`${asset.digest}\` | ${asset.allowed ? 'yes' : 'no'} |`
+    ),
+    '',
+    'Add to `packages/airouter/src/main/index-tts-runtime.ts` (then rebuild the app):',
+    '',
+    block,
+    ''
+  ].join('\n')
 }
 
 export function parseOptions(argv) {
@@ -77,27 +130,6 @@ export function parseOptions(argv) {
   return options
 }
 
-/** Markdown for a CI step summary: the digest plus the exact allowlist entry to add. */
-export function formatReport(result) {
-  const entry = `  '${result.platform}': [\n    '${result.digest}'\n  ]`
-  return [
-    `## IndexTTS runtime digest (${result.platform})`,
-    '',
-    `- helper: \`${result.helperPath}\` (${result.size} B)`,
-    `- sha256: \`${result.digest}\``,
-    `- allowlisted: ${result.ok ? 'yes' : 'no'}`,
-    '',
-    'Add this to `packages/airouter/src/main/index-tts-runtime.ts` (then rebuild the app):',
-    '',
-    '```ts',
-    'export const INDEX_TTS_HELPER_SHA256: Record<string, readonly string[]> = {',
-    entry,
-    '}',
-    '```',
-    ''
-  ].join('\n')
-}
-
 const invokedDirectly =
   process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))
 
@@ -107,6 +139,7 @@ if (invokedDirectly) {
     if (options.help) {
       console.log(
         '用法：node scripts/index-tts/verify-allowlist.mjs [--platform <key>] [--report]\n' +
+          '  校验 externals/ai/index-tts/runtime/<platform>/ 下每个运行时文件是否都在应用白名单中\n' +
           '  --report  只输出摘要与白名单片段（供 CI 汇总），不因未白名单而失败'
       )
       process.exit(0)
@@ -116,17 +149,17 @@ if (invokedDirectly) {
       console.log(formatReport(result))
       process.exit(0)
     }
-    console.log(`[index-tts] helper ${result.helperPath} (${result.size} B)`)
-    console.log(`[index-tts] sha256 ${result.digest}`)
+    console.log(`[index-tts] runtime directory ${result.directory}`)
+    for (const asset of result.assets) {
+      console.log(`[index-tts]   ${asset.allowed ? 'ok  ' : 'MISS'} ${asset.name} ${asset.digest}`)
+    }
     if (!result.ok) {
       console.error(
-        `[index-tts] 该摘要不在应用白名单中（${result.platform}）。请把它加入 ${ALLOWLIST_FILE}：\n` +
-          `  '${result.platform}': [\n    '${result.digest}'\n  ]\n` +
-          '然后提交并重新运行本工作流；未经白名单的运行时会被应用拒绝执行。'
+        `[index-tts] 有运行时资产不在应用白名单中（${result.platform}）。请确认 ${ALLOWLIST_FILE} 包含：\n${formatReport(result)}`
       )
       process.exit(1)
     }
-    console.log('[index-tts] runtime digest is allowlisted')
+    console.log('[index-tts] every runtime asset is allowlisted')
   } catch (error) {
     console.error(`[index-tts] ${error instanceof Error ? error.message : String(error)}`)
     process.exit(1)
