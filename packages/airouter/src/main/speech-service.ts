@@ -42,6 +42,22 @@ const ELEVENLABS_DEFAULT_BASE_URL = 'https://api.elevenlabs.io'
 const ELEVENLABS_OUTPUT_FORMAT = 'pcm_24000'
 const ELEVENLABS_SAMPLE_RATE = 24000
 const ELEVENLABS_API_PATH = '/v1'
+const MINIMAX_DEFAULT_BASE_URL = 'https://api.minimax.io'
+const MINIMAX_TTS_PATH = '/v1/t2a_v2'
+const MINIMAX_VOICE_PATH = '/v1/get_voice'
+const MINIMAX_AUDIO_FORMAT = 'pcm'
+const MINIMAX_SAMPLE_RATE = 24000
+// MiniMax 没有模型列举接口，这里固定 T2A 请求体允许的全部模型。
+const MINIMAX_TEXT_TO_SPEECH_MODELS = [
+  'speech-2.8-hd',
+  'speech-2.8-turbo',
+  'speech-2.6-hd',
+  'speech-2.6-turbo',
+  'speech-02-hd',
+  'speech-02-turbo',
+  'speech-01-hd',
+  'speech-01-turbo'
+]
 const MAX_AUDIO_BYTES = 100 * 1024 * 1024
 const validConfigId = /^[a-zA-Z0-9_-]+$/
 
@@ -158,6 +174,7 @@ export class AIRouterSpeechService {
 
     const apiKey = await this.resolveApiKey(input, config.id)
     if (config.type === 'elevenlabs') return listElevenLabsModels(config.baseUrl, apiKey)
+    if (config.type === 'minimax') return listMinimaxModels()
     const response = await fetch(`${config.baseUrl}/models`, {
       headers: { authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(30_000)
@@ -192,6 +209,10 @@ export class AIRouterSpeechService {
     if (config.type === 'elevenlabs') {
       const apiKey = await this.resolveApiKey(request.config, config.id)
       return listElevenLabsVoices(config.baseUrl, apiKey)
+    }
+    if (config.type === 'minimax') {
+      const apiKey = await this.resolveApiKey(request.config, config.id)
+      return listMinimaxVoices(config.baseUrl, apiKey)
     }
     return config.voices.map(({ id }) => ({ id }))
   }
@@ -261,6 +282,9 @@ export class AIRouterSpeechService {
     if (config.kind === 'online') {
       if (config.type === 'elevenlabs') {
         return this.synthesizeElevenLabs(config, modelId, voiceId, text, signal, apiKey)
+      }
+      if (config.type === 'minimax') {
+        return this.synthesizeMinimax(config, modelId, voiceId, text, signal, apiKey)
       }
       return this.synthesizeOpenAI(config, modelId, voiceId, text, format, signal, apiKey)
     }
@@ -349,6 +373,53 @@ export class AIRouterSpeechService {
     }
   }
 
+  private async synthesizeMinimax(
+    config: AIRouterSpeechProviderConfig,
+    modelId: string,
+    voiceId: string,
+    text: string,
+    signal?: AbortSignal,
+    apiKey?: string
+  ): Promise<AIRouterGeneratedAudio> {
+    const resolvedApiKey = apiKey ?? (await this.secretScope().read(config.id))
+    const response = await fetch(`${config.baseUrl}${MINIMAX_TTS_PATH}`, {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${resolvedApiKey ?? ''}`,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: modelId,
+        text,
+        stream: false,
+        output_format: 'hex',
+        voice_setting: { voice_id: voiceId },
+        audio_setting: {
+          format: MINIMAX_AUDIO_FORMAT,
+          sample_rate: MINIMAX_SAMPLE_RATE,
+          channel: 1
+        }
+      }),
+      signal
+    })
+    if (!response.ok) throw new Error(await providerError(response, '语音合成请求失败'))
+    const payload: unknown = await response.json()
+    assertMinimaxSuccess(payload, '语音合成请求失败')
+    const audio = readMinimaxHexAudio(payload)
+    assertAudioSize(audio)
+    const samples = audio.subarray(0, audio.byteLength - (audio.byteLength % 2))
+    const sampleRate = readMinimaxNumber(payload, 'audio_sample_rate') ?? MINIMAX_SAMPLE_RATE
+    const channels = readMinimaxNumber(payload, 'audio_channel') ?? 1
+    return {
+      data: encodeWavPcm16(samples, sampleRate, channels),
+      mediaType: 'audio/wav',
+      format: 'wav',
+      sampleRate,
+      channels,
+      durationMs: (samples.byteLength / (channels * 2) / sampleRate) * 1000
+    }
+  }
+
   private async generateOnlineSpeech(
     model: SpeechModel,
     options: {
@@ -420,10 +491,7 @@ export class AIRouterSpeechService {
       throw new Error('Qwen TTS 计算后端无效')
     }
     if (input.kind === 'online') {
-      const baseUrl = (
-        input.baseUrl?.trim() ||
-        (input.type === 'elevenlabs' ? ELEVENLABS_DEFAULT_BASE_URL : DEFAULT_BASE_URL)
-      ).replace(/\/$/, '')
+      const baseUrl = (input.baseUrl?.trim() || defaultOnlineBaseUrl(input.type)).replace(/\/$/, '')
       assertHttpUrl(baseUrl)
       return {
         id: input.id,
@@ -532,6 +600,7 @@ function assertProviderConfigInput(
   if (
     candidate.type !== 'openai-compatible' &&
     candidate.type !== 'elevenlabs' &&
+    candidate.type !== 'minimax' &&
     candidate.type !== 'pocket-tts' &&
     candidate.type !== 'qwen-tts'
   ) {
@@ -542,7 +611,13 @@ function assertProviderConfigInput(
 function isOnlineSpeechProviderType(
   type: AIRouterSpeechProviderType
 ): type is AIRouterOnlineSpeechProviderType {
-  return type === 'openai-compatible' || type === 'elevenlabs'
+  return type === 'openai-compatible' || type === 'elevenlabs' || type === 'minimax'
+}
+
+function defaultOnlineBaseUrl(type: AIRouterSpeechProviderType): string {
+  if (type === 'elevenlabs') return ELEVENLABS_DEFAULT_BASE_URL
+  if (type === 'minimax') return MINIMAX_DEFAULT_BASE_URL
+  return DEFAULT_BASE_URL
 }
 
 function normalizeVoices(
@@ -579,6 +654,7 @@ function isProviderConfig(value: unknown): value is AIRouterSpeechProviderConfig
     (candidate.kind === 'online' || candidate.kind === 'local') &&
     (candidate.type === 'openai-compatible' ||
       candidate.type === 'elevenlabs' ||
+      candidate.type === 'minimax' ||
       candidate.type === 'pocket-tts' ||
       candidate.type === 'qwen-tts') &&
     typeof candidate.baseUrl === 'string' &&
@@ -751,6 +827,84 @@ function readProviderErrorMessage(payload: unknown): string | null {
 
 function elevenLabsHeaders(apiKey: string | null | undefined): Record<string, string> {
   return apiKey ? { 'xi-api-key': apiKey } : {}
+}
+
+function listMinimaxModels(): AIRouterSpeechModelOption[] {
+  return MINIMAX_TEXT_TO_SPEECH_MODELS.map((id) => ({ id }))
+}
+
+async function listMinimaxVoices(
+  baseUrl: string,
+  apiKey: string
+): Promise<AIRouterSpeechVoiceOption[]> {
+  const response = await fetch(`${baseUrl}${MINIMAX_VOICE_PATH}`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({ voice_type: 'all' }),
+    signal: AbortSignal.timeout(30_000)
+  })
+  if (!response.ok) throw new Error(await providerError(response, '获取语音音色列表失败'))
+  const payload: unknown = await response.json()
+  assertMinimaxSuccess(payload, '获取语音音色列表失败')
+  const voices = new Map<string, AIRouterSpeechVoiceOption>()
+  for (const entry of minimaxVoiceEntries(payload)) {
+    if (typeof entry.voice_id !== 'string' || !entry.voice_id || voices.has(entry.voice_id))
+      continue
+    const name = typeof entry.voice_name === 'string' ? entry.voice_name : undefined
+    voices.set(entry.voice_id, { id: entry.voice_id, name })
+  }
+  return [...voices.values()].sort((left, right) =>
+    (left.name ?? left.id).localeCompare(right.name ?? right.id)
+  )
+}
+
+function minimaxVoiceEntries(payload: unknown): Array<{
+  voice_id?: unknown
+  voice_name?: unknown
+}> {
+  if (!payload || typeof payload !== 'object') return []
+  const value = payload as Record<string, unknown>
+  return ['system_voice', 'voice_cloning', 'voice_generation'].flatMap((key) =>
+    Array.isArray(value[key])
+      ? (value[key] as Array<{ voice_id?: unknown; voice_name?: unknown }>)
+      : []
+  )
+}
+
+function assertMinimaxSuccess(payload: unknown, fallback: string): void {
+  if (!payload || typeof payload !== 'object') throw new Error(fallback)
+  const base = (payload as { base_resp?: unknown }).base_resp
+  if (base === undefined) return
+  if (!base || typeof base !== 'object') throw new Error(fallback)
+  const status = (base as { status_code?: unknown }).status_code
+  if (status === 0 || status === undefined) return
+  const message = (base as { status_msg?: unknown }).status_msg
+  const detail = typeof message === 'string' && message ? message : fallback
+  throw new Error(`${detail}（${String(status)}）`)
+}
+
+function readMinimaxHexAudio(payload: unknown): Uint8Array {
+  const data = (payload as { data?: unknown } | null)?.data
+  const audio = data && typeof data === 'object' ? (data as { audio?: unknown }).audio : undefined
+  if (
+    typeof audio !== 'string' ||
+    !audio ||
+    audio.length % 2 !== 0 ||
+    !/^[0-9a-fA-F]+$/.test(audio)
+  ) {
+    throw new Error('语音合成结果大小无效')
+  }
+  return new Uint8Array(Buffer.from(audio, 'hex'))
+}
+
+function readMinimaxNumber(payload: unknown, key: string): number | undefined {
+  const extra = (payload as { extra_info?: unknown } | null)?.extra_info
+  if (!extra || typeof extra !== 'object') return undefined
+  const value = (extra as Record<string, unknown>)[key]
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
 }
 
 async function listElevenLabsModels(

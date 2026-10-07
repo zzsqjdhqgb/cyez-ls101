@@ -3,11 +3,12 @@ export type AIRouterImageProviderType = 'manual' | 'openai-compatible'
 export type AIRouterSpeechProviderType =
   | 'openai-compatible'
   | 'elevenlabs'
+  | 'minimax'
   | 'pocket-tts'
   | 'qwen-tts'
 export type AIRouterOnlineSpeechProviderType = Extract<
   AIRouterSpeechProviderType,
-  'openai-compatible' | 'elevenlabs'
+  'openai-compatible' | 'elevenlabs' | 'minimax'
 >
 export type AIRouterLocalSpeechProviderType = Extract<
   AIRouterSpeechProviderType,

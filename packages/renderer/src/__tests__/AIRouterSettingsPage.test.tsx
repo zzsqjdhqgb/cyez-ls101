@@ -708,6 +708,80 @@ describe('AIRouterSettingsPage', () => {
     )
   })
 
+  it('configures a MiniMax provider and discovers its voices', async () => {
+    const listSpeechModels = vi.fn().mockResolvedValue([{ id: 'speech-2.8-hd' }])
+    const listSpeechVoices = vi
+      .fn()
+      .mockResolvedValue([{ id: 'English_Graceful_Lady', name: 'Graceful Lady' }])
+    const saveSpeechConfig = vi
+      .fn()
+      .mockImplementation(async (input: AIRouterSpeechProviderConfigInput) => ({
+        id: 'speech-minimax',
+        name: input.name,
+        kind: input.kind,
+        type: input.type,
+        baseUrl: input.baseUrl ?? '',
+        modelPackageId: '',
+        modelPackageVersion: '',
+        models: input.models,
+        voices: input.voices,
+        hasApiKey: false
+      }))
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechModels,
+      listSpeechVoices,
+      saveSpeechConfig
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax' }
+    })
+    expect(within(dialog).getByLabelText('语音 Base URL')).toHaveValue('https://api.minimax.io')
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
+    await waitFor(() =>
+      expect(listSpeechModels).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'minimax', baseUrl: 'https://api.minimax.io' })
+      )
+    )
+    fireEvent.click(await within(dialog).findByLabelText('speech-2.8-hd'))
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取音色列表' }))
+    await waitFor(() =>
+      expect(listSpeechVoices).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({ type: 'minimax' }),
+          modelId: 'speech-2.8-hd'
+        })
+      )
+    )
+    fireEvent.click(await within(dialog).findByLabelText('Graceful Lady (English_Graceful_Lady)'))
+
+    fireEvent.change(within(dialog).getByLabelText('语音配置名称'), {
+      target: { value: 'MiniMax 语音' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+
+    await waitFor(() =>
+      expect(saveSpeechConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'MiniMax 语音',
+          kind: 'online',
+          type: 'minimax',
+          baseUrl: 'https://api.minimax.io',
+          models: [{ id: 'speech-2.8-hd', enabled: true }],
+          voices: [{ id: 'English_Graceful_Lady', enabled: true }]
+        })
+      )
+    )
+  })
+
   it('keeps Qwen on CPU while CUDA runtime packaging is disabled', async () => {
     const probeQwenTtsCuda = vi.fn()
     const saveSpeechConfig = vi

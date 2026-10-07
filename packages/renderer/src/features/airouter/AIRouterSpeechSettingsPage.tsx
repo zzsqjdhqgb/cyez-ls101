@@ -72,6 +72,7 @@ type SpeechFeedbackScope =
 const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   elevenlabs: 'ElevenLabs',
+  minimax: 'MiniMax',
   'pocket-tts': 'Pocket TTS (WASM)',
   'qwen-tts': 'Qwen3-TTS 0.6B'
 }
@@ -79,12 +80,19 @@ const providerLabels: Record<AIRouterSpeechProviderType, string> = {
 const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   elevenlabs: 'ElevenLabs',
+  minimax: 'MiniMax',
   'pocket-tts': 'Pocket TTS',
   'qwen-tts': 'Qwen3-TTS 0.6B'
 }
 
 function defaultOnlineBaseUrl(type: AIRouterSpeechProviderType): string {
-  return type === 'elevenlabs' ? 'https://api.elevenlabs.io' : 'https://api.openai.com/v1'
+  if (type === 'elevenlabs') return 'https://api.elevenlabs.io'
+  if (type === 'minimax') return 'https://api.minimax.io'
+  return 'https://api.openai.com/v1'
+}
+
+function supportsRemoteVoiceDiscovery(type: AIRouterSpeechProviderType): boolean {
+  return type === 'elevenlabs' || type === 'minimax'
 }
 
 export function AIRouterSpeechSettingsPage({
@@ -496,6 +504,7 @@ export function AIRouterSpeechSettingsPage({
                       <>
                         <option value="openai-compatible">OpenAI Compatible</option>
                         <option value="elevenlabs">ElevenLabs</option>
+                        <option value="minimax">MiniMax</option>
                       </>
                     ) : (
                       <>
@@ -657,7 +666,9 @@ export function AIRouterSpeechSettingsPage({
                     description={
                       draft.type === 'elevenlabs'
                         ? '从 ElevenLabs 获取可用模型列表，或手动添加模型 ID。'
-                        : '从兼容服务获取模型列表，或手动添加模型 ID。'
+                        : draft.type === 'minimax'
+                          ? '使用 MiniMax 内置的语音模型列表，或手动添加模型 ID。'
+                          : '从兼容服务获取模型列表，或手动添加模型 ID。'
                     }
                   >
                     <div className={styles.modelToolbar}>
@@ -736,11 +747,13 @@ export function AIRouterSpeechSettingsPage({
                     description={
                       draft.type === 'elevenlabs'
                         ? '从 ElevenLabs 获取账号可用音色列表，或手动添加 Voice ID。'
-                        : '添加 OpenAI Compatible 服务支持的音色 ID。'
+                        : draft.type === 'minimax'
+                          ? '从 MiniMax 获取账号可用音色（含克隆音色）列表，或手动添加 Voice ID。'
+                          : '添加 OpenAI Compatible 服务支持的音色 ID。'
                     }
                   >
                     <div className={styles.modelToolbar}>
-                      {draft.type === 'elevenlabs' ? (
+                      {supportsRemoteVoiceDiscovery(draft.type) ? (
                         <Button
                           icon={Download}
                           disabled={Boolean(busy)}

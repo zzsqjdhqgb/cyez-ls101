@@ -429,6 +429,239 @@ describe('AIRouterSpeechService', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('maps MiniMax speech requests and wraps hex PCM output into WAV', async () => {
+    const pcm = createPcm(480)
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: { audio: Buffer.from(pcm).toString('hex'), status: 2 },
+          extra_info: { audio_sample_rate: 24000, audio_channel: 1, audio_format: 'pcm' },
+          base_resp: { status_code: 0, status_msg: 'success' }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const saved = await service.saveProviderConfig({
+      id: 'minimax-speech',
+      name: 'MiniMax Speech',
+      kind: 'online',
+      type: 'minimax',
+      baseUrl: 'https://api.minimax.io/',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'English_Graceful_Lady', enabled: true }],
+      apiKey: 'minimax-secret'
+    })
+
+    expect(saved).toEqual(
+      expect.objectContaining({
+        type: 'minimax',
+        baseUrl: 'https://api.minimax.io',
+        modelPackageId: '',
+        hasApiKey: true
+      })
+    )
+
+    const result = await service.synthesizeSpeech({
+      text: 'Hello',
+      routing: {
+        default: {
+          providerConfigId: 'minimax-speech',
+          modelId: 'speech-2.8-hd',
+          voiceId: 'English_Graceful_Lady'
+        }
+      }
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.minimax.io/v1/t2a_v2',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ authorization: 'Bearer minimax-secret' }),
+        body: JSON.stringify({
+          model: 'speech-2.8-hd',
+          text: 'Hello',
+          stream: false,
+          output_format: 'hex',
+          voice_setting: { voice_id: 'English_Graceful_Lady' },
+          audio_setting: { format: 'pcm', sample_rate: 24000, channel: 1 }
+        })
+      })
+    )
+    expect(result).toEqual(
+      expect.objectContaining({
+        format: 'wav',
+        mediaType: 'audio/wav',
+        sampleRate: 24000,
+        channels: 1,
+        durationMs: 20
+      })
+    )
+    expect(readWavFormat(result.data)).toEqual({ sampleRate: 24000, channels: 1, bits: 16 })
+    expect(result.data.byteLength).toBe(pcm.byteLength + 44)
+  })
+
+  it('defaults a MiniMax provider to the official API base URL', async () => {
+    const saved = await service.saveProviderConfig({
+      id: 'minimax-default',
+      name: 'MiniMax Default',
+      kind: 'online',
+      type: 'minimax',
+      models: [],
+      voices: []
+    })
+
+    expect(saved.baseUrl).toBe('https://api.minimax.io')
+  })
+
+  it('rejects MiniMax as a local provider runtime', async () => {
+    await expect(
+      service.saveProviderConfig({
+        id: 'minimax-local',
+        name: 'MiniMax Local',
+        kind: 'local',
+        type: 'minimax',
+        models: [],
+        voices: []
+      })
+    ).rejects.toThrow('离线语音 Provider 类型无效')
+  })
+
+  it('reports MiniMax errors that arrive with an HTTP 200 response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            base_resp: {
+              status_code: 1004,
+              status_msg: "login fail: Please carry the API secret key in the 'Authorization' field"
+            }
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      )
+    )
+    await service.saveProviderConfig({
+      id: 'minimax-broken',
+      name: 'MiniMax Broken',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'wrong'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'minimax-broken', modelId: 'speech-2.8-hd', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow(/login fail.*1004/)
+  })
+
+  it('rejects a MiniMax response without hex audio', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ data: null, base_resp: { status_code: 0 } }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' }
+        })
+      )
+    )
+    await service.saveProviderConfig({
+      id: 'minimax-empty',
+      name: 'MiniMax Empty',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'minimax-empty', modelId: 'speech-2.8-hd', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成结果大小无效')
+  })
+
+  it('lists MiniMax text-to-speech models without a network call', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      service.listModels({
+        name: 'MiniMax',
+        kind: 'online',
+        type: 'minimax',
+        models: [],
+        voices: []
+      })
+    ).resolves.toEqual([
+      { id: 'speech-2.8-hd' },
+      { id: 'speech-2.8-turbo' },
+      { id: 'speech-2.6-hd' },
+      { id: 'speech-2.6-turbo' },
+      { id: 'speech-02-hd' },
+      { id: 'speech-02-turbo' },
+      { id: 'speech-01-hd' },
+      { id: 'speech-01-turbo' }
+    ])
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('lists MiniMax voices from the voice management endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          system_voice: [
+            { voice_id: 'English_Graceful_Lady', voice_name: 'Graceful Lady' },
+            { voice_id: 'Chinese (Mandarin)_News_Anchor', voice_name: 'News Anchor' }
+          ],
+          voice_cloning: [{ voice_id: 'my-clone' }],
+          voice_generation: [{ voice_id: 'English_Graceful_Lady' }],
+          base_resp: { status_code: 0, status_msg: 'success' }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      service.listVoices({
+        config: {
+          name: 'MiniMax',
+          kind: 'online',
+          type: 'minimax',
+          models: [],
+          voices: [],
+          apiKey: 'minimax-secret'
+        },
+        modelId: 'speech-2.8-hd'
+      })
+    ).resolves.toEqual([
+      { id: 'English_Graceful_Lady', name: 'Graceful Lady' },
+      { id: 'my-clone', name: undefined },
+      { id: 'Chinese (Mandarin)_News_Anchor', name: 'News Anchor' }
+    ])
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.minimax.io/v1/get_voice',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ authorization: 'Bearer minimax-secret' }),
+        body: JSON.stringify({ voice_type: 'all' })
+      })
+    )
+  })
+
   it('routes marked lines and concatenates WAV segments in order', async () => {
     const outputs = [createWav([100, 200]), createWav([300, 400])]
     const fetchMock = vi
