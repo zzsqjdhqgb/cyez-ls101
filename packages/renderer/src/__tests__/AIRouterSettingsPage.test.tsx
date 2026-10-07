@@ -829,7 +829,9 @@ describe('AIRouterSettingsPage', () => {
     await waitFor(() => expect(within(dialog).getByLabelText(newsAnchor)).toBeInTheDocument())
     expect(within(dialog).getByLabelText(graceful)).not.toBeChecked()
 
-    const search = within(dialog).getByLabelText('搜索音色')
+    const search = within(dialog).getByLabelText('搜索音色') as HTMLInputElement
+    expect(within(dialog).queryByRole('button', { name: '清除音色搜索' })).toBeNull()
+
     fireEvent.change(search, { target: { value: 'graceful' } })
 
     expect(within(dialog).getByLabelText(graceful)).toBeInTheDocument()
@@ -842,7 +844,9 @@ describe('AIRouterSettingsPage', () => {
     fireEvent.change(search, { target: { value: '不存在的音色' } })
     expect(within(dialog).getByText('没有匹配的音色。')).toBeInTheDocument()
 
-    fireEvent.change(search, { target: { value: '' } })
+    // 清除按钮使用项目的 icon 组件，点击后恢复完整列表并保留勾选状态。
+    fireEvent.click(within(dialog).getByRole('button', { name: '清除音色搜索' }))
+    expect(search.value).toBe('')
     expect(within(dialog).getByLabelText(graceful)).toBeChecked()
     expect(within(dialog).getByLabelText(newsAnchor)).not.toBeChecked()
     expect(within(dialog).getByLabelText('my-clone')).not.toBeChecked()

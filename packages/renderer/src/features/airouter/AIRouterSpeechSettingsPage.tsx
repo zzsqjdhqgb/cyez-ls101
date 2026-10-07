@@ -818,15 +818,27 @@ export function AIRouterSpeechSettingsPage({
                         </span>
                       )}
                       {draft.voices.length >= LONG_LIST_MIN_ITEMS ? (
-                        <input
-                          aria-label="搜索音色"
-                          className={styles.input}
-                          disabled={Boolean(busy)}
-                          onChange={(event) => setVoiceSearch(event.target.value)}
-                          placeholder="搜索音色"
-                          type="search"
-                          value={voiceSearch}
-                        />
+                        <div className={styles.searchInputWrap}>
+                          <input
+                            aria-label="搜索音色"
+                            className={`${styles.input} ${styles.searchInput}`}
+                            disabled={Boolean(busy)}
+                            onChange={(event) => setVoiceSearch(event.target.value)}
+                            placeholder="搜索音色"
+                            type="text"
+                            value={voiceSearch}
+                          />
+                          {voiceSearch ? (
+                            <button
+                              aria-label="清除音色搜索"
+                              className={styles.searchClear}
+                              onClick={() => setVoiceSearch('')}
+                              type="button"
+                            >
+                              <X aria-hidden="true" />
+                            </button>
+                          ) : null}
+                        </div>
                       ) : null}
                       <ManualEntry
                         ariaLabel="手动语音音色 ID"
