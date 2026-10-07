@@ -48,6 +48,13 @@ const MINIMAX_TTS_PATH = '/v1/t2a_v2'
 const MINIMAX_VOICE_PATH = '/v1/get_voice'
 const MINIMAX_AUDIO_FORMAT = 'pcm'
 const MINIMAX_SAMPLE_RATE = 24000
+// MiniMax 的 RPM 限额远小于其他 Provider。限流错误（HTTP 429 或 base_resp 的
+// 1002/1039）不立刻向上层传递，而是在服务内部等待后自动重试，避免上层的
+// 立即重试把配额烧光。
+const MINIMAX_RATE_LIMIT_HTTP_STATUS = 429
+const MINIMAX_RATE_LIMIT_STATUS_CODES = [1002, 1039]
+const MINIMAX_RATE_LIMIT_RETRY_DELAY_MS = 10_000
+const MINIMAX_RATE_LIMIT_RETRY_WINDOW_MS = 90_000
 // MiniMax 没有模型列举接口，这里固定 T2A 请求体允许的全部模型。
 const MINIMAX_TEXT_TO_SPEECH_MODELS = [
   'speech-2.8-hd',
@@ -383,29 +390,14 @@ export class AIRouterSpeechService {
     apiKey?: string
   ): Promise<AIRouterGeneratedAudio> {
     const resolvedApiKey = apiKey ?? (await this.secretScope().read(config.id))
-    const response = await fetch(`${config.baseUrl}${MINIMAX_TTS_PATH}`, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${resolvedApiKey ?? ''}`,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: modelId,
-        text,
-        stream: false,
-        output_format: 'hex',
-        voice_setting: { voice_id: voiceId },
-        audio_setting: {
-          format: MINIMAX_AUDIO_FORMAT,
-          sample_rate: MINIMAX_SAMPLE_RATE,
-          channel: 1
-        }
-      }),
+    const payload = await requestMinimaxSpeechPayload({
+      baseUrl: config.baseUrl,
+      apiKey: resolvedApiKey ?? '',
+      modelId,
+      voiceId,
+      text,
       signal
     })
-    if (!response.ok) throw new Error(await providerError(response, '语音合成请求失败'))
-    const payload: unknown = await response.json()
-    assertMinimaxSuccess(payload, '语音合成请求失败')
     const audio = readMinimaxHexAudio(payload)
     assertAudioSize(audio)
     const samples = audio.subarray(0, audio.byteLength - (audio.byteLength % 2))
@@ -896,6 +888,9 @@ function assertMinimaxSuccess(payload: unknown, fallback: string): void {
   if (status === 0 || status === undefined) return
   const message = (base as { status_msg?: unknown }).status_msg
   const detail = typeof message === 'string' && message ? message : fallback
+  if (typeof status === 'number' && isMinimaxRateLimitStatus(status)) {
+    throw new MinimaxRateLimitError(`${detail}（${String(status)}）`)
+  }
   throw new Error(`${detail}（${String(status)}）`)
 }
 
@@ -918,6 +913,93 @@ function readMinimaxNumber(payload: unknown, key: string): number | undefined {
   if (!extra || typeof extra !== 'object') return undefined
   const value = (extra as Record<string, unknown>)[key]
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : undefined
+}
+
+class MinimaxRateLimitError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'MinimaxRateLimitError'
+  }
+}
+
+function isMinimaxRateLimitStatus(statusCode: number): boolean {
+  return MINIMAX_RATE_LIMIT_STATUS_CODES.includes(statusCode)
+}
+
+interface MinimaxSpeechRequest {
+  baseUrl: string
+  apiKey: string
+  modelId: string
+  voiceId: string
+  text: string
+  signal?: AbortSignal
+}
+
+async function fetchMinimaxSpeechOnce(request: MinimaxSpeechRequest): Promise<unknown> {
+  const response = await fetch(`${request.baseUrl}${MINIMAX_TTS_PATH}`, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${request.apiKey}`,
+      'content-type': 'application/json'
+    },
+    body: JSON.stringify({
+      model: request.modelId,
+      text: request.text,
+      stream: false,
+      output_format: 'hex',
+      voice_setting: { voice_id: request.voiceId },
+      audio_setting: {
+        format: MINIMAX_AUDIO_FORMAT,
+        sample_rate: MINIMAX_SAMPLE_RATE,
+        channel: 1
+      }
+    }),
+    signal: request.signal
+  })
+  if (!response.ok) {
+    const message = await providerError(response, '语音合成请求失败')
+    if (response.status === MINIMAX_RATE_LIMIT_HTTP_STATUS) throw new MinimaxRateLimitError(message)
+    throw new Error(message)
+  }
+  const payload: unknown = await response.json()
+  assertMinimaxSuccess(payload, '语音合成请求失败')
+  return payload
+}
+
+// MiniMax 的 RPM 限额很小，而上层（模板生成）的重试循环是立即重试的。限流时这里
+// 隐藏错误并等待 10 秒后重试；自首次限流响应起 90 秒内仍未恢复，才停止重试并把
+// 最后一次限流错误传递给上层。等待期间照常响应取消信号。
+async function requestMinimaxSpeechPayload(request: MinimaxSpeechRequest): Promise<unknown> {
+  let retryDeadline: number | undefined
+  for (;;) {
+    try {
+      return await fetchMinimaxSpeechOnce(request)
+    } catch (error) {
+      if (!(error instanceof MinimaxRateLimitError)) throw error
+      const now = Date.now()
+      retryDeadline ??= now + MINIMAX_RATE_LIMIT_RETRY_WINDOW_MS
+      if (now + MINIMAX_RATE_LIMIT_RETRY_DELAY_MS > retryDeadline) throw error
+      await sleepForDuration(MINIMAX_RATE_LIMIT_RETRY_DELAY_MS, request.signal)
+    }
+  }
+}
+
+function sleepForDuration(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Speech synthesis was aborted', 'AbortError'))
+      return
+    }
+    const onAbort = (): void => {
+      clearTimeout(timer)
+      reject(new DOMException('Speech synthesis was aborted', 'AbortError'))
+    }
+    const timer = setTimeout((): void => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
 }
 
 async function listElevenLabsModels(

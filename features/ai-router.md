@@ -180,6 +180,7 @@ interface AIRouterSpeechProviderConfig {
 - `minimax` 没有可复用的语音抽象（`@ai-sdk/minimax` 只提供语言模型和视频），因此由 AIRouter 直接实现 MiniMax 的同步语音合成协议：
   - 合成调用 `POST {baseUrl}/v1/t2a_v2`，`Bearer` 鉴权，请求体为 `{ model, text, stream: false, output_format: 'hex', voice_setting: { voice_id }, audio_setting: { format: 'pcm', sample_rate: 24000, channel: 1 } }`。
   - MiniMax 把音频放在 `data.audio` 里并以十六进制字符串返回，AIRouter 解码后包装成 WAV；`extra_info.audio_sample_rate` 和 `audio_channel` 有值时按实际值写入容器。MiniMax 的接口错误同样是 HTTP 200，因此除了 `response.ok` 还必须检查 `base_resp.status_code`。
+  - MiniMax 的 RPM 限额很小，而模板生成流程的重试循环是立即重试的。因此合成路径在 AIRouter 内部特判限流：遇到 HTTP 429 或 `base_resp.status_code` 为 1002/1039 时不把错误向上层传递，而是隐藏错误并等待 10 秒后自动重试；自首次限流响应起 90 秒内仍未恢复，才停止重试并把最后一次限流错误传递出去。等待期间照常响应取消信号，上层重试机制保持不变。
   - MiniMax 没有模型列举接口，设置页使用 T2A 请求体允许的固定模型集合：`speech-2.8-hd`、`speech-2.8-turbo`、`speech-2.6-hd`、`speech-2.6-turbo`、`speech-02-hd`、`speech-02-turbo`、`speech-01-hd`、`speech-01-turbo`。
   - 音色从 `POST /v1/get_voice`（`voice_type: all`）发现，合并系统音色、快速克隆音色和文本生成音色后按名称排序。
   - `minimax` 和 `minimax-cn` 使用完全相同的协议实现，只是默认 Base URL 不同：`minimax` 默认 `https://api.minimax.io`，`minimax-cn` 默认 `https://api.minimax.cn`，两者都可以改成代理地址。

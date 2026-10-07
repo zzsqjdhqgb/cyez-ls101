@@ -24,8 +24,57 @@ describe('AIRouterSpeechService', () => {
 
   afterEach(async () => {
     vi.unstubAllGlobals()
+    vi.useRealTimers()
     await rm(baseDir, { recursive: true, force: true })
   })
+
+  async function saveMinimaxSynthesisProvider(): Promise<void> {
+    await service.saveProviderConfig({
+      id: 'minimax-rpm',
+      name: 'MiniMax RPM',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'English_Graceful_Lady', enabled: true }],
+      apiKey: 'minimax-secret'
+    })
+  }
+
+  // 只伪造 setTimeout 与 Date：限流等待用 setTimeout、重试窗口用 Date.now，而配置
+  // 读取等真实 I/O 依赖 setImmediate 之后的宏任务阶段，保持真实才能让链路推进。
+  function useMinimaxRateLimitFakeTimers(): void {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+  }
+
+  // 反复让出宏任务直到谓词满足，用于把真实 I/O 链路推进到断言点，不触碰伪造的定时器。
+  async function flushUntil(predicate: () => boolean, maxTurns = 100): Promise<void> {
+    for (let turn = 0; turn < maxTurns && !predicate(); turn += 1) {
+      await new Promise<void>((resolve) => setImmediate(resolve))
+    }
+  }
+
+  function synthesizeWithMinimaxRouting(options: { signal?: AbortSignal } = {}) {
+    return service.synthesizeSpeech(
+      {
+        text: 'Hello',
+        routing: {
+          default: {
+            providerConfigId: 'minimax-rpm',
+            modelId: 'speech-2.8-hd',
+            voiceId: 'English_Graceful_Lady'
+          }
+        }
+      },
+      options
+    )
+  }
+
+  function rateLimitedResponse(statusCode: number, statusMsg: string): Response {
+    return new Response(JSON.stringify({ base_resp: { status_code: statusCode, status_msg: statusMsg } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    })
+  }
 
   it('normalizes every new Qwen provider to CPU', async () => {
     const cuda = await service.saveProviderConfig({
@@ -669,6 +718,112 @@ describe('AIRouterSpeechService', () => {
         body: JSON.stringify({ voice_type: 'all' })
       })
     )
+  })
+
+  it('hides a MiniMax rate limit and retries after waiting ten seconds', async () => {
+    useMinimaxRateLimitFakeTimers()
+    const pcm = createPcm(480)
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ base_resp: { status_code: 1002, status_msg: 'rate limit exceeded' } }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: { audio: Buffer.from(pcm).toString('hex'), status: 2 },
+            extra_info: { audio_sample_rate: 24000, audio_channel: 1 },
+            base_resp: { status_code: 0, status_msg: 'success' }
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    await saveMinimaxSynthesisProvider()
+
+    const pending = synthesizeWithMinimaxRouting()
+    await flushUntil(() => fetchMock.mock.calls.length >= 1)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    // 未满 10 秒不发起第二次请求，错误也没有向外传递。
+    await vi.advanceTimersByTimeAsync(9_999)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(1)
+    const result = await pending
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result).toEqual(
+      expect.objectContaining({ format: 'wav', mediaType: 'audio/wav', sampleRate: 24000 })
+    )
+  })
+
+  it('retries a MiniMax HTTP 429 response until it clears', async () => {
+    useMinimaxRateLimitFakeTimers()
+    const pcm = createPcm(480)
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response('too many requests', {
+          status: 429,
+          headers: { 'content-type': 'text/plain' }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: { audio: Buffer.from(pcm).toString('hex'), status: 2 },
+            extra_info: { audio_sample_rate: 24000, audio_channel: 1 },
+            base_resp: { status_code: 0, status_msg: 'success' }
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    await saveMinimaxSynthesisProvider()
+
+    const pending = synthesizeWithMinimaxRouting()
+    await flushUntil(() => fetchMock.mock.calls.length >= 1)
+    await vi.advanceTimersByTimeAsync(10_000)
+    const result = await pending
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result.format).toBe('wav')
+  })
+
+  it('propagates a MiniMax rate limit after the retry window is exhausted', async () => {
+    useMinimaxRateLimitFakeTimers()
+    // 每次重试都返回全新的 Response：同一个 Response 的 body 只能被读取一次。
+    const fetchMock = vi.fn(async () => rateLimitedResponse(1039, 'TPM rate limit exceeded'))
+    vi.stubGlobal('fetch', fetchMock)
+    await saveMinimaxSynthesisProvider()
+
+    const pending = synthesizeWithMinimaxRouting()
+    await flushUntil(() => fetchMock.mock.calls.length >= 1)
+    // 先挂上拒绝断言再推进时间：拒绝发生在推进期间，晚挂会被判定为 unhandled rejection。
+    const rejection = expect(pending).rejects.toThrow(/TPM rate limit exceeded（1039）/)
+    await vi.advanceTimersByTimeAsync(90_000)
+    await rejection
+    // 首次请求 + 9 次等待重试，累计等待正好 90 秒。
+    expect(fetchMock).toHaveBeenCalledTimes(10)
+  })
+
+  it('stops waiting when a MiniMax rate-limit retry is aborted', async () => {
+    useMinimaxRateLimitFakeTimers()
+    const fetchMock = vi.fn(async () => rateLimitedResponse(1002, 'rate limit exceeded'))
+    vi.stubGlobal('fetch', fetchMock)
+    await saveMinimaxSynthesisProvider()
+
+    const controller = new AbortController()
+    const pending = synthesizeWithMinimaxRouting({ signal: controller.signal })
+    await flushUntil(() => fetchMock.mock.calls.length >= 1)
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    controller.abort()
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('routes marked lines and concatenates WAV segments in order', async () => {
