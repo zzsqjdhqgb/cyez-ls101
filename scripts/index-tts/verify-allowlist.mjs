@@ -122,8 +122,14 @@ export function parseOptions(argv) {
   const options = {}
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
-    if (flag === '--platform') options.platform = argv[++index]
-    else if (flag === '--report') options.report = true
+    if (flag === '--platform') {
+      const value = argv[index + 1]
+      if (value === undefined || value === '' || value.startsWith('-')) {
+        throw new Error('--platform 缺少取值，取值不能为空，也不能是另一个选项。')
+      }
+      options.platform = value
+      index += 1
+    } else if (flag === '--report') options.report = true
     else if (flag === '--help' || flag === '-h') options.help = true
     else throw new Error(`未知参数：${flag}`)
   }

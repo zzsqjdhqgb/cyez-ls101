@@ -26,16 +26,63 @@ const defaultRoot = path.resolve(here, '..', '..')
 const HF_BASE = 'https://huggingface.co'
 const MODELSCOPE_BASE = 'https://www.modelscope.cn'
 
-export function buildSources(assets) {
+export const USAGE =
+  '用法：node scripts/index-tts/download-model.mjs [--output <path>] [--dry-run] [--help]'
+
+/**
+ * Percent-encodes a URL path segment by segment, so a repository, revision or file name containing
+ * `#`, `?`, `%` or a space can never change the shape of the request.
+ *
+ * A `.`/`..` segment is rejected rather than encoded: `encodeURIComponent` leaves the dots alone and
+ * the URL parser would then silently collapse the path into a different resource.
+ */
+export function encodeUrlPath(value) {
+  return String(value)
+    .split('/')
+    .map((segment) => {
+      if (segment === '.' || segment === '..') {
+        throw new Error(`下载地址中的路径段非法（不能是 . 或 ..）：${value}`)
+      }
+      return encodeURIComponent(segment)
+    })
+    .join('/')
+}
+
+/** Appends encoded path segments to `base`, keeping any path prefix `base` already carries. */
+function urlWithPath(base, segments) {
+  const url = new URL(base)
+  const prefix = url.pathname.replace(/\/+$/, '')
+  url.pathname = `${prefix}/${segments.map(encodeUrlPath).join('/')}`
+  return url
+}
+
+/** `https://huggingface.co/<repository>/resolve/<revision>/<file>`, every segment encoded. */
+export function buildHuggingFaceUrl(model, base = HF_BASE) {
+  return urlWithPath(base, [model.repository, 'resolve', model.revision, model.file]).toString()
+}
+
+/** ModelScope mirror URL; the whole file path travels in the `FilePath` query value. */
+export function buildModelScopeUrl(mirror, file, base = MODELSCOPE_BASE) {
+  const url = urlWithPath(base, ['api', 'v1', 'models', mirror.repository, 'repo'])
+  url.searchParams.set('Revision', mirror.revision ?? 'master')
+  url.searchParams.set('FilePath', file)
+  return url.toString()
+}
+
+export function buildSources(assets, options = {}) {
   const model = assets.model
-  const sources = [`${HF_BASE}/${model.repository}/resolve/${model.revision}/${model.file}`]
+  const sources = [buildHuggingFaceUrl(model, options.huggingFaceBase ?? HF_BASE)]
   if (model.mirror?.repository) {
-    const revision = model.mirror.revision ?? 'master'
     sources.push(
-      `${MODELSCOPE_BASE}/api/v1/models/${model.mirror.repository}/repo?Revision=${revision}&FilePath=${encodeURIComponent(model.file)}`
+      buildModelScopeUrl(model.mirror, model.file, options.mirrorBase ?? MODELSCOPE_BASE)
     )
   }
   return sources
+}
+
+/** True only when a file's size and SHA-256 both match the assets.json pin. */
+export function matchesPin(model, size, sha256) {
+  return size === model.size && String(sha256).toLowerCase() === model.sha256
 }
 
 export async function downloadModel(options = {}) {
@@ -53,7 +100,7 @@ export async function downloadModel(options = {}) {
   }
   const outputPath =
     options.output ?? path.join(root, 'externals/ai/index-tts/models', path.basename(model.file))
-  const sources = buildSources(assets)
+  const sources = buildSources(assets, options)
 
   if (options.dryRun) {
     return { outputPath, sources, size: model.size, sha256: model.sha256, downloaded: false }
@@ -62,9 +109,10 @@ export async function downloadModel(options = {}) {
   const existing = await stat(outputPath).catch(() => null)
   if (existing?.isFile()) {
     const digest = await sha256File(outputPath)
-    if (existing.size === model.size && digest === model.sha256) {
+    if (matchesPin(model, existing.size, digest)) {
       return { outputPath, sources, size: model.size, sha256: model.sha256, downloaded: false }
     }
+    // A cached file that no longer matches the pin must never be reused.
     await rm(outputPath, { force: true })
   }
 
@@ -80,7 +128,7 @@ export async function downloadModel(options = {}) {
       await pipeline(Readable.fromWeb(response.body), createWriteStream(partialPath))
       const info = await stat(partialPath)
       const digest = await sha256File(partialPath)
-      if (info.size !== model.size || digest !== model.sha256) {
+      if (!matchesPin(model, info.size, digest)) {
         throw new Error(`校验失败：size=${info.size} sha256=${digest}`)
       }
       await rename(partialPath, outputPath)
@@ -101,14 +149,25 @@ async function sha256File(filePath) {
   return hash.digest('hex')
 }
 
+/** Reads the value of an option, refusing a missing value or another option as the value. */
+function readOptionValue(argv, index, flag) {
+  const value = argv[index + 1]
+  if (value === undefined || value === '' || value.startsWith('--') || value === '-h') {
+    throw new Error(`${flag} 缺少取值，取值不能为空，也不能是另一个选项。\n${USAGE}`)
+  }
+  return value
+}
+
 export function parseOptions(argv) {
   const options = {}
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index]
-    if (flag === '--output') options.output = argv[++index]
-    else if (flag === '--dry-run') options.dryRun = true
+    if (flag === '--output') {
+      options.output = readOptionValue(argv, index, flag)
+      index += 1
+    } else if (flag === '--dry-run') options.dryRun = true
     else if (flag === '--help' || flag === '-h') options.help = true
-    else throw new Error(`未知参数：${flag}`)
+    else throw new Error(`未知参数：${flag}\n${USAGE}`)
   }
   return options
 }
@@ -120,7 +179,7 @@ if (invokedDirectly) {
   try {
     const options = parseOptions(process.argv.slice(2))
     if (options.help) {
-      console.log(`用法：node scripts/index-tts/download-model.mjs [--output <path>] [--dry-run]`)
+      console.log(USAGE)
       process.exit(0)
     }
     const result = await downloadModel(options)
