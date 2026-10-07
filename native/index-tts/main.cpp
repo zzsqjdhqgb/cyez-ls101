@@ -31,7 +31,10 @@
 //
 // The stub engine also honours the environment variables the Electron contract test
 // uses: LS101_STUB_FAIL=<non-zero> answers every request with an error frame, and
-// LS101_STUB_SECONDS=<f> sets the tone duration (default 0.2 s).
+// LS101_STUB_SECONDS=<f> sets the tone duration (default 0.2 s). Test-only knob, stub builds
+// only: LS101_STUB_RATE=<n>[,<n>,...] overrides the sample rate the stub reports (one entry
+// per request, the last entry repeats), so the protocol layer's engine-geometry validation
+// can be exercised with a bogus or non-22050 rate. Never set it in production.
 
 #include <algorithm>
 #include <cctype>
@@ -40,6 +43,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -70,8 +74,27 @@ constexpr int kProtocolVersion = 1;
 constexpr int kOutputSampleRate = 22050;  // the contract's fixed output rate
 constexpr size_t kMaxTextBytes = 64 * 1024;
 constexpr size_t kMaxErrorBytes = 4096;
-constexpr size_t kMaxOutputBytes = 100 * 1024 * 1024;
+// The request header is one LF-terminated line; the decoder's own header cap is 4096 B
+// (MAX_HEADER_BYTES in index-tts-protocol.ts), so 64 KiB is far beyond anything legitimate.
+// An over-long line is unrecoverable framing — see read_header_line().
+constexpr size_t kMaxRequestHeaderBytes = 64 * 1024;
+// The decoder rejects any `result` payload above MAX_PAYLOAD_BYTES = 100 * 1024 * 1024
+// (index-tts-protocol.ts) and that limit covers the *whole* WAV file: the fixed 44-byte
+// canonical header plus the data chunk. kMaxWavDataBytes is therefore the shared budget for
+// the encoder and the resampler; kMaxPayloadBytes is only the name of the consumer's limit.
+constexpr size_t kMaxPayloadBytes = 100 * 1024 * 1024;
+constexpr size_t kWavHeaderBytes = 44;
+constexpr size_t kMaxWavDataBytes = kMaxPayloadBytes - kWavHeaderBytes;  // 104857556
+constexpr size_t kMaxOutputFrames = kMaxWavDataBytes / sizeof(int16_t);
 constexpr size_t kMaxReferenceBytes = 64 * 1024 * 1024;
+// Sane geometry for raw engine output: at most 10 minutes at the highest accepted rate and
+// channel count. Anything larger is a corrupt count, not audio.
+constexpr int kMinEngineSampleRate = 8000;
+constexpr int kMaxEngineSampleRate = 192000;
+constexpr int kMaxEngineChannels = 8;
+constexpr size_t kMaxEngineFrames = static_cast<size_t>(kMaxEngineSampleRate) * 600;
+constexpr size_t kMaxEngineSamples =
+    kMaxEngineFrames * static_cast<size_t>(kMaxEngineChannels);
 
 // Documented defaults; a field that is absent or out of range falls back to these.
 constexpr double kDefaultEmotionAlpha = 1.0;
@@ -509,6 +532,41 @@ bool parse_request_header(const std::string& line, SynthRequest& request, std::s
 // Output formatting (protocol layer): mono 22050 Hz PCM16 WAV + frame writers
 // ---------------------------------------------------------------------------
 
+// Validates the channel count the engine reported. Kept separate so callers can divide by it
+// only after it is known to be sane.
+bool validate_engine_channels(int channels, std::string& error) {
+  if (channels < 1 || channels > kMaxEngineChannels) {
+    error = "引擎返回的声道数非法：" + std::to_string(channels) + "（需在 1..8 之间）";
+    return false;
+  }
+  return true;
+}
+
+// Validates the engine's frame count, sample rate and channel count *before* any buffer is
+// sized from them, and bounds `frames * channels` without overflowing.
+//
+// `frames` is `size_t` in the audio.cpp C ABI (audiocpp_result_audio), so a negative count is
+// unrepresentable; a corrupt count shows up as zero or as an absurdly large value, both of
+// which are rejected here.
+bool validate_engine_audio(size_t frames, int sample_rate, int channels, std::string& error) {
+  if (!validate_engine_channels(channels, error)) return false;
+  if (sample_rate < kMinEngineSampleRate || sample_rate > kMaxEngineSampleRate) {
+    error = "引擎返回的采样率非法：" + std::to_string(sample_rate) +
+            " Hz（需在 8000..192000 之间）";
+    return false;
+  }
+  if (frames == 0) {
+    error = "引擎未返回音频";
+    return false;
+  }
+  if (frames > kMaxEngineFrames ||
+      frames > kMaxEngineSamples / static_cast<size_t>(channels)) {
+    error = "引擎返回的采样帧数超出限制：" + std::to_string(frames);
+    return false;
+  }
+  return true;
+}
+
 std::vector<float> to_mono(const std::vector<float>& samples, int channels) {
   if (channels <= 1) return samples;
   const size_t frame_count = samples.size() / static_cast<size_t>(channels);
@@ -523,21 +581,58 @@ std::vector<float> to_mono(const std::vector<float>& samples, int channels) {
   return mono;
 }
 
-std::vector<float> resample_linear(const std::vector<float>& input, int input_rate,
-                                   int output_rate) {
-  if (input.empty() || input_rate <= 0 || input_rate == output_rate) return input;
+// Resamples mono float audio from the engine's native rate to the contract rate.
+//
+// `input_rate` is validated before this is reached, but it is checked again here so the
+// function is safe on its own: a bogus rate must fail the request rather than pass the input
+// through while the result frame still declares 22050 Hz (wrong-speed audio).
+//
+// The expected output frame count is computed in integer arithmetic (the exact floor of
+// input_frames * output_rate / input_rate) and refused when it would not fit the encoder's
+// payload budget, so the allocation below is always bounded and can never overflow.
+bool resample_linear(const std::vector<float>& input, int input_rate, int output_rate,
+                     std::vector<float>& output, std::string& error) {
+  if (input.empty()) {
+    output.clear();
+    return true;
+  }
+  if (input_rate < kMinEngineSampleRate || input_rate > kMaxEngineSampleRate) {
+    error = "引擎返回的采样率非法：" + std::to_string(input_rate) +
+            " Hz（需在 8000..192000 之间）";
+    return false;
+  }
+  if (input_rate == output_rate) {
+    output = input;  // byte-identical passthrough: the common 22050 Hz case
+    return true;
+  }
+  if (output_rate <= 0 ||
+      input.size() > std::numeric_limits<uint64_t>::max() / static_cast<uint64_t>(output_rate)) {
+    error = "重采样输入过大，无法计算输出帧数";
+    return false;
+  }
+  const uint64_t output_frames = static_cast<uint64_t>(input.size()) *
+                                 static_cast<uint64_t>(output_rate) /
+                                 static_cast<uint64_t>(input_rate);
+  if (output_frames > static_cast<uint64_t>(kMaxOutputFrames)) {
+    error = "重采样后的音频超过输出大小限制";
+    return false;
+  }
+  if (output_frames == 0) {
+    error = "重采样后的音频为空";
+    return false;
+  }
+
   const double ratio = static_cast<double>(input_rate) / static_cast<double>(output_rate);
-  const size_t output_size = static_cast<size_t>(static_cast<double>(input.size()) / ratio);
-  std::vector<float> output(output_size, 0.0f);
-  for (size_t index = 0; index < output_size; ++index) {
+  output.assign(static_cast<size_t>(output_frames), 0.0f);
+  for (size_t index = 0; index < output.size(); ++index) {
     const double position = static_cast<double>(index) * ratio;
-    const size_t left = static_cast<size_t>(position);
+    const size_t left = std::min(static_cast<size_t>(position), input.size() - 1);
     const size_t right = std::min(left + 1, input.size() - 1);
     const double fraction = position - static_cast<double>(left);
     output[index] =
         static_cast<float>((1.0 - fraction) * input[left] + fraction * input[right]);
   }
-  return output;
+  return true;
 }
 
 void append_u16(std::vector<uint8_t>& output, uint16_t value) {
@@ -553,19 +648,23 @@ void append_u32(std::vector<uint8_t>& output, uint32_t value) {
 }
 
 std::vector<uint8_t> encode_wav(const std::vector<float>& samples, int sample_rate) {
-  const uint64_t data_size_64 = samples.size() * sizeof(int16_t);
-  if (data_size_64 > kMaxOutputBytes ||
-      data_size_64 > std::numeric_limits<uint32_t>::max() - 36) {
+  // The whole RIFF/WAVE file — 44-byte canonical header plus data — must stay within
+  // MAX_PAYLOAD_BYTES (100 MiB, index-tts-protocol.ts), so `data` gets what is left over.
+  if (samples.size() > kMaxWavDataBytes / sizeof(int16_t)) return {};
+  const uint64_t data_size_64 = static_cast<uint64_t>(samples.size()) * sizeof(int16_t);
+  if (data_size_64 > kMaxWavDataBytes ||
+      data_size_64 > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max() -
+                                           (kWavHeaderBytes - 8))) {
     return {};
   }
   const uint32_t data_size = static_cast<uint32_t>(data_size_64);
   std::vector<uint8_t> output;
-  output.reserve(44 + data_size);
+  output.reserve(kWavHeaderBytes + data_size);
   const auto append_text = [&output](const char* value) {
     output.insert(output.end(), value, value + 4);
   };
   append_text("RIFF");
-  append_u32(output, 36 + data_size);
+  append_u32(output, static_cast<uint32_t>(kWavHeaderBytes - 8 + data_size));
   append_text("WAVE");
   append_text("fmt ");
   append_u32(output, 16);
@@ -932,10 +1031,14 @@ class AudioCppEngine final : public Engine {
       error = describe_status("audiocpp_result_audio", status);
       return false;
     }
-    if (!output || frames == 0 || channel_count < 1) {
+    if (!output) {
       error = "audio.cpp 未返回音频";
       return false;
     }
+    // Bound the engine's geometry before sizing the copy below: `frames * channel_count` is
+    // computed only after both factors passed validation, so the assign cannot overflow and
+    // the allocation cannot be driven past kMaxEngineSamples by a corrupt count.
+    if (!validate_engine_audio(frames, rate, channel_count, error)) return false;
     samples.assign(output, output + frames * static_cast<size_t>(channel_count));
     sample_rate = rate;
     channels = channel_count;
@@ -1072,11 +1175,45 @@ class StubEngine final : public Engine {
       samples[index] = static_cast<float>(
           amplitude * std::sin(2.0 * 3.14159265358979323846 * frequency * position));
     }
-    sample_rate = kOutputSampleRate;
+    sample_rate = next_stub_sample_rate();
     channels = 1;
     (void)request;
     return true;
   }
+
+ private:
+  // Test-only knob, present only in a LS101_INDEX_TTS_STUB_ENGINE build:
+  // LS101_STUB_RATE=<n>[,<n>…] overrides the sample rate the stub reports, i.e. it fakes an
+  // engine that returns samples at a bogus or non-22050 rate. One comma-separated entry is
+  // consumed per successful request and the last entry repeats, so a hostile-input harness can
+  // force an invalid rate on one request and a healthy one on the next in the same process.
+  int next_stub_sample_rate() {
+    if (rate_overrides_.empty() && !rate_overrides_read_) {
+      rate_overrides_read_ = true;
+      const char* configured = std::getenv("LS101_STUB_RATE");
+      std::string text = configured ? configured : "";
+      while (!text.empty()) {
+        const size_t comma = text.find(',');
+        const std::string entry = text.substr(0, comma);
+        text = comma == std::string::npos ? std::string() : text.substr(comma + 1);
+        char* stop = nullptr;
+        const long parsed = std::strtol(entry.c_str(), &stop, 10);
+        if (!entry.empty() && stop && *stop == '\0' &&
+            parsed >= static_cast<long>(std::numeric_limits<int>::min()) &&
+            parsed <= static_cast<long>(std::numeric_limits<int>::max())) {
+          rate_overrides_.push_back(static_cast<int>(parsed));
+        }
+      }
+    }
+    if (rate_overrides_.empty()) return kOutputSampleRate;
+    const size_t index = std::min(rate_override_index_, rate_overrides_.size() - 1);
+    ++rate_override_index_;
+    return rate_overrides_[index];
+  }
+
+  std::vector<int> rate_overrides_;
+  size_t rate_override_index_ = 0;
+  bool rate_overrides_read_ = false;
 };
 
 #endif  // LS101_INDEX_TTS_STUB_ENGINE
@@ -1204,10 +1341,107 @@ void print_usage(const char* program) {
 // serve loop (protocol layer)
 // ---------------------------------------------------------------------------
 
+enum class HeaderRead { Line, EndOfStream, TooLong };
+
+// Reads one LF-terminated request header line, capped at kMaxRequestHeaderBytes.
+//
+// The cap is deliberately a hard failure and not a recoverable one: after an over-long line
+// the helper cannot tell where the `textBytes` payload that belongs to the missing header
+// starts, so there is no way to resynchronise the stream. The frozen contract has no frame
+// that could carry "I lost framing", and guessing would emit results against the wrong
+// request ids, so serve() exits non-zero with a stderr diagnostic instead.
+HeaderRead read_header_line(std::string& line) {
+  line.clear();
+  char character = '\0';
+  while (std::cin.get(character)) {
+    if (character == '\n') return HeaderRead::Line;
+    if (line.size() >= kMaxRequestHeaderBytes) return HeaderRead::TooLong;
+    line.push_back(character);
+  }
+  // A last header without a trailing LF is still a complete line for this stream (EOF means no
+  // further bytes can arrive) and the previous getline()-based loop answered it, so keep that
+  // behaviour. A hard stream error discards the partial line instead.
+  if (std::cin.eof() && !line.empty()) return HeaderRead::Line;
+  return HeaderRead::EndOfStream;
+}
+
+// Reports a failed request on stdout (the contract's error frame) and on stderr (diagnostics).
+// Returns false when even the error frame could not be written, which means stdout framing is
+// broken and the session must be aborted instead of serving more requests.
+bool report_failure(const std::string& request_id, const std::string& message) {
+  std::fprintf(stderr, "IndexTTS 合成失败（id=%s）：%s\n", request_id.c_str(), message.c_str());
+  try {
+    send_error(request_id, message);
+    return true;
+  } catch (const std::exception& exception) {
+    std::fprintf(stderr, "IndexTTS 错误帧写入失败（id=%s）：%s\n", request_id.c_str(),
+                 exception.what());
+    return false;
+  } catch (...) {
+    std::fprintf(stderr, "IndexTTS 错误帧写入失败（id=%s）：未知异常\n", request_id.c_str());
+    return false;
+  }
+}
+
+// Handles one fully read request and writes exactly one response frame. Returns false only
+// when the response could not be framed at all (see report_failure); every other failure —
+// including bad_alloc and any other exception — becomes an error frame, and the caller keeps
+// serving the next request.
+bool handle_request(Engine& engine, const SynthRequest& request) {
+  try {
+    // audiocpp_request_set_text takes a NUL-terminated C string, so a NUL inside the payload
+    // would silently truncate the text; reject the request instead.
+    if (request.text.find('\0') != std::string::npos) {
+      return report_failure(request.id, "请求文本包含 NUL（0x00）字节，C 接口无法处理");
+    }
+
+    std::vector<float> samples;
+    int sample_rate = 0;
+    int channels = 1;
+    std::string error;
+    if (!engine.synthesize(request, samples, sample_rate, channels, error)) {
+      return report_failure(request.id, error);
+    }
+
+    // Validate the engine's geometry before converting or allocating anything from it. The
+    // channel check runs first, so dividing by `channels` is safe.
+    if (!validate_engine_channels(channels, error) ||
+        !validate_engine_audio(samples.size() / static_cast<size_t>(channels), sample_rate,
+                              channels, error)) {
+      return report_failure(request.id, error);
+    }
+
+    const std::vector<float> mono = to_mono(samples, channels);
+    std::vector<float> resampled;
+    if (!resample_linear(mono, sample_rate, kOutputSampleRate, resampled, error)) {
+      return report_failure(request.id, error);
+    }
+    const std::vector<uint8_t> wav = encode_wav(resampled, kOutputSampleRate);
+    if (wav.empty()) {
+      return report_failure(request.id, "生成的音频超过输出大小限制");
+    }
+    send_result(request.id, wav);
+    return true;
+  } catch (const std::exception& exception) {
+    return report_failure(request.id, std::string("合成失败：") + exception.what());
+  } catch (...) {
+    return report_failure(request.id, "合成失败：未知异常");
+  }
+}
+
 int serve(Engine& engine) {
   std::string line;
-  while (std::getline(std::cin, line)) {
+  for (;;) {
+    const HeaderRead read = read_header_line(line);
+    if (read == HeaderRead::EndOfStream) return 0;
+    if (read == HeaderRead::TooLong) {
+      std::fprintf(stderr,
+                   "IndexTTS 请求头超过 %zu 字节仍未出现换行：帧边界无法恢复，进程退出\n",
+                   kMaxRequestHeaderBytes);
+      return 2;
+    }
     if (!line.empty() && line.back() == '\r') line.pop_back();
+
     SynthRequest request;
     std::string error;
     if (!parse_request_header(line, request, error)) {
@@ -1215,36 +1449,24 @@ int serve(Engine& engine) {
       return 2;
     }
 
-    request.text.resize(request.text_bytes);
-    if (request.text_bytes > 0) {
-      std::cin.read(request.text.data(), static_cast<std::streamsize>(request.text_bytes));
-      if (static_cast<size_t>(std::cin.gcount()) != request.text_bytes) {
-        std::fprintf(stderr, "IndexTTS 请求负载不完整（id=%s）\n", request.id.c_str());
-        return 2;
+    bool keep_serving = true;
+    try {
+      request.text.resize(request.text_bytes);
+      if (request.text_bytes > 0) {
+        std::cin.read(request.text.data(), static_cast<std::streamsize>(request.text_bytes));
+        if (static_cast<size_t>(std::cin.gcount()) != request.text_bytes) {
+          std::fprintf(stderr, "IndexTTS 请求负载不完整（id=%s）\n", request.id.c_str());
+          return 2;
+        }
       }
+      keep_serving = handle_request(engine, request);
+    } catch (const std::exception& exception) {
+      keep_serving = report_failure(request.id, std::string("请求处理失败：") + exception.what());
+    } catch (...) {
+      keep_serving = report_failure(request.id, "请求处理失败：未知异常");
     }
-
-    std::vector<float> samples;
-    int sample_rate = 0;
-    int channels = 1;
-    if (!engine.synthesize(request, samples, sample_rate, channels, error)) {
-      std::fprintf(stderr, "IndexTTS 合成失败（id=%s）：%s\n", request.id.c_str(), error.c_str());
-      send_error(request.id, error);
-      continue;
-    }
-
-    const std::vector<float> mono = to_mono(samples, channels);
-    const std::vector<float> resampled = resample_linear(mono, sample_rate, kOutputSampleRate);
-    const std::vector<uint8_t> wav = encode_wav(resampled, kOutputSampleRate);
-    if (wav.empty()) {
-      const std::string message = "生成的音频超过输出大小限制";
-      std::fprintf(stderr, "IndexTTS 合成失败（id=%s）：%s\n", request.id.c_str(), message.c_str());
-      send_error(request.id, message);
-      continue;
-    }
-    send_result(request.id, wav);
+    if (!keep_serving) return 2;
   }
-  return 0;
 }
 
 }  // namespace
@@ -1266,11 +1488,23 @@ int main(int argc, char** argv) {
   std::ios::sync_with_stdio(false);
   std::cin.tie(nullptr);
 
-  const std::unique_ptr<Engine> engine = create_engine();
-  if (!engine->load(options, error)) {
-    std::fprintf(stderr, "IndexTTS 引擎加载失败：%s\n", error.c_str());
+  // The load path runs before the `ready` frame exists, so there is no request id an error
+  // frame could carry: a failure (including a thrown exception) is reported on stderr and ends
+  // the process with a non-zero status, which is exactly what the lifecycle table expects
+  // ("a session that exits or violates the protocol is rejected, dropped, and respawned").
+  try {
+    const std::unique_ptr<Engine> engine = create_engine();
+    if (!engine->load(options, error)) {
+      std::fprintf(stderr, "IndexTTS 引擎加载失败：%s\n", error.c_str());
+      return 1;
+    }
+    send_ready();
+    return serve(*engine);
+  } catch (const std::exception& exception) {
+    std::fprintf(stderr, "IndexTTS helper 异常终止：%s\n", exception.what());
+    return 1;
+  } catch (...) {
+    std::fprintf(stderr, "IndexTTS helper 异常终止：未知异常\n");
     return 1;
   }
-  send_ready();
-  return serve(*engine);
 }
