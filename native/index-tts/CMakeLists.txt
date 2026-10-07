@@ -34,6 +34,28 @@ else()
     target_link_libraries(ls101-index-tts-helper PRIVATE audiocpp)
     target_include_directories(ls101-index-tts-helper PRIVATE "${AUDIOCPP_SOURCE_DIR}/include")
 
+    # libaudiocpp links the CUDA driver API (libcuda.so.1), which does not exist on a build machine
+    # without a GPU, so linking the helper would otherwise fail with undefined cuMem*/cuDevice*
+    # references. The toolkit ships a stub for exactly this case: linking it gives the helper a
+    # NEEDED libcuda.so.1 entry that the real driver satisfies at runtime. It must never be shipped.
+    if(UNIX AND NOT APPLE)
+        find_library(LS101_CUDA_DRIVER_STUB
+            NAMES cuda
+            PATHS
+                "$ENV{CUDA_PATH}/lib64/stubs"
+                "$ENV{CUDA_HOME}/lib64/stubs"
+                "/usr/local/cuda/lib64/stubs"
+                "${CUDAToolkit_LIBRARY_ROOT}/lib64/stubs"
+            NO_DEFAULT_PATH)
+        if(LS101_CUDA_DRIVER_STUB)
+            message(STATUS "ls101-index-tts-helper: linking the CUDA driver stub ${LS101_CUDA_DRIVER_STUB}")
+            target_link_libraries(ls101-index-tts-helper PRIVATE "${LS101_CUDA_DRIVER_STUB}")
+        else()
+            message(STATUS "ls101-index-tts-helper: no CUDA driver stub found; allowing undefined driver symbols")
+            target_link_options(ls101-index-tts-helper PRIVATE "-Wl,--allow-shlib-undefined")
+        endif()
+    endif()
+
     # libaudiocpp is a shared library, so the helper has to find it next to
     # itself when the runtime is shipped inside a model package.
     if(APPLE)

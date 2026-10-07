@@ -269,24 +269,32 @@ jobs:
           staged=0
           for binary in "$runtime_dir"/ls101-index-tts-helper-cuda "$runtime_dir"/libaudiocpp.so*; do
             [ -e "$binary" ] || continue
-            while read -r dependency; do
-              [ -n "$dependency" ] || continue
+            while read -r name dependency; do
+              [ -n "$name" ] || continue
+              # Driver libraries come from the user's GPU driver, never from the package, and the
+              # build machine has no driver, so ldd reports them as missing. Never stage them.
+              case "$name" in
+                libcuda.so* | libnvidia-*)
+                  echo "skipped driver-provided $name"
+                  continue
+                  ;;
+              esac
               if [ "$dependency" = "not" ]; then
-                echo "::error title=Unresolved dependency::ldd reports an unresolved dependency for $binary" >&2
+                echo "::error title=Unresolved dependency::ldd cannot resolve $name for $binary" >&2
                 ldd "$binary" >&2
                 exit 1
               fi
               case "$dependency" in
                 "${cuda_path}"/*)
-                  name="$(basename "$dependency")"
-                  if [ ! -e "$runtime_dir/$name" ]; then
-                    cp -L "$dependency" "$runtime_dir/$name"
-                    echo "staged $name"
+                  staged_name="$(basename "$dependency")"
+                  if [ ! -e "$runtime_dir/$staged_name" ]; then
+                    cp -L "$dependency" "$runtime_dir/$staged_name"
+                    echo "staged $staged_name"
                     staged=$((staged + 1))
                   fi
                   ;;
               esac
-            done < <(ldd "$binary" | awk '/=>/ { print $3 }')
+            done < <(ldd "$binary" | awk '/=>/ { print $1, $3 }')
           done
           if [ "$staged" -eq 0 ]; then
             echo "::error title=No CUDA libraries staged::No CUDA runtime library was found next to the helper; check the link line." >&2
