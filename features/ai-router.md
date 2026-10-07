@@ -167,7 +167,7 @@ interface AIRouterSpeechProviderConfig {
 - 语音 Provider：列出、创建、编辑和删除在线或离线 Provider；摘要显示运行时、启用模型数和启用音色数。
 - TTS 模型包：列出已安装包的运行时、版本、模型数、音色数、总大小和 Provider 引用数，并提供 ZIP 导入与删除入口。
 
-在线 Provider 可以选择 `openai-compatible`、`elevenlabs`、`minimax` 或 `minimax-cn`，配置 Base URL、独立 API Key、模型 ID 和音色 ID。已保存的 API Key 默认不返回 renderer，只有点击显示按钮时才按 Provider ID 读取。连接测试使用一个已启用模型和音色合成固定测试文本，成功后在编辑器内显示音频播放器。
+在线 Provider 可以选择 `openai-compatible`、`elevenlabs`、`minimax` 或 `minimax-cn`，配置 Base URL、独立 API Key、模型 ID 和音色 ID。模型或音色列表超过 6 项时，编辑器会提供搜索框和折叠控件：搜索按 ID 或显示名称过滤当前列表，折叠后列表只保留一行「展开列表（共 N 项）」，输入搜索词时列表会自动展开。过滤和折叠都只影响显示，隐藏条目的勾选状态和删除操作仍然作用于完整列表。已保存的 API Key 默认不返回 renderer，只有点击显示按钮时才按 Provider ID 读取。连接测试使用一个已启用模型和音色合成固定测试文本，成功后在编辑器内显示音频播放器。
 
 `openai-compatible` 和 `elevenlabs` 的合成走 AI SDK 的语音抽象：`ai` 的 `generateSpeech()` 配合 `@ai-sdk/openai` 或 `@ai-sdk/elevenlabs` 的 `speech(modelId)` 模型。Provider 配置、密钥读取、模型与音色校验、结果大小校验、WAV 拼接和最终转码仍然由 AIRouter 自己负责，SDK 只承担单次合成的协议细节。单次调用显式使用 `maxRetries: 0`，重试和续跑由上层业务流程决定。
 

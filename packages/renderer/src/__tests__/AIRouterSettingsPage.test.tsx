@@ -800,6 +800,102 @@ describe('AIRouterSettingsPage', () => {
     expect(within(dialog).getByRole('button', { name: '获取音色列表' })).toBeInTheDocument()
   })
 
+  it('filters a long voice list without dropping hidden selections', async () => {
+    const voices = [
+      { id: 'English_Graceful_Lady', name: 'Graceful Lady' },
+      { id: 'Chinese (Mandarin)_News_Anchor', name: 'News Anchor' },
+      { id: 'English_Insightful_Speaker', name: 'Insightful Speaker' },
+      { id: 'Japanese_Whisper_Belle', name: 'Whisper Belle' },
+      { id: 'my-clone' },
+      { id: 'ttv-voice-1' }
+    ]
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechVoices: vi.fn().mockResolvedValue(voices)
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取音色列表' }))
+
+    const graceful = 'Graceful Lady (English_Graceful_Lady)'
+    const newsAnchor = 'News Anchor (Chinese (Mandarin)_News_Anchor)'
+    await waitFor(() => expect(within(dialog).getByLabelText(newsAnchor)).toBeInTheDocument())
+    expect(within(dialog).getByLabelText(graceful)).not.toBeChecked()
+
+    const search = within(dialog).getByLabelText('搜索音色')
+    fireEvent.change(search, { target: { value: 'graceful' } })
+
+    expect(within(dialog).getByLabelText(graceful)).toBeInTheDocument()
+    expect(within(dialog).queryByLabelText(newsAnchor)).toBeNull()
+    expect(within(dialog).queryByLabelText('my-clone')).toBeNull()
+
+    fireEvent.click(within(dialog).getByLabelText(graceful))
+    expect(within(dialog).getByLabelText(graceful)).toBeChecked()
+
+    fireEvent.change(search, { target: { value: '不存在的音色' } })
+    expect(within(dialog).getByText('没有匹配的音色。')).toBeInTheDocument()
+
+    fireEvent.change(search, { target: { value: '' } })
+    expect(within(dialog).getByLabelText(graceful)).toBeChecked()
+    expect(within(dialog).getByLabelText(newsAnchor)).not.toBeChecked()
+    expect(within(dialog).getByLabelText('my-clone')).not.toBeChecked()
+  })
+
+  it('collapses and expands a long voice list while keeping selections', async () => {
+    const voices = [
+      { id: 'English_Graceful_Lady', name: 'Graceful Lady' },
+      { id: 'Chinese (Mandarin)_News_Anchor', name: 'News Anchor' },
+      { id: 'English_Insightful_Speaker', name: 'Insightful Speaker' },
+      { id: 'Japanese_Whisper_Belle', name: 'Whisper Belle' },
+      { id: 'my-clone' },
+      { id: 'ttv-voice-1' }
+    ]
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechVoices: vi.fn().mockResolvedValue(voices)
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取音色列表' }))
+
+    const graceful = 'Graceful Lady (English_Graceful_Lady)'
+    await waitFor(() => expect(within(dialog).getByLabelText(graceful)).toBeInTheDocument())
+    fireEvent.click(within(dialog).getByLabelText(graceful))
+    expect(within(dialog).getByLabelText(graceful)).toBeChecked()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '收起列表' }))
+    expect(within(dialog).queryByLabelText(graceful)).toBeNull()
+    expect(within(dialog).getByRole('button', { name: /展开列表/ })).toHaveTextContent('共 6 项')
+
+    // 搜索会自动展开被收起的列表。
+    fireEvent.change(within(dialog).getByLabelText('搜索音色'), {
+      target: { value: 'graceful' }
+    })
+    expect(within(dialog).getByLabelText(graceful)).toBeChecked()
+
+    // 清空搜索后回到收起状态，勾选状态保留。
+    fireEvent.change(within(dialog).getByLabelText('搜索音色'), { target: { value: '' } })
+    expect(within(dialog).queryByLabelText(graceful)).toBeNull()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /展开列表/ }))
+    expect(within(dialog).getByLabelText(graceful)).toBeChecked()
+    expect(within(dialog).getByLabelText('my-clone')).not.toBeChecked()
+  })
+
   it('keeps Qwen on CPU while CUDA runtime packaging is disabled', async () => {
     const probeQwenTtsCuda = vi.fn()
     const saveSpeechConfig = vi

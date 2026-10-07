@@ -102,6 +102,9 @@ function supportsRemoteVoiceDiscovery(type: AIRouterSpeechProviderType): boolean
   return type === 'elevenlabs' || isMinimaxType(type)
 }
 
+// 列表超过这个长度才显示搜索框和折叠控件，短列表不增加额外控件。
+const LONG_LIST_MIN_ITEMS = 6
+
 export function AIRouterSpeechSettingsPage({
   application = airouterApplication
 }: {
@@ -116,6 +119,7 @@ export function AIRouterSpeechSettingsPage({
   const [manualModel, setManualModel] = useState('')
   const [manualVoice, setManualVoice] = useState('')
   const [discoveredVoices, setDiscoveredVoices] = useState<AIRouterSpeechVoiceOption[]>([])
+  const [voiceSearch, setVoiceSearch] = useState('')
   const [testModelId, setTestModelId] = useState('')
   const [testVoiceId, setTestVoiceId] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -220,6 +224,7 @@ export function AIRouterSpeechSettingsPage({
     setTestAudioUrl(null)
     setManualModel('')
     setManualVoice('')
+    setVoiceSearch('')
     setDiscoveredVoices([])
     setTestModelId('')
     setTestVoiceId('')
@@ -494,6 +499,7 @@ export function AIRouterSpeechSettingsPage({
                     onChange={(event) => {
                       const type = event.target.value as AIRouterSpeechProviderType
                       setDiscoveredVoices([])
+                      setVoiceSearch('')
                       setDraft({
                         ...draft,
                         type,
@@ -743,6 +749,7 @@ export function AIRouterSpeechSettingsPage({
                       value={feedback.models}
                     />
                     <ToggleList
+                      collapsible={draft.models.length >= LONG_LIST_MIN_ITEMS}
                       empty="尚未添加模型。"
                       items={draft.models}
                       itemLabel={(id) => id}
@@ -810,6 +817,17 @@ export function AIRouterSpeechSettingsPage({
                           已配置 {draft.voices.length} 个音色
                         </span>
                       )}
+                      {draft.voices.length >= LONG_LIST_MIN_ITEMS ? (
+                        <input
+                          aria-label="搜索音色"
+                          className={styles.input}
+                          disabled={Boolean(busy)}
+                          onChange={(event) => setVoiceSearch(event.target.value)}
+                          placeholder="搜索音色"
+                          type="search"
+                          value={voiceSearch}
+                        />
+                      ) : null}
                       <ManualEntry
                         ariaLabel="手动语音音色 ID"
                         disabled={Boolean(busy)}
@@ -832,7 +850,10 @@ export function AIRouterSpeechSettingsPage({
                       value={feedback.voices}
                     />
                     <ToggleList
+                      collapsible={draft.voices.length >= LONG_LIST_MIN_ITEMS}
                       empty="尚未添加音色。"
+                      emptyFiltered="没有匹配的音色。"
+                      filter={voiceSearch}
                       items={draft.voices}
                       itemLabel={(id) => optionName(id, discoveredVoices)}
                       removeLabel="移除语音音色"
@@ -1101,22 +1122,50 @@ function ManualEntry({
 }
 
 function ToggleList<T extends { id: string; enabled: boolean }>({
+  collapsible = false,
   empty,
+  emptyFiltered = '没有匹配的条目。',
+  filter,
   items,
   itemLabel,
   removeLabel,
   onChange
 }: {
+  collapsible?: boolean
   empty: string
+  emptyFiltered?: string
+  filter?: string
   items: T[]
   itemLabel: (id: string) => string
   removeLabel?: string
   onChange: (items: T[]) => void
 }): JSX.Element {
+  const [collapsed, setCollapsed] = useState(false)
   if (!items.length) return <p className={styles.emptyModels}>{empty}</p>
+  const query = filter?.trim().toLowerCase() ?? ''
+  // 过滤只影响渲染：onChange 始终基于完整 items，隐藏的条目不会被丢掉。
+  const visible = query
+    ? items.filter((item) => itemLabel(item.id).toLowerCase().includes(query))
+    : items
+  // 搜索时强制展开，收起状态不会挡住搜索结果。
+  const showItems = query ? true : !collapsed
   return (
     <div className={styles.modelList}>
-      {items.map((item) => (
+      {collapsible ? (
+        <button
+          aria-expanded={showItems}
+          className={styles.listToggle}
+          onClick={() => setCollapsed((value) => !value)}
+          type="button"
+        >
+          <ChevronRight
+            aria-hidden="true"
+            className={`${styles.listToggleIcon} ${showItems ? styles.listToggleIconOpen : ''}`}
+          />
+          {showItems ? '收起列表' : `展开列表（共 ${items.length} 项）`}
+        </button>
+      ) : null}
+      {(showItems ? visible : []).map((item) => (
         <div className={styles.modelItem} key={item.id}>
           <label className={styles.modelToggle}>
             <input
@@ -1146,6 +1195,7 @@ function ToggleList<T extends { id: string; enabled: boolean }>({
           ) : null}
         </div>
       ))}
+      {showItems && !visible.length ? <p className={styles.emptyModels}>{emptyFiltered}</p> : null}
     </div>
   )
 }

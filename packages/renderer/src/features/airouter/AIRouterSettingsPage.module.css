@@ -605,6 +605,36 @@
   gap: var(--space-2);
 }
 
+.listToggle {
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--space-4);
+  border: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.listToggle:hover {
+  color: var(--color-text-strong);
+}
+
+.listToggleIcon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  transition: transform 120ms ease;
+}
+
+.listToggleIconOpen {
+  transform: rotate(90deg);
+}
+
 .modelList {
   border-top: 1px solid var(--color-border);
 }
