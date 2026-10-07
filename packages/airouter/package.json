@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "4.0.41",
+    "@ai-sdk/elevenlabs": "3.0.30",
     "@ai-sdk/openai": "4.0.46",
     "@ls101/config-store": "workspace:*",
     "@ls101/grading-engine": "workspace:*",

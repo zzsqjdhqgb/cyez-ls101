@@ -1,4 +1,7 @@
 import { randomUUID } from 'node:crypto'
+import { createElevenLabs } from '@ai-sdk/elevenlabs'
+import { createOpenAI } from '@ai-sdk/openai'
+import { generateSpeech, type SpeechModel, type SpeechResult } from 'ai'
 import { JsonConfigStorage } from '@ls101/config-store/main'
 import type { JsonValue } from '@ls101/config-store/shared'
 import {
@@ -11,6 +14,7 @@ import { transcodeWav } from './speech-audio-transcoder'
 import type {
   AIRouterGeneratedAudio,
   AIRouterModelConfig,
+  AIRouterOnlineSpeechProviderType,
   AIRouterSpeechConnectionTestInput,
   AIRouterSpeechModelOption,
   AIRouterSpeechModelPackageImportResult,
@@ -34,6 +38,10 @@ import type {
 const CONFIG_VERSION = 1
 const CONFIG_KEY = 'speech-providers'
 const DEFAULT_BASE_URL = 'https://api.openai.com/v1'
+const ELEVENLABS_DEFAULT_BASE_URL = 'https://api.elevenlabs.io'
+const ELEVENLABS_OUTPUT_FORMAT = 'pcm_24000'
+const ELEVENLABS_SAMPLE_RATE = 24000
+const ELEVENLABS_API_PATH = '/v1'
 const MAX_AUDIO_BYTES = 100 * 1024 * 1024
 const validConfigId = /^[a-zA-Z0-9_-]+$/
 
@@ -149,6 +157,7 @@ export class AIRouterSpeechService {
     }
 
     const apiKey = await this.resolveApiKey(input, config.id)
+    if (config.type === 'elevenlabs') return listElevenLabsModels(config.baseUrl, apiKey)
     const response = await fetch(`${config.baseUrl}/models`, {
       headers: { authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(30_000)
@@ -179,6 +188,10 @@ export class AIRouterSpeechService {
       )
       assertModel(manifest, request.modelId)
       return manifest.voices.map(({ id, name, languageCodes }) => ({ id, name, languageCodes }))
+    }
+    if (config.type === 'elevenlabs') {
+      const apiKey = await this.resolveApiKey(request.config, config.id)
+      return listElevenLabsVoices(config.baseUrl, apiKey)
     }
     return config.voices.map(({ id }) => ({ id }))
   }
@@ -246,12 +259,15 @@ export class AIRouterSpeechService {
     assertEnabledModel(config, modelId)
     assertEnabledVoice(config, voiceId)
     if (config.kind === 'online') {
+      if (config.type === 'elevenlabs') {
+        return this.synthesizeElevenLabs(config, modelId, voiceId, text, signal, apiKey)
+      }
       return this.synthesizeOpenAI(config, modelId, voiceId, text, format, signal, apiKey)
     }
     if (!config.modelPackageId || !config.modelPackageVersion) {
       throw new Error('本地语音 Provider 尚未选择模型包')
     }
-    if (config.type === 'openai-compatible') throw new Error('在线 Provider 配置无效')
+    if (isOnlineSpeechProviderType(config.type)) throw new Error('在线 Provider 配置无效')
     const synthesizer = this.localSynthesizers[config.type]
     if (!synthesizer) throw new Error(`本地 TTS 运行时尚未实现：${config.type}`)
     const manifest = await this.modelStore.getPackage(
@@ -288,29 +304,73 @@ export class AIRouterSpeechService {
     apiKey?: string
   ): Promise<AIRouterGeneratedAudio> {
     const resolvedApiKey = apiKey ?? (await this.secretScope().read(config.id))
-    const responseFormat = format === 'pcm-s16le' ? 'pcm' : format
-    const response = await fetch(`${config.baseUrl}/audio/speech`, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${resolvedApiKey ?? ''}`,
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: modelId,
-        input: text,
-        voice: voiceId,
-        response_format: responseFormat
-      }),
-      signal
-    })
-    if (!response.ok) throw new Error(await providerError(response, '语音合成请求失败'))
-    const data = new Uint8Array(await response.arrayBuffer())
-    if (!data.byteLength || data.byteLength > MAX_AUDIO_BYTES) {
-      throw new Error('语音合成结果大小无效')
-    }
-    const mediaType = response.headers.get('content-type')?.split(';', 1)[0] || mediaTypeFor(format)
+    const result = await this.generateOnlineSpeech(
+      createOpenAI({ apiKey: resolvedApiKey ?? '', baseURL: config.baseUrl }).speech(modelId),
+      {
+        text,
+        voiceId,
+        outputFormat: format === 'pcm-s16le' ? 'pcm' : format,
+        signal
+      }
+    )
+    const data = new Uint8Array(result.audio.uint8Array)
+    assertAudioSize(data)
+    const mediaType = responseMediaType(result) ?? mediaTypeFor(format)
     if (!mediaType.startsWith('audio/')) throw new Error('语音合成结果不是音频')
     return { data, mediaType, format }
+  }
+
+  private async synthesizeElevenLabs(
+    config: AIRouterSpeechProviderConfig,
+    modelId: string,
+    voiceId: string,
+    text: string,
+    signal?: AbortSignal,
+    apiKey?: string
+  ): Promise<AIRouterGeneratedAudio> {
+    const resolvedApiKey = apiKey ?? (await this.secretScope().read(config.id))
+    const result = await this.generateOnlineSpeech(
+      createElevenLabs({
+        apiKey: resolvedApiKey ?? '',
+        fetch: createElevenLabsFetch(config.baseUrl)
+      }).speech(modelId),
+      { text, voiceId, outputFormat: ELEVENLABS_OUTPUT_FORMAT, signal }
+    )
+    const pcm = new Uint8Array(result.audio.uint8Array)
+    assertAudioSize(pcm)
+    const samples = pcm.subarray(0, pcm.byteLength - (pcm.byteLength % 2))
+    return {
+      data: encodeWavPcm16(samples, ELEVENLABS_SAMPLE_RATE, 1),
+      mediaType: 'audio/wav',
+      format: 'wav',
+      sampleRate: ELEVENLABS_SAMPLE_RATE,
+      channels: 1,
+      durationMs: (samples.byteLength / 2 / ELEVENLABS_SAMPLE_RATE) * 1000
+    }
+  }
+
+  private async generateOnlineSpeech(
+    model: SpeechModel,
+    options: {
+      text: string
+      voiceId: string
+      outputFormat: string
+      signal?: AbortSignal
+    }
+  ): Promise<SpeechResult> {
+    try {
+      return await generateSpeech({
+        model,
+        text: options.text,
+        voice: options.voiceId,
+        outputFormat: options.outputFormat,
+        // 语音合成的重试和续跑由上层业务流程负责，单次调用不再叠加 SDK 重试。
+        maxRetries: 0,
+        abortSignal: options.signal
+      })
+    } catch (error) {
+      throw toSpeechSynthesisError(error, options.signal)
+    }
   }
 
   private async resolveTransientConfig(
@@ -345,10 +405,10 @@ export class AIRouterSpeechService {
     if (!Array.isArray(input.voices)) throw new Error('语音音色配置必须是数组')
     const models = normalizeModels(input.models)
     const voices = normalizeVoices(input.voices)
-    if (input.kind === 'online' && input.type !== 'openai-compatible') {
+    if (input.kind === 'online' && !isOnlineSpeechProviderType(input.type)) {
       throw new Error('在线语音 Provider 类型无效')
     }
-    if (input.kind === 'local' && input.type === 'openai-compatible') {
+    if (input.kind === 'local' && isOnlineSpeechProviderType(input.type)) {
       throw new Error('离线语音 Provider 类型无效')
     }
     if (
@@ -360,7 +420,10 @@ export class AIRouterSpeechService {
       throw new Error('Qwen TTS 计算后端无效')
     }
     if (input.kind === 'online') {
-      const baseUrl = (input.baseUrl?.trim() || DEFAULT_BASE_URL).replace(/\/$/, '')
+      const baseUrl = (
+        input.baseUrl?.trim() ||
+        (input.type === 'elevenlabs' ? ELEVENLABS_DEFAULT_BASE_URL : DEFAULT_BASE_URL)
+      ).replace(/\/$/, '')
       assertHttpUrl(baseUrl)
       return {
         id: input.id,
@@ -468,11 +531,18 @@ function assertProviderConfigInput(
   }
   if (
     candidate.type !== 'openai-compatible' &&
+    candidate.type !== 'elevenlabs' &&
     candidate.type !== 'pocket-tts' &&
     candidate.type !== 'qwen-tts'
   ) {
     throw new Error('语音 Provider 类型无效')
   }
+}
+
+function isOnlineSpeechProviderType(
+  type: AIRouterSpeechProviderType
+): type is AIRouterOnlineSpeechProviderType {
+  return type === 'openai-compatible' || type === 'elevenlabs'
 }
 
 function normalizeVoices(
@@ -508,6 +578,7 @@ function isProviderConfig(value: unknown): value is AIRouterSpeechProviderConfig
     typeof candidate.name === 'string' &&
     (candidate.kind === 'online' || candidate.kind === 'local') &&
     (candidate.type === 'openai-compatible' ||
+      candidate.type === 'elevenlabs' ||
       candidate.type === 'pocket-tts' ||
       candidate.type === 'qwen-tts') &&
     typeof candidate.baseUrl === 'string' &&
@@ -608,16 +679,125 @@ function mediaTypeFor(format: AIRouterSpeechAudioFormat): string {
 }
 
 async function providerError(response: Response, fallback: string): Promise<string> {
-  const body = await response.text().catch(() => '')
-  if (body) {
-    try {
-      const parsed = JSON.parse(body) as { error?: { message?: unknown } }
-      if (typeof parsed.error?.message === 'string') return parsed.error.message
-    } catch {
-      return `${fallback}（HTTP ${response.status}）`
+  const message = readProviderErrorMessage(safeParseJson(await response.text().catch(() => '')))
+  return message ?? `${fallback}（HTTP ${response.status}）`
+}
+
+function safeParseJson(value: string): unknown {
+  try {
+    return JSON.parse(value)
+  } catch {
+    return undefined
+  }
+}
+
+function toSpeechSynthesisError(error: unknown, signal?: AbortSignal): Error {
+  const candidate = error as {
+    name?: unknown
+    statusCode?: unknown
+    responseBody?: unknown
+  }
+  if (signal?.aborted || candidate?.name === 'AbortError') {
+    return new DOMException('Speech synthesis was aborted', 'AbortError')
+  }
+  if (candidate?.name === 'NoSpeechGeneratedError') return new Error('语音合成结果大小无效')
+  const message = readProviderErrorMessage(
+    typeof candidate?.responseBody === 'string' ? safeParseJson(candidate.responseBody) : undefined
+  )
+  if (message) return new Error(message)
+  if (typeof candidate?.statusCode === 'number') {
+    return new Error(`语音合成请求失败（HTTP ${candidate.statusCode}）`)
+  }
+  return error instanceof Error ? error : new Error('语音合成请求失败')
+}
+
+function assertAudioSize(data: Uint8Array): void {
+  if (!data.byteLength || data.byteLength > MAX_AUDIO_BYTES) {
+    throw new Error('语音合成结果大小无效')
+  }
+}
+
+function responseMediaType(result: SpeechResult): string | undefined {
+  return result.responses[0]?.headers?.['content-type']?.split(';', 1)[0]?.trim() || undefined
+}
+
+function createElevenLabsFetch(baseUrl: string): typeof fetch {
+  const target = baseUrl.replace(/\/$/, '')
+  return (input, init) => {
+    const source = new URL(
+      typeof input === 'string' ? input : input instanceof URL ? input.href : input.url
+    )
+    return fetch(`${target}${source.pathname}${source.search}`, init)
+  }
+}
+
+function readProviderErrorMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return null
+  const value = payload as { error?: unknown; detail?: unknown; message?: unknown }
+  for (const nested of [value.error, value.detail]) {
+    if (typeof nested === 'string') return nested
+    if (Array.isArray(nested)) {
+      const first = nested[0] as { msg?: unknown; message?: unknown } | undefined
+      if (typeof first?.msg === 'string') return first.msg
+      if (typeof first?.message === 'string') return first.message
+    }
+    if (nested && typeof nested === 'object') {
+      const message = (nested as { message?: unknown }).message
+      if (typeof message === 'string') return message
     }
   }
-  return `${fallback}（HTTP ${response.status}）`
+  return typeof value.message === 'string' ? value.message : null
+}
+
+function elevenLabsHeaders(apiKey: string | null | undefined): Record<string, string> {
+  return apiKey ? { 'xi-api-key': apiKey } : {}
+}
+
+async function listElevenLabsModels(
+  baseUrl: string,
+  apiKey: string
+): Promise<AIRouterSpeechModelOption[]> {
+  const response = await fetch(`${baseUrl}${ELEVENLABS_API_PATH}/models`, {
+    headers: elevenLabsHeaders(apiKey),
+    signal: AbortSignal.timeout(30_000)
+  })
+  if (!response.ok) throw new Error(await providerError(response, '获取语音模型列表失败'))
+  const payload: unknown = await response.json()
+  if (!Array.isArray(payload)) return []
+  return payload
+    .map((item): AIRouterSpeechModelOption | null => {
+      if (!item || typeof item !== 'object') return null
+      const value = item as { model_id?: unknown; name?: unknown; can_do_text_to_speech?: unknown }
+      if (value.can_do_text_to_speech === false) return null
+      return typeof value.model_id === 'string'
+        ? { id: value.model_id, name: typeof value.name === 'string' ? value.name : undefined }
+        : null
+    })
+    .filter((model): model is AIRouterSpeechModelOption => model !== null)
+    .sort((left, right) => left.id.localeCompare(right.id))
+}
+
+async function listElevenLabsVoices(
+  baseUrl: string,
+  apiKey: string
+): Promise<AIRouterSpeechVoiceOption[]> {
+  const response = await fetch(`${baseUrl}${ELEVENLABS_API_PATH}/voices`, {
+    headers: elevenLabsHeaders(apiKey),
+    signal: AbortSignal.timeout(30_000)
+  })
+  if (!response.ok) throw new Error(await providerError(response, '获取语音音色列表失败'))
+  const payload = (await response.json()) as { voices?: unknown }
+  if (!Array.isArray(payload?.voices)) return []
+  return payload.voices
+    .map((item): AIRouterSpeechVoiceOption | null => {
+      if (!item || typeof item !== 'object') return null
+      const value = item as { voice_id?: unknown; name?: unknown }
+      return typeof value.voice_id === 'string'
+        ? { id: value.voice_id, name: typeof value.name === 'string' ? value.name : undefined }
+        : null
+    })
+    .filter((voice): voice is AIRouterSpeechVoiceOption => voice !== null)
+    .sort((left, right) => (left.name ?? left.id).localeCompare(right.name ?? right.id))
 }
 
 function concatWav(outputs: AIRouterGeneratedAudio[]): AIRouterGeneratedAudio {

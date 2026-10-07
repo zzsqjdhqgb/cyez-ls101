@@ -629,6 +629,85 @@ describe('AIRouterSettingsPage', () => {
     )
   })
 
+  it('configures an ElevenLabs provider and discovers its voices', async () => {
+    const listSpeechModels = vi
+      .fn()
+      .mockResolvedValue([{ id: 'eleven_multilingual_v2', name: 'Eleven Multilingual v2' }])
+    const listSpeechVoices = vi
+      .fn()
+      .mockResolvedValue([{ id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam' }])
+    const saveSpeechConfig = vi
+      .fn()
+      .mockImplementation(async (input: AIRouterSpeechProviderConfigInput) => ({
+        id: 'speech-eleven',
+        name: input.name,
+        kind: input.kind,
+        type: input.type,
+        baseUrl: input.baseUrl ?? '',
+        modelPackageId: '',
+        modelPackageVersion: '',
+        models: input.models,
+        voices: input.voices,
+        hasApiKey: false
+      }))
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechModels,
+      listSpeechVoices,
+      saveSpeechConfig
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'elevenlabs' }
+    })
+    expect(within(dialog).getByLabelText('语音 Base URL')).toHaveValue('https://api.elevenlabs.io')
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
+    await waitFor(() =>
+      expect(listSpeechModels).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'elevenlabs',
+          baseUrl: 'https://api.elevenlabs.io'
+        })
+      )
+    )
+    fireEvent.click(await within(dialog).findByLabelText('eleven_multilingual_v2'))
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取音色列表' }))
+    await waitFor(() =>
+      expect(listSpeechVoices).toHaveBeenCalledWith(
+        expect.objectContaining({
+          config: expect.objectContaining({ type: 'elevenlabs' }),
+          modelId: 'eleven_multilingual_v2'
+        })
+      )
+    )
+    fireEvent.click(await within(dialog).findByLabelText('Liam (TX3LPaxmHKxFdv7VOQHJ)'))
+
+    fireEvent.change(within(dialog).getByLabelText('语音配置名称'), {
+      target: { value: 'ElevenLabs 语音' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+
+    await waitFor(() =>
+      expect(saveSpeechConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'ElevenLabs 语音',
+          kind: 'online',
+          type: 'elevenlabs',
+          baseUrl: 'https://api.elevenlabs.io',
+          models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+          voices: [{ id: 'TX3LPaxmHKxFdv7VOQHJ', enabled: true }]
+        })
+      )
+    )
+  })
+
   it('keeps Qwen on CPU while CUDA runtime packaging is disabled', async () => {
     const probeQwenTtsCuda = vi.fn()
     const saveSpeechConfig = vi

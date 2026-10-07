@@ -99,7 +99,7 @@ node scripts/test-pronunciation.js <audio-file> --text "Reference sentence"
 
 ```text
 TTS Provider
-  ├── 在线 Provider：openai-compatible
+  ├── 在线 Provider：openai-compatible、elevenlabs
   └── 离线 Provider：pocket-tts、qwen-tts 等本地运行时
 
 模型包
@@ -113,7 +113,7 @@ TTS Provider
   └── woman   -> Provider + Model + Voice
 ```
 
-Provider 表示实际的后端或本地运行时。在线 Provider 当前只支持 OpenAI Compatible 格式；离线 Provider 当前支持 Pocket TTS WASM，后续可以增加 Qwen TTS 等本地运行时。一次语音调用的具体目标由 Provider、模型和音色共同决定：
+Provider 表示实际的后端或本地运行时。在线 Provider 支持 OpenAI Compatible 和 ElevenLabs 两种 API 格式；离线 Provider 当前支持 Pocket TTS WASM，后续可以增加 Qwen TTS 等本地运行时。一次语音调用的具体目标由 Provider、模型和音色共同决定：
 
 ```typescript
 interface AIRouterSpeechTarget {
@@ -149,7 +149,7 @@ interface AIRouterSpeechProviderConfig {
   id: string
   name: string
   kind: 'online' | 'local'
-  type: 'openai-compatible' | 'pocket-tts' | 'qwen-tts'
+  type: 'openai-compatible' | 'elevenlabs' | 'pocket-tts' | 'qwen-tts'
   baseUrl: string
   modelPackageId: string
   modelPackageVersion: string
@@ -167,7 +167,17 @@ interface AIRouterSpeechProviderConfig {
 - 语音 Provider：列出、创建、编辑和删除在线或离线 Provider；摘要显示运行时、启用模型数和启用音色数。
 - TTS 模型包：列出已安装包的运行时、版本、模型数、音色数、总大小和 Provider 引用数，并提供 ZIP 导入与删除入口。
 
-在线 Provider 当前只允许选择 `openai-compatible`，配置 Base URL、独立 API Key、模型 ID 和音色 ID。模型可以从兼容服务的 `/models` 接口发现，也可以手动添加；音色 ID 由用户手动添加。已保存的 API Key 默认不返回 renderer，只有点击显示按钮时才按 Provider ID 读取。连接测试使用一个已启用模型和音色合成固定测试文本，成功后在编辑器内显示音频播放器。
+在线 Provider 可以选择 `openai-compatible` 或 `elevenlabs`，配置 Base URL、独立 API Key、模型 ID 和音色 ID。已保存的 API Key 默认不返回 renderer，只有点击显示按钮时才按 Provider ID 读取。连接测试使用一个已启用模型和音色合成固定测试文本，成功后在编辑器内显示音频播放器。
+
+两种在线格式的合成统一走 AI SDK 的语音抽象：`ai` 的 `generateSpeech()` 配合 `@ai-sdk/openai` 或 `@ai-sdk/elevenlabs` 的 `speech(modelId)` 模型。Provider 配置、密钥读取、模型与音色校验、结果大小校验、WAV 拼接和最终转码仍然由 AIRouter 自己负责，SDK 只承担单次合成的协议细节。单次调用显式使用 `maxRetries: 0`，重试和续跑由上层业务流程决定。
+
+- `openai-compatible` 用 `createOpenAI({ apiKey, baseURL })` 构造 Provider，`generateSpeech()` 向 `{baseUrl}/audio/speech` 发送 `{ model, input, voice, response_format }`。输出格式沿用 AIRouter 的 `wav`，因此可以和本地 Provider 的片段拼接。API Key 允许为空，未鉴权的本地兼容服务仍然可以调用。模型从兼容服务的 `/models` 接口发现，音色 ID 由用户手动添加。
+- `elevenlabs` 用 `createElevenLabs({ apiKey, fetch })` 构造 Provider。ElevenLabs 没有 `/audio/speech` 这类 OpenAI 兼容端点，SDK 调用的是 `POST /v1/text-to-speech/{voiceId}?output_format=pcm_24000`，请求头使用 `xi-api-key`，请求体为 `{ text, model_id }`。
+  - `@ai-sdk/elevenlabs` 没有 `baseURL` 选项，speech 端点固定为 `https://api.elevenlabs.io`。为了继续支持自定义 Base URL 和代理，AIRouter 传入一个 `fetch` 包装器，把 SDK 生成的路径重写到配置的 Base URL 上。
+  - 返回的 PCM 片段在 main process 内包装成 24 kHz 单声道 16-bit WAV，因此仍然复用统一的 WAV 拼接和最终转码流程。
+  - 模型从 `GET /v1/models` 发现并过滤掉 `can_do_text_to_speech` 为 false 的条目，音色从 `GET /v1/voices` 发现并按名称排序；SDK 不提供列举接口，这两次请求仍由 AIRouter 直接发起。
+  - Base URL 默认为 `https://api.elevenlabs.io`，可以指向代理服务。
+- SDK 抛出的 `APICallError` 会读取 `responseBody` 中的错误信息，因此 ElevenLabs 的 `detail.message` 和 OpenAI 的 `error.message` 都能作为最终错误文本展示；取消合成仍然抛出 `AbortError`。
 
 本地 Provider 当前只允许选择 `pocket-tts`。编辑器按 manifest 的 `runtime.engine` 过滤模型包：
 

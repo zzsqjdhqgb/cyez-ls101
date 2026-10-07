@@ -7,7 +7,8 @@ import type {
   AIRouterSpeechProviderConfigSummary,
   AIRouterSpeechProviderKind,
   AIRouterSpeechProviderType,
-  AIRouterSpeechVoiceConfig
+  AIRouterSpeechVoiceConfig,
+  AIRouterSpeechVoiceOption
 } from '@ls101/airouter'
 import {
   AudioLines,
@@ -62,6 +63,7 @@ type SpeechFeedbackScope =
   | 'api-key'
   | 'package'
   | 'models'
+  | 'voices'
   | 'test'
   | 'editor'
   | 'delete-provider'
@@ -69,14 +71,20 @@ type SpeechFeedbackScope =
 
 const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
+  elevenlabs: 'ElevenLabs',
   'pocket-tts': 'Pocket TTS (WASM)',
   'qwen-tts': 'Qwen3-TTS 0.6B'
 }
 
 const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
+  elevenlabs: 'ElevenLabs',
   'pocket-tts': 'Pocket TTS',
   'qwen-tts': 'Qwen3-TTS 0.6B'
+}
+
+function defaultOnlineBaseUrl(type: AIRouterSpeechProviderType): string {
+  return type === 'elevenlabs' ? 'https://api.elevenlabs.io' : 'https://api.openai.com/v1'
 }
 
 export function AIRouterSpeechSettingsPage({
@@ -92,6 +100,7 @@ export function AIRouterSpeechSettingsPage({
   const [draft, setDraft] = useState<SpeechProviderDraft | null>(null)
   const [manualModel, setManualModel] = useState('')
   const [manualVoice, setManualVoice] = useState('')
+  const [discoveredVoices, setDiscoveredVoices] = useState<AIRouterSpeechVoiceOption[]>([])
   const [testModelId, setTestModelId] = useState('')
   const [testVoiceId, setTestVoiceId] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -196,6 +205,7 @@ export function AIRouterSpeechSettingsPage({
     setTestAudioUrl(null)
     setManualModel('')
     setManualVoice('')
+    setDiscoveredVoices([])
     setTestModelId('')
     setTestVoiceId('')
     setApiKeyVisible(false)
@@ -440,11 +450,13 @@ export function AIRouterSpeechSettingsPage({
                     disabled={Boolean(draft.id) || Boolean(busy)}
                     onChange={(event) => {
                       const kind = event.target.value as AIRouterSpeechProviderKind
+                      const type: AIRouterSpeechProviderType =
+                        kind === 'online' ? 'openai-compatible' : 'pocket-tts'
                       setDraft({
                         ...draft,
                         kind,
-                        type: kind === 'online' ? 'openai-compatible' : 'pocket-tts',
-                        baseUrl: kind === 'online' ? 'https://api.openai.com/v1' : '',
+                        type,
+                        baseUrl: kind === 'online' ? defaultOnlineBaseUrl(type) : '',
                         modelPackageId: '',
                         modelPackageVersion: '',
                         models: [],
@@ -465,9 +477,12 @@ export function AIRouterSpeechSettingsPage({
                     className={styles.input}
                     disabled={Boolean(draft.id) || Boolean(busy)}
                     onChange={(event) => {
+                      const type = event.target.value as AIRouterSpeechProviderType
+                      setDiscoveredVoices([])
                       setDraft({
                         ...draft,
-                        type: event.target.value as AIRouterSpeechProviderType,
+                        type,
+                        baseUrl: draft.kind === 'online' ? defaultOnlineBaseUrl(type) : '',
                         backend: 'cpu',
                         modelPackageId: '',
                         modelPackageVersion: '',
@@ -478,7 +493,10 @@ export function AIRouterSpeechSettingsPage({
                     value={draft.type}
                   >
                     {draft.kind === 'online' ? (
-                      <option value="openai-compatible">OpenAI Compatible</option>
+                      <>
+                        <option value="openai-compatible">OpenAI Compatible</option>
+                        <option value="elevenlabs">ElevenLabs</option>
+                      </>
                     ) : (
                       <>
                         <option value="pocket-tts">Pocket TTS (WASM)</option>
@@ -636,7 +654,11 @@ export function AIRouterSpeechSettingsPage({
                 <>
                   <SettingsSection
                     title="Model ID"
-                    description="从兼容服务获取模型列表，或手动添加模型 ID。"
+                    description={
+                      draft.type === 'elevenlabs'
+                        ? '从 ElevenLabs 获取可用模型列表，或手动添加模型 ID。'
+                        : '从兼容服务获取模型列表，或手动添加模型 ID。'
+                    }
                   >
                     <div className={styles.modelToolbar}>
                       <Button
@@ -711,12 +733,62 @@ export function AIRouterSpeechSettingsPage({
                   </SettingsSection>
                   <SettingsSection
                     title="Voice ID"
-                    description="添加 OpenAI Compatible 服务支持的音色 ID。"
+                    description={
+                      draft.type === 'elevenlabs'
+                        ? '从 ElevenLabs 获取账号可用音色列表，或手动添加 Voice ID。'
+                        : '添加 OpenAI Compatible 服务支持的音色 ID。'
+                    }
                   >
                     <div className={styles.modelToolbar}>
-                      <span className={styles.modelToggle}>
-                        已配置 {draft.voices.length} 个音色
-                      </span>
+                      {draft.type === 'elevenlabs' ? (
+                        <Button
+                          icon={Download}
+                          disabled={Boolean(busy)}
+                          onClick={() =>
+                            void run(
+                              'voices',
+                              async () => {
+                                const discovered = await application.listSpeechVoices({
+                                  config: toInput(draft, apiKeyBaseline, apiKeyLoaded),
+                                  modelId: enabledModels[0]?.id ?? ''
+                                })
+                                const existing = new Map(
+                                  draft.voices.map((voice) => [voice.id, voice])
+                                )
+                                setDraft({
+                                  ...draft,
+                                  voices: discovered
+                                    .map(
+                                      (voice) =>
+                                        existing.get(voice.id) ?? { id: voice.id, enabled: false }
+                                    )
+                                    .concat(
+                                      draft.voices.filter(
+                                        (voice) =>
+                                          !discovered.some((candidate) => candidate.id === voice.id)
+                                      )
+                                    )
+                                })
+                                setDiscoveredVoices(discovered)
+                                setFeedback((current) => ({
+                                  ...current,
+                                  voices: {
+                                    kind: 'success',
+                                    text: `获取到 ${discovered.length} 个音色`
+                                  }
+                                }))
+                              },
+                              'voices'
+                            )
+                          }
+                        >
+                          获取音色列表
+                        </Button>
+                      ) : (
+                        <span className={styles.modelToggle}>
+                          已配置 {draft.voices.length} 个音色
+                        </span>
+                      )}
                       <ManualEntry
                         ariaLabel="手动语音音色 ID"
                         disabled={Boolean(busy)}
@@ -734,10 +806,14 @@ export function AIRouterSpeechSettingsPage({
                         }}
                       />
                     </div>
+                    <AIRouterOperationFeedback
+                      className={styles.modelFeedback}
+                      value={feedback.voices}
+                    />
                     <ToggleList
                       empty="尚未添加音色。"
                       items={draft.voices}
-                      itemLabel={(id) => id}
+                      itemLabel={(id) => optionName(id, discoveredVoices)}
                       removeLabel="移除语音音色"
                       onChange={(voices) => setDraft({ ...draft, voices })}
                     />
@@ -1145,7 +1221,7 @@ function packageKey(id: string, version: string): string {
 
 function optionName(
   id: string,
-  options: ReadonlyArray<{ id: string; name: string }> | undefined
+  options: ReadonlyArray<{ id: string; name?: string }> | undefined
 ): string {
   const name = options?.find((item) => item.id === id)?.name
   return name && name !== id ? `${name} (${id})` : id

@@ -1,9 +1,17 @@
 export type AIRouterProviderType = 'openai-compatible' | 'anthropic'
 export type AIRouterImageProviderType = 'manual' | 'openai-compatible'
-export type AIRouterSpeechProviderType = 'openai-compatible' | 'pocket-tts' | 'qwen-tts'
-export type AIRouterLocalSpeechProviderType = Exclude<
+export type AIRouterSpeechProviderType =
+  | 'openai-compatible'
+  | 'elevenlabs'
+  | 'pocket-tts'
+  | 'qwen-tts'
+export type AIRouterOnlineSpeechProviderType = Extract<
   AIRouterSpeechProviderType,
-  'openai-compatible'
+  'openai-compatible' | 'elevenlabs'
+>
+export type AIRouterLocalSpeechProviderType = Extract<
+  AIRouterSpeechProviderType,
+  'pocket-tts' | 'qwen-tts'
 >
 export type AIRouterSpeechProviderKind = 'online' | 'local'
 export type AIRouterQwenTtsBackend = 'cpu' | 'cuda'

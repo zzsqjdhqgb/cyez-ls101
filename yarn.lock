@@ -24,6 +24,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@ai-sdk/elevenlabs@npm:3.0.30":
+  version: 3.0.30
+  resolution: "@ai-sdk/elevenlabs@npm:3.0.30"
+  dependencies:
+    "@ai-sdk/provider": "npm:4.0.7"
+    "@ai-sdk/provider-utils": "npm:5.0.29"
+  peerDependencies:
+    zod: ^3.25.76 || ^4.1.8
+  checksum: 10c0/6873d58dea43eaacfa7f2370ad2f0bdb1d571de8f9bdc0e1504df427518b941949603be293fdade0168b85f635bebf6b40ea38b7622fbf05ff3d27cb3917c621
+  languageName: node
+  linkType: hard
+
 "@ai-sdk/gateway@npm:4.0.62":
   version: 4.0.62
   resolution: "@ai-sdk/gateway@npm:4.0.62"
@@ -1233,6 +1245,7 @@ __metadata:
   resolution: "@ls101/airouter@workspace:packages/airouter"
   dependencies:
     "@ai-sdk/anthropic": "npm:4.0.41"
+    "@ai-sdk/elevenlabs": "npm:3.0.30"
     "@ai-sdk/openai": "npm:4.0.46"
     "@ls101/config-store": "workspace:*"
     "@ls101/grading-engine": "workspace:*"
