@@ -85,7 +85,7 @@ RUN corepack enable && corepack prepare yarn@4.15.0
 RUN npm i -g \
     @anthropic-ai/claude-code@2.1.263 \
     @openai/codex@0.153.4 \
-    @deepseek-ai/dsh@0.1.5-rc.1
+    @deepseek-ai/dsh@0.2.0-rc.2
 
 # 设置工作目录为仓库代码挂载点
 WORKDIR /workspace

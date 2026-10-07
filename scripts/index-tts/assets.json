@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "package": {
+    "version": "1.0.0"
+  },
+  "release": {
+    "repository": "zzsqjdhqgb/cyez-ls101",
+    "tag": "index-tts-model-v1.0.0",
+    "prerelease": true,
+    "maxAssetBytes": 2147483648,
+    "assets": []
+  },
+  "model": {
+    "repository": "audio-cpp/audio.cpp-gguf",
+    "mirror": {
+      "provider": "modelscope",
+      "repository": "HereIsMark/audio.cpp-gguf",
+      "revision": "master"
+    },
+    "revision": "main",
+    "file": "IndexTTS2.5-GGUF/index-tts2_5-f16.gguf",
+    "quantization": "f16",
+    "size": 4547355072,
+    "sha256": "87bed9b82fc8f22119a1a1042332091016c28e37f29b0e93343ccdbfa76ef66a"
+  },
+  "runtime": {
+    "repository": "https://github.com/0xShug0/audio.cpp.git",
+    "revision": "19859a075db32ae2d5e89fe0aec3a9297304c277",
+    "helperName": "ls101-index-tts-helper",
+    "backends": ["cuda"],
+    "cudaArchitectures": "75;86-real;89-real;120a-real",
+    "helpers": []
+  },
+  "voices": [
+    {
+      "id": "american-man",
+      "name": "American English Man",
+      "file": "native/index-tts/voices/american-man.wav",
+      "manifest": "native/index-tts/voices/american-man.json",
+      "size": 457004,
+      "sha256": "1ae5ac5b80ba218a08441f623896368db080af2a47250fe979e7950b08ca7a66",
+      "sampleRate": 24000,
+      "channels": 1,
+      "durationSeconds": 9.52
+    },
+    {
+      "id": "american-woman",
+      "name": "American English Woman",
+      "file": "native/index-tts/voices/american-woman.wav",
+      "manifest": "native/index-tts/voices/american-woman.json",
+      "size": 522284,
+      "sha256": "d84992242a33494813263e795d1bc401335b79dda96de6c829c3743bc15847ac",
+      "sampleRate": 24000,
+      "channels": 1,
+      "durationSeconds": 10.88
+    }
+  ],
+  "notes": [
+    "helpers[] is filled by the build job with { runtimeDirectory, backend, name, size, sha256 }. Those digests are also copied into packages/airouter/src/main/index-tts-runtime.ts, and the application refuses to execute a package helper that is not on that allowlist.",
+    "release.assets[] is filled when the split-volume package is published: part-000… files plus volumes.json describing order, sizes, per-part digests and the whole-archive digest.",
+    "Both reference voices are synthetic, designed with Qwen3-TTS VoiceDesign (see each voice manifest); no human speaker consent is involved."
+  ]
+}

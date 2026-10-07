@@ -315,5 +315,14 @@ GPLv3 §6 要求接收方能够取得**与该二进制对应**的源码。这一
    （`externals/` 不入库，仅影响本机）。
 8. **可选：向上游反馈（P3）。** `npm-addon-*.yaml` 只需加一行 `-DSHERPA_ONNX_ENABLE_TTS=OFF`
    （或为 Node 单独出 no-tts 平台包），npm 包就不再夹带 GPL 的 eSpeak。届时本仓库的替换机制可以整体移除。
+9. **IndexTTS 2.5 引入新的模型许可义务（P1）。** 权重与上游代码适用 bilibili 模型使用许可协议
+   （非 OSI；§1.5(iii) 把转换/量化权重定义为 Derivative Work）。协议英文/中文全文与免责声明
+   已 vendor 进 `thirdparty-licenses/LICENSE.bilibili-index-tts.txt`、`LICENSE.bilibili-index-tts.zh.txt`
+   （§9 规定以中文为准）与 `DISCLAIMER.bilibili-index-tts.txt`。要点：§3.4(b) 每份分发都要保留协议与
+   版权声明；§3.4(a) 需向下游传递同等条款并对下游违约负责；§4.1(a) 分发 Derivative Work 时需附
+   「未获原始权利人背书/担保」声明；§2.2 在月活 >1 亿或年营收 >10 亿元人民币时需另行取得授权；
+   DISCLAIMER 另含未授权不得商用合成语音等使用限制。若最终选择 Python sidecar 路线，安装包 NOTICE
+   还需覆盖 LGPL 组件（`soxr` LGPL-2.1+、`opencv-python` 内含 FFmpeg LGPL-2.1 与 Qt5 LGPL-3.0）。
+   详见 `docs/engineering/index-tts.md` 的 Licensing 一节。
 
 > 本文只做工程层面的证据整理，不构成法律意见。

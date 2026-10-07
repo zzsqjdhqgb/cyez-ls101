@@ -6,6 +6,7 @@ import {
   type OpenDialogOptions,
   type WebContents
 } from 'electron'
+import path from 'node:path'
 import { AIROUTER_CHANNELS } from '../shared'
 import type {
   AIRouterConnectionTestInput,
@@ -34,6 +35,8 @@ import { AIRouterSpeechRecognitionService } from './speech-recognition-service'
 import { AIRouterPronunciationAssessmentService } from './pronunciation-assessment-service'
 import { PocketTtsSynthesizer } from './pocket-tts'
 import { QwenTtsSynthesizer } from './qwen-tts'
+import { IndexTtsSynthesizer } from './index-tts'
+import { probeNvidiaGpu } from './gpu-probe'
 
 export { AIRouterService } from './service'
 export { AIRouterImageService } from './image-service'
@@ -44,6 +47,7 @@ export { AIRouterSpeechModelStore, AIRouterSpeechRecognitionModelStore } from '.
 export { AIRouterExtensionStore } from './extension-store'
 export { PocketTtsSynthesizer } from './pocket-tts'
 export { QwenTtsSynthesizer } from './qwen-tts'
+export { IndexTtsSynthesizer } from './index-tts'
 export type { AIRouterServiceOptions } from './service'
 export type {
   AIRouterLocalSpeechRequest,
@@ -68,6 +72,9 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
   const service = new AIRouterService(options)
   const imageService = new AIRouterImageService(options)
   const qwenTtsSynthesizer = new QwenTtsSynthesizer()
+  const indexTtsSynthesizer = new IndexTtsSynthesizer({
+    runtimeRoot: path.join(options.baseDir, 'models', 'tts', 'runtime')
+  })
   const speechService = new AIRouterSpeechService({
     baseDir: options.baseDir,
     appVersion: app.getVersion(),
@@ -75,10 +82,14 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
     secretStorage: options.secretStorage,
     localSynthesizers: {
       'pocket-tts': new PocketTtsSynthesizer(options.workerUrls?.pocketTts),
-      'qwen-tts': qwenTtsSynthesizer
+      'qwen-tts': qwenTtsSynthesizer,
+      'index-tts': indexTtsSynthesizer
     }
   })
-  app.once('will-quit', () => qwenTtsSynthesizer.dispose())
+  app.once('will-quit', () => {
+    qwenTtsSynthesizer.dispose()
+    indexTtsSynthesizer.dispose()
+  })
   const recognitionService = new AIRouterSpeechRecognitionService({
     baseDir: options.baseDir,
     appVersion: app.getVersion(),
@@ -176,6 +187,7 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
     (_event, request: AIRouterSpeechConnectionTestInput) => speechService.testConnection(request)
   )
   ipcMain.handle(AIROUTER_CHANNELS.probeQwenTtsCuda, () => qwenTtsSynthesizer.probeCuda())
+  ipcMain.handle(AIROUTER_CHANNELS.probeIndexTtsGpu, () => probeNvidiaGpu())
   ipcMain.handle(AIROUTER_CHANNELS.listRecognitionConfigs, () =>
     recognitionService.listProviderConfigs()
   )

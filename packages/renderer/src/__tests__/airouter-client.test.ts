@@ -244,6 +244,7 @@ function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
     probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
+    probeIndexTtsGpu: vi.fn().mockResolvedValue({ available: false, recommendedBackend: 'cuda', recommendedWeightType: 'f16', summary: '' }),
     listSpeechRecognitionModels: vi.fn(),
     listSpeechRecognitionProviderConfigs: vi.fn(),
     saveSpeechRecognitionProviderConfig: vi.fn(),

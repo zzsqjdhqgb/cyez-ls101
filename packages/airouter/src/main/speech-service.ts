@@ -352,12 +352,12 @@ export class AIRouterSpeechService {
       throw new Error('离线语音 Provider 类型无效')
     }
     if (
-      input.type === 'qwen-tts' &&
+      (input.type === 'qwen-tts' || input.type === 'index-tts') &&
       input.backend !== undefined &&
       input.backend !== 'cpu' &&
       input.backend !== 'cuda'
     ) {
-      throw new Error('Qwen TTS 计算后端无效')
+      throw new Error(input.type === 'qwen-tts' ? 'Qwen TTS 计算后端无效' : 'IndexTTS 计算后端无效')
     }
     if (input.kind === 'online') {
       const baseUrl = (input.baseUrl?.trim() || DEFAULT_BASE_URL).replace(/\/$/, '')
@@ -397,7 +397,11 @@ export class AIRouterSpeechService {
       modelPackageVersion,
       models: modelPackageId ? models : [],
       voices: modelPackageId ? voices : [],
-      ...(input.type === 'qwen-tts' ? { backend: 'cpu' as const } : {})
+      ...(input.type === 'qwen-tts'
+        ? { backend: 'cpu' as const }
+        : input.type === 'index-tts'
+          ? { backend: input.backend === 'cuda' ? ('cuda' as const) : ('cpu' as const) }
+          : {})
     }
   }
 
@@ -426,9 +430,16 @@ export class AIRouterSpeechService {
     const document: StoredDocument = value
     return {
       ...document,
-      providers: document.providers.map((config) =>
-        config.type === 'qwen-tts' ? { ...config, backend: 'cpu' } : config
-      )
+      providers: document.providers.map((config) => {
+        if (config.type === 'qwen-tts') return { ...config, backend: 'cpu' as const }
+        if (config.type === 'index-tts') {
+          return {
+            ...config,
+            backend: config.backend === 'cuda' ? ('cuda' as const) : ('cpu' as const)
+          }
+        }
+        return config
+      })
     }
   }
 
@@ -469,7 +480,8 @@ function assertProviderConfigInput(
   if (
     candidate.type !== 'openai-compatible' &&
     candidate.type !== 'pocket-tts' &&
-    candidate.type !== 'qwen-tts'
+    candidate.type !== 'qwen-tts' &&
+    candidate.type !== 'index-tts'
   ) {
     throw new Error('语音 Provider 类型无效')
   }
@@ -509,7 +521,8 @@ function isProviderConfig(value: unknown): value is AIRouterSpeechProviderConfig
     (candidate.kind === 'online' || candidate.kind === 'local') &&
     (candidate.type === 'openai-compatible' ||
       candidate.type === 'pocket-tts' ||
-      candidate.type === 'qwen-tts') &&
+      candidate.type === 'qwen-tts' ||
+      candidate.type === 'index-tts') &&
     typeof candidate.baseUrl === 'string' &&
     typeof candidate.modelPackageId === 'string' &&
     typeof candidate.modelPackageVersion === 'string' &&

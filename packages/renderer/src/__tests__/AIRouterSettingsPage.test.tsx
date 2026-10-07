@@ -678,6 +678,79 @@ describe('AIRouterSettingsPage', () => {
     )
   })
 
+  it('shows the detected GPU and preselects CUDA for an IndexTTS provider', async () => {
+    const probeIndexTtsGpu = vi.fn().mockResolvedValue({
+      available: true,
+      name: 'NVIDIA GeForce RTX 4060',
+      vramMiB: 8188,
+      computeCapability: '8.9',
+      driverVersion: '572.16',
+      recommendedBackend: 'cuda',
+      recommendedWeightType: 'f16',
+      summary:
+        '检测到 NVIDIA GeForce RTX 4060 / 8.0 GB / sm_89，可使用 CUDA 合成与 fp16 模型包（4.55 GB）。'
+    })
+    const application = applicationWith({
+      probeIndexTtsGpu,
+      listSpeechPackages: vi.fn().mockResolvedValue([
+        {
+          ...createSpeechPackageSummary(),
+          package: {
+            id: 'index-tts-f16',
+            version: '1.0.0',
+            name: 'IndexTTS 2.5 fp16',
+            description: 'IndexTTS 2.5 fp16 model'
+          },
+          runtime: { engine: 'index-tts' as const, engineApiVersion: 1 },
+          models: [
+            {
+              id: 'index-tts2.5-f16',
+              name: 'IndexTTS 2.5 fp16',
+              languageCodes: ['zh', 'en'],
+              artifacts: {
+                'tts-model': ['models/index-tts2_5-f16.gguf'],
+                'runtime-helper': ['runtime/win32-x64/ls101-index-tts-helper-cuda.exe']
+              },
+              parameters: {}
+            }
+          ],
+          voices: [
+            {
+              id: 'american-woman',
+              name: 'American English Woman',
+              languageCodes: ['en'],
+              files: ['voices/american-woman.wav']
+            }
+          ]
+        }
+      ]),
+      listSpeechConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'index-local',
+          name: 'IndexTTS 本地语音',
+          kind: 'local',
+          type: 'index-tts',
+          baseUrl: '',
+          modelPackageId: '',
+          modelPackageVersion: '',
+          models: [],
+          voices: [],
+          backend: 'cuda',
+          hasApiKey: false
+        }
+      ])
+    })
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+    const provider = await screen.findByRole('button', { name: /IndexTTS 本地语音/ })
+    expect(within(provider).getByText('CUDA')).toBeInTheDocument()
+    fireEvent.click(provider)
+    const dialog = await screen.findByRole('dialog', { name: 'IndexTTS 本地语音' })
+
+    expect(within(dialog).getByLabelText('IndexTTS 计算后端')).toHaveValue('cuda')
+    expect(await within(dialog).findByText(/RTX 4060/)).toBeInTheDocument()
+    expect(probeIndexTtsGpu).toHaveBeenCalled()
+  })
+
   it('manages image Providers without a default Provider control', async () => {
     const manualProvider = {
       id: 'manual',
@@ -805,6 +878,14 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
     probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
+    probeIndexTtsGpu: vi
+      .fn()
+      .mockResolvedValue({
+        available: false,
+        recommendedBackend: 'cuda',
+        recommendedWeightType: 'f16',
+        summary: ''
+      }),
     getPronunciationExtensionStatus: vi.fn().mockResolvedValue({
       extensionId: 'charsiu-en-w2v2-pronunciation',
       requiredVersion: '1.0.0',
