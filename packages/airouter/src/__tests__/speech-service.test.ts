@@ -429,7 +429,10 @@ describe('AIRouterSpeechService', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('maps MiniMax speech requests and wraps hex PCM output into WAV', async () => {
+  it.each([
+    ['minimax', 'https://api.minimax.io'],
+    ['minimax-cn', 'https://api.minimax.cn']
+  ] as const)('maps %s speech requests and wraps hex PCM output into WAV', async (type, host) => {
     const pcm = createPcm(480)
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
@@ -447,8 +450,8 @@ describe('AIRouterSpeechService', () => {
       id: 'minimax-speech',
       name: 'MiniMax Speech',
       kind: 'online',
-      type: 'minimax',
-      baseUrl: 'https://api.minimax.io/',
+      type,
+      baseUrl: `${host}/`,
       models: [{ id: 'speech-2.8-hd', enabled: true }],
       voices: [{ id: 'English_Graceful_Lady', enabled: true }],
       apiKey: 'minimax-secret'
@@ -456,8 +459,8 @@ describe('AIRouterSpeechService', () => {
 
     expect(saved).toEqual(
       expect.objectContaining({
-        type: 'minimax',
-        baseUrl: 'https://api.minimax.io',
+        type,
+        baseUrl: host,
         modelPackageId: '',
         hasApiKey: true
       })
@@ -475,7 +478,7 @@ describe('AIRouterSpeechService', () => {
     })
 
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://api.minimax.io/v1/t2a_v2',
+      `${host}/v1/t2a_v2`,
       expect.objectContaining({
         method: 'POST',
         headers: expect.objectContaining({ authorization: 'Bearer minimax-secret' }),
@@ -502,31 +505,37 @@ describe('AIRouterSpeechService', () => {
     expect(result.data.byteLength).toBe(pcm.byteLength + 44)
   })
 
-  it('defaults a MiniMax provider to the official API base URL', async () => {
+  it.each([
+    ['minimax', 'https://api.minimax.io'],
+    ['minimax-cn', 'https://api.minimax.cn']
+  ] as const)('defaults a %s provider to its regional base URL', async (type, host) => {
     const saved = await service.saveProviderConfig({
       id: 'minimax-default',
       name: 'MiniMax Default',
       kind: 'online',
-      type: 'minimax',
+      type,
       models: [],
       voices: []
     })
 
-    expect(saved.baseUrl).toBe('https://api.minimax.io')
+    expect(saved.baseUrl).toBe(host)
   })
 
-  it('rejects MiniMax as a local provider runtime', async () => {
-    await expect(
-      service.saveProviderConfig({
-        id: 'minimax-local',
-        name: 'MiniMax Local',
-        kind: 'local',
-        type: 'minimax',
-        models: [],
-        voices: []
-      })
-    ).rejects.toThrow('离线语音 Provider 类型无效')
-  })
+  it.each(['minimax', 'minimax-cn'] as const)(
+    'rejects %s as a local provider runtime',
+    async (type) => {
+      await expect(
+        service.saveProviderConfig({
+          id: 'minimax-local',
+          name: 'MiniMax Local',
+          kind: 'local',
+          type,
+          models: [],
+          voices: []
+        })
+      ).rejects.toThrow('离线语音 Provider 类型无效')
+    }
+  )
 
   it('reports MiniMax errors that arrive with an HTTP 200 response', async () => {
     vi.stubGlobal(

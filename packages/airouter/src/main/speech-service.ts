@@ -43,6 +43,7 @@ const ELEVENLABS_OUTPUT_FORMAT = 'pcm_24000'
 const ELEVENLABS_SAMPLE_RATE = 24000
 const ELEVENLABS_API_PATH = '/v1'
 const MINIMAX_DEFAULT_BASE_URL = 'https://api.minimax.io'
+const MINIMAX_CN_DEFAULT_BASE_URL = 'https://api.minimax.cn'
 const MINIMAX_TTS_PATH = '/v1/t2a_v2'
 const MINIMAX_VOICE_PATH = '/v1/get_voice'
 const MINIMAX_AUDIO_FORMAT = 'pcm'
@@ -174,7 +175,7 @@ export class AIRouterSpeechService {
 
     const apiKey = await this.resolveApiKey(input, config.id)
     if (config.type === 'elevenlabs') return listElevenLabsModels(config.baseUrl, apiKey)
-    if (config.type === 'minimax') return listMinimaxModels()
+    if (isMinimaxSpeechProviderType(config.type)) return listMinimaxModels()
     const response = await fetch(`${config.baseUrl}/models`, {
       headers: { authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(30_000)
@@ -210,7 +211,7 @@ export class AIRouterSpeechService {
       const apiKey = await this.resolveApiKey(request.config, config.id)
       return listElevenLabsVoices(config.baseUrl, apiKey)
     }
-    if (config.type === 'minimax') {
+    if (isMinimaxSpeechProviderType(config.type)) {
       const apiKey = await this.resolveApiKey(request.config, config.id)
       return listMinimaxVoices(config.baseUrl, apiKey)
     }
@@ -283,7 +284,7 @@ export class AIRouterSpeechService {
       if (config.type === 'elevenlabs') {
         return this.synthesizeElevenLabs(config, modelId, voiceId, text, signal, apiKey)
       }
-      if (config.type === 'minimax') {
+      if (isMinimaxSpeechProviderType(config.type)) {
         return this.synthesizeMinimax(config, modelId, voiceId, text, signal, apiKey)
       }
       return this.synthesizeOpenAI(config, modelId, voiceId, text, format, signal, apiKey)
@@ -601,6 +602,7 @@ function assertProviderConfigInput(
     candidate.type !== 'openai-compatible' &&
     candidate.type !== 'elevenlabs' &&
     candidate.type !== 'minimax' &&
+    candidate.type !== 'minimax-cn' &&
     candidate.type !== 'pocket-tts' &&
     candidate.type !== 'qwen-tts'
   ) {
@@ -611,12 +613,22 @@ function assertProviderConfigInput(
 function isOnlineSpeechProviderType(
   type: AIRouterSpeechProviderType
 ): type is AIRouterOnlineSpeechProviderType {
-  return type === 'openai-compatible' || type === 'elevenlabs' || type === 'minimax'
+  return (
+    type === 'openai-compatible' ||
+    type === 'elevenlabs' ||
+    type === 'minimax' ||
+    type === 'minimax-cn'
+  )
+}
+
+function isMinimaxSpeechProviderType(type: AIRouterSpeechProviderType): boolean {
+  return type === 'minimax' || type === 'minimax-cn'
 }
 
 function defaultOnlineBaseUrl(type: AIRouterSpeechProviderType): string {
   if (type === 'elevenlabs') return ELEVENLABS_DEFAULT_BASE_URL
   if (type === 'minimax') return MINIMAX_DEFAULT_BASE_URL
+  if (type === 'minimax-cn') return MINIMAX_CN_DEFAULT_BASE_URL
   return DEFAULT_BASE_URL
 }
 
@@ -655,6 +667,7 @@ function isProviderConfig(value: unknown): value is AIRouterSpeechProviderConfig
     (candidate.type === 'openai-compatible' ||
       candidate.type === 'elevenlabs' ||
       candidate.type === 'minimax' ||
+      candidate.type === 'minimax-cn' ||
       candidate.type === 'pocket-tts' ||
       candidate.type === 'qwen-tts') &&
     typeof candidate.baseUrl === 'string' &&

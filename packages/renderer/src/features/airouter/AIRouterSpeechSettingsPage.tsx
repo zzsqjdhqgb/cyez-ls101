@@ -73,6 +73,7 @@ const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   elevenlabs: 'ElevenLabs',
   minimax: 'MiniMax',
+  'minimax-cn': 'MiniMax 国内版',
   'pocket-tts': 'Pocket TTS (WASM)',
   'qwen-tts': 'Qwen3-TTS 0.6B'
 }
@@ -81,6 +82,7 @@ const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   elevenlabs: 'ElevenLabs',
   minimax: 'MiniMax',
+  'minimax-cn': 'MiniMax 国内版',
   'pocket-tts': 'Pocket TTS',
   'qwen-tts': 'Qwen3-TTS 0.6B'
 }
@@ -88,11 +90,16 @@ const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
 function defaultOnlineBaseUrl(type: AIRouterSpeechProviderType): string {
   if (type === 'elevenlabs') return 'https://api.elevenlabs.io'
   if (type === 'minimax') return 'https://api.minimax.io'
+  if (type === 'minimax-cn') return 'https://api.minimax.cn'
   return 'https://api.openai.com/v1'
 }
 
+function isMinimaxType(type: AIRouterSpeechProviderType): boolean {
+  return type === 'minimax' || type === 'minimax-cn'
+}
+
 function supportsRemoteVoiceDiscovery(type: AIRouterSpeechProviderType): boolean {
-  return type === 'elevenlabs' || type === 'minimax'
+  return type === 'elevenlabs' || isMinimaxType(type)
 }
 
 export function AIRouterSpeechSettingsPage({
@@ -505,6 +512,7 @@ export function AIRouterSpeechSettingsPage({
                         <option value="openai-compatible">OpenAI Compatible</option>
                         <option value="elevenlabs">ElevenLabs</option>
                         <option value="minimax">MiniMax</option>
+                        <option value="minimax-cn">MiniMax 国内版</option>
                       </>
                     ) : (
                       <>
@@ -666,7 +674,7 @@ export function AIRouterSpeechSettingsPage({
                     description={
                       draft.type === 'elevenlabs'
                         ? '从 ElevenLabs 获取可用模型列表，或手动添加模型 ID。'
-                        : draft.type === 'minimax'
+                        : isMinimaxType(draft.type)
                           ? '使用 MiniMax 内置的语音模型列表，或手动添加模型 ID。'
                           : '从兼容服务获取模型列表，或手动添加模型 ID。'
                     }
@@ -747,7 +755,7 @@ export function AIRouterSpeechSettingsPage({
                     description={
                       draft.type === 'elevenlabs'
                         ? '从 ElevenLabs 获取账号可用音色列表，或手动添加 Voice ID。'
-                        : draft.type === 'minimax'
+                        : isMinimaxType(draft.type)
                           ? '从 MiniMax 获取账号可用音色（含克隆音色）列表，或手动添加 Voice ID。'
                           : '添加 OpenAI Compatible 服务支持的音色 ID。'
                     }

@@ -782,6 +782,24 @@ describe('AIRouterSettingsPage', () => {
     )
   })
 
+  it('offers MiniMax 国内版 with its regional base URL', async () => {
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([])
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax-cn' }
+    })
+
+    expect(within(dialog).getByLabelText('语音 Base URL')).toHaveValue('https://api.minimax.cn')
+    expect(within(dialog).getByRole('button', { name: '获取音色列表' })).toBeInTheDocument()
+  })
+
   it('keeps Qwen on CPU while CUDA runtime packaging is disabled', async () => {
     const probeQwenTtsCuda = vi.fn()
     const saveSpeechConfig = vi

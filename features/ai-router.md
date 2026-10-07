@@ -99,7 +99,7 @@ node scripts/test-pronunciation.js <audio-file> --text "Reference sentence"
 
 ```text
 TTS Provider
-  ├── 在线 Provider：openai-compatible、elevenlabs、minimax
+  ├── 在线 Provider：openai-compatible、elevenlabs、minimax、minimax-cn
   └── 离线 Provider：pocket-tts、qwen-tts 等本地运行时
 
 模型包
@@ -149,7 +149,7 @@ interface AIRouterSpeechProviderConfig {
   id: string
   name: string
   kind: 'online' | 'local'
-  type: 'openai-compatible' | 'elevenlabs' | 'minimax' | 'pocket-tts' | 'qwen-tts'
+  type: 'openai-compatible' | 'elevenlabs' | 'minimax' | 'minimax-cn' | 'pocket-tts' | 'qwen-tts'
   baseUrl: string
   modelPackageId: string
   modelPackageVersion: string
@@ -167,7 +167,7 @@ interface AIRouterSpeechProviderConfig {
 - 语音 Provider：列出、创建、编辑和删除在线或离线 Provider；摘要显示运行时、启用模型数和启用音色数。
 - TTS 模型包：列出已安装包的运行时、版本、模型数、音色数、总大小和 Provider 引用数，并提供 ZIP 导入与删除入口。
 
-在线 Provider 可以选择 `openai-compatible`、`elevenlabs` 或 `minimax`，配置 Base URL、独立 API Key、模型 ID 和音色 ID。已保存的 API Key 默认不返回 renderer，只有点击显示按钮时才按 Provider ID 读取。连接测试使用一个已启用模型和音色合成固定测试文本，成功后在编辑器内显示音频播放器。
+在线 Provider 可以选择 `openai-compatible`、`elevenlabs`、`minimax` 或 `minimax-cn`，配置 Base URL、独立 API Key、模型 ID 和音色 ID。已保存的 API Key 默认不返回 renderer，只有点击显示按钮时才按 Provider ID 读取。连接测试使用一个已启用模型和音色合成固定测试文本，成功后在编辑器内显示音频播放器。
 
 `openai-compatible` 和 `elevenlabs` 的合成走 AI SDK 的语音抽象：`ai` 的 `generateSpeech()` 配合 `@ai-sdk/openai` 或 `@ai-sdk/elevenlabs` 的 `speech(modelId)` 模型。Provider 配置、密钥读取、模型与音色校验、结果大小校验、WAV 拼接和最终转码仍然由 AIRouter 自己负责，SDK 只承担单次合成的协议细节。单次调用显式使用 `maxRetries: 0`，重试和续跑由上层业务流程决定。
 
@@ -182,7 +182,7 @@ interface AIRouterSpeechProviderConfig {
   - MiniMax 把音频放在 `data.audio` 里并以十六进制字符串返回，AIRouter 解码后包装成 WAV；`extra_info.audio_sample_rate` 和 `audio_channel` 有值时按实际值写入容器。MiniMax 的接口错误同样是 HTTP 200，因此除了 `response.ok` 还必须检查 `base_resp.status_code`。
   - MiniMax 没有模型列举接口，设置页使用 T2A 请求体允许的固定模型集合：`speech-2.8-hd`、`speech-2.8-turbo`、`speech-2.6-hd`、`speech-2.6-turbo`、`speech-02-hd`、`speech-02-turbo`、`speech-01-hd`、`speech-01-turbo`。
   - 音色从 `POST /v1/get_voice`（`voice_type: all`）发现，合并系统音色、快速克隆音色和文本生成音色后按名称排序。
-  - Base URL 默认为 `https://api.minimax.io`，国内平台可以改为 `https://api.minimaxi.com`。
+  - `minimax` 和 `minimax-cn` 使用完全相同的协议实现，只是默认 Base URL 不同：`minimax` 默认 `https://api.minimax.io`，`minimax-cn` 默认 `https://api.minimax.cn`，两者都可以改成代理地址。
 - SDK 抛出的 `APICallError` 会读取 `responseBody` 中的错误信息，因此 ElevenLabs 的 `detail.message` 和 OpenAI 的 `error.message` 都能作为最终错误文本展示；MiniMax 的错误文本来自 `base_resp.status_msg`。取消合成仍然抛出 `AbortError`。
 
 本地 Provider 当前只允许选择 `pocket-tts`。编辑器按 manifest 的 `runtime.engine` 过滤模型包：
