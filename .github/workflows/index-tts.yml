@@ -370,7 +370,8 @@ jobs:
 
   # The protocol between the app and the helper is the one contract that must not drift. This job
   # compiles the real helper with its stub engine (no CUDA, no weights) and runs the same contract
-  # test the developer runs locally.
+  # test the developer runs locally; it then compiles the scratch double in native/index-tts/stub/
+  # and runs that same test against it, so the double cannot rot either.
   contract:
     runs-on: ubuntu-latest
     steps:
@@ -402,6 +403,18 @@ jobs:
         shell: bash
         env:
           LS101_INDEX_TTS_STUB: /tmp/ls101-index-tts-helper-cuda
+        run: yarn vitest run packages/airouter/src/__tests__/index-tts-contract.test.ts
+
+      - name: Compile the stub double
+        shell: bash
+        run: |
+          g++ -O2 -std=c++17 -Wall -Wextra -Wpedantic \
+            -o /tmp/ls101-index-tts-helper-double native/index-tts/stub/helper-stub.cpp
+
+      - name: Run the contract test against the stub double
+        shell: bash
+        env:
+          LS101_INDEX_TTS_STUB: /tmp/ls101-index-tts-helper-double
         run: yarn vitest run packages/airouter/src/__tests__/index-tts-contract.test.ts
 
   release:
