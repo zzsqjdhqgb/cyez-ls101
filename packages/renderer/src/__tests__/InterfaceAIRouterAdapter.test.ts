@@ -166,7 +166,6 @@ function clientWith(overrides: Partial<AIRouterClient>): AIRouterClient {
     listSpeechVoices: vi.fn().mockResolvedValue([]),
     testSpeechConnection: vi.fn(),
     probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
-    probeIndexTtsGpu: vi.fn().mockResolvedValue({ available: false, recommendedBackend: 'cuda', recommendedWeightType: 'f16', summary: '' }),
     listSpeechRecognitionProviderConfigs: vi.fn().mockResolvedValue([]),
     saveSpeechRecognitionProviderConfig: vi.fn(),
     deleteSpeechRecognitionProviderConfig: vi.fn(),

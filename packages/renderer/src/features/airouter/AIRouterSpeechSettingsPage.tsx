@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import type {
   AIRouterModelConfig,
-  AIRouterGpuProbeResult,
-  AIRouterSpeechBackend,
+  AIRouterQwenTtsBackend,
   AIRouterSpeechModelPackageSummary,
   AIRouterSpeechProviderConfigInput,
   AIRouterSpeechProviderConfigSummary,
@@ -54,7 +53,7 @@ interface SpeechProviderDraft {
   modelPackageVersion: string
   models: AIRouterModelConfig[]
   voices: AIRouterSpeechVoiceConfig[]
-  backend: AIRouterSpeechBackend
+  backend: AIRouterQwenTtsBackend
   apiKey: string
   hasApiKey: boolean
 }
@@ -71,15 +70,13 @@ type SpeechFeedbackScope =
 const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   'pocket-tts': 'Pocket TTS (WASM)',
-  'qwen-tts': 'Qwen3-TTS 0.6B',
-  'index-tts': 'IndexTTS 2.5'
+  'qwen-tts': 'Qwen3-TTS 0.6B'
 }
 
 const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   'pocket-tts': 'Pocket TTS',
-  'qwen-tts': 'Qwen3-TTS 0.6B',
-  'index-tts': 'IndexTTS 2.5'
+  'qwen-tts': 'Qwen3-TTS 0.6B'
 }
 
 export function AIRouterSpeechSettingsPage({
@@ -109,24 +106,6 @@ export function AIRouterSpeechSettingsPage({
   const [deletePackageTarget, setDeletePackageTarget] =
     useState<AIRouterSpeechModelPackageSummary | null>(null)
   const [testAudioUrl, setTestAudioUrl] = useState<string | null>(null)
-  const [gpuProbe, setGpuProbe] = useState<AIRouterGpuProbeResult | null>(null)
-  const [gpuProbeBusy, setGpuProbeBusy] = useState(false)
-
-  const runGpuProbe = useCallback(async (): Promise<void> => {
-    setGpuProbeBusy(true)
-    try {
-      setGpuProbe(await application.probeIndexTtsGpu())
-    } catch {
-      setGpuProbe(null)
-    } finally {
-      setGpuProbeBusy(false)
-    }
-  }, [application])
-
-  useEffect(() => {
-    if (draft?.type !== 'index-tts' || gpuProbe || gpuProbeBusy) return
-    void runGpuProbe()
-  }, [draft?.type, gpuProbe, gpuProbeBusy, runGpuProbe])
 
   const loadSettings = useCallback(async (): Promise<void> => {
     const requestId = loadRequest.current + 1
@@ -318,9 +297,6 @@ export function AIRouterSpeechSettingsPage({
                     <span>{providerLabels[config.type]}</span>
                     <span>{config.kind === 'local' ? '本地' : '在线'}</span>
                     {config.type === 'qwen-tts' ? <span>CPU</span> : null}
-                    {config.type === 'index-tts' ? (
-                      <span>{config.backend === 'cuda' ? 'CUDA' : 'CPU'}</span>
-                    ) : null}
                     <span>{config.models.filter((model) => model.enabled).length} 个模型</span>
                     <span>{config.voices.filter((voice) => voice.enabled).length} 个音色</span>
                   </span>
@@ -492,7 +468,7 @@ export function AIRouterSpeechSettingsPage({
                       setDraft({
                         ...draft,
                         type: event.target.value as AIRouterSpeechProviderType,
-                        backend: event.target.value === 'index-tts' ? 'cuda' : 'cpu',
+                        backend: 'cpu',
                         modelPackageId: '',
                         modelPackageVersion: '',
                         models: [],
@@ -507,7 +483,6 @@ export function AIRouterSpeechSettingsPage({
                       <>
                         <option value="pocket-tts">Pocket TTS (WASM)</option>
                         <option value="qwen-tts">Qwen3-TTS 0.6B</option>
-                        <option value="index-tts">IndexTTS 2.5</option>
                       </>
                     )}
                   </select>
@@ -627,44 +602,6 @@ export function AIRouterSpeechSettingsPage({
                           ))}
                         </select>
                       </SettingsRow>
-                      {draft.type === 'index-tts' ? (
-                        <>
-                          <SettingsRow label="计算后端">
-                            <select
-                              aria-label="IndexTTS 计算后端"
-                              className={styles.inputWide}
-                              disabled={Boolean(busy)}
-                              onChange={(event) =>
-                                setDraft({
-                                  ...draft,
-                                  backend: event.target.value as AIRouterSpeechBackend
-                                })
-                              }
-                              value={draft.backend}
-                            >
-                              <option value="cpu">CPU（仅供调试，不受支持）</option>
-                              <option value="cuda">NVIDIA GPU（CUDA）</option>
-                            </select>
-                          </SettingsRow>
-                          <SettingsRow label="本机 GPU">
-                            <div className={styles.modelNotice}>
-                              <div>
-                                {gpuProbeBusy
-                                  ? '正在检测本机 GPU…'
-                                  : (gpuProbe?.summary ?? '尚未检测本机 GPU')}
-                              </div>
-                              <button
-                                className={styles.addModel}
-                                disabled={gpuProbeBusy}
-                                onClick={() => void runGpuProbe()}
-                                type="button"
-                              >
-                                重新检测
-                              </button>
-                            </div>
-                          </SettingsRow>
-                        </>
-                      ) : null}
                     </SettingsSection>
                     {selectedPackage ? (
                       <ModelVoiceSections
@@ -1156,12 +1093,7 @@ function toInput(
     baseUrl: draft.kind === 'online' ? draft.baseUrl : undefined,
     modelPackageId: draft.kind === 'local' ? draft.modelPackageId : undefined,
     modelPackageVersion: draft.kind === 'local' ? draft.modelPackageVersion : undefined,
-    backend:
-      draft.kind === 'local' && draft.type === 'qwen-tts'
-        ? 'cpu'
-        : draft.kind === 'local' && draft.type === 'index-tts'
-          ? draft.backend
-          : undefined,
+    backend: draft.kind === 'local' && draft.type === 'qwen-tts' ? 'cpu' : undefined,
     models: draft.models,
     voices: draft.voices,
     apiKey:

@@ -50,49 +50,6 @@ describe('AIRouterSpeechService', () => {
     expect(cpu.backend).toBe('cpu')
   })
 
-  it('persists the CUDA backend for IndexTTS providers', async () => {
-    const cuda = await service.saveProviderConfig({
-      id: 'index-cuda',
-      name: 'IndexTTS CUDA',
-      kind: 'local',
-      type: 'index-tts',
-      backend: 'cuda',
-      models: [],
-      voices: []
-    })
-    const cpu = await service.saveProviderConfig({
-      id: 'index-cpu',
-      name: 'IndexTTS CPU',
-      kind: 'local',
-      type: 'index-tts',
-      models: [],
-      voices: []
-    })
-
-    expect(cuda.backend).toBe('cuda')
-    expect(cpu.backend).toBe('cpu')
-    await expect(service.listProviderConfigs()).resolves.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ id: 'index-cuda', backend: 'cuda' }),
-        expect.objectContaining({ id: 'index-cpu', backend: 'cpu' })
-      ])
-    )
-  })
-
-  it('rejects an invalid IndexTTS backend', async () => {
-    await expect(
-      service.saveProviderConfig({
-        id: 'index-bad',
-        name: 'IndexTTS Bad',
-        kind: 'local',
-        type: 'index-tts',
-        backend: 'tpu' as never,
-        models: [],
-        voices: []
-      })
-    ).rejects.toThrow('IndexTTS 计算后端无效')
-  })
-
   it('normalizes a stored CUDA provider to CPU before returning it', async () => {
     const configStorage = new JsonConfigStorage(baseDir)
     await configStorage.write(

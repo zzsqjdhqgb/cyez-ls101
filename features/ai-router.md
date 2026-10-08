@@ -198,11 +198,6 @@ pocket-tts-en-1.0.0.zip
 
 模型包只携带模型数据，不携带可执行 JS、WASM 或原生代码。运行时由软件本体提供；发布安装包不再默认内置 TTS 模型包，发布流程同时产出独立模型包文件。现有 Pocket TTS 的 WASM runtime 可以继续作为软件运行时资源，模型权重、tokenizer 和 voice embedding 改由模型包提供。
 
-> **例外：IndexTTS 2.5（2026-10-06 决策）**。该引擎的运行时改为随**模型包**分发（`runtime-helper` / `runtime-library` 资产），
-> 因为其 CUDA 运行时体积大、且与权重版本强耦合。软件本体不再内置该运行时，只保存**允许的运行时资产摘要白名单**：
-> 只有摘要命中白名单的 helper 才会被执行，包内自述的 sha256 不构成安全边界。其余引擎（pocket-tts、qwen-tts）仍遵循上面的
-> 纯数据约束。详见 `docs/engineering/index-tts.md` 的 Runtime delivery 一节。
-
 manifest v1 采用以下结构：
 
 ```json
