@@ -605,6 +605,76 @@
   gap: var(--space-2);
 }
 
+.searchInputWrap {
+  position: relative;
+  width: 240px;
+  max-width: 100%;
+}
+
+.searchInput {
+  width: 100%;
+  padding-right: 34px;
+}
+
+/* 自定义清除按钮之外，隐藏 WebKit 为 type=search 渲染的原生取消按钮，避免双按钮。 */
+.searchInput::-webkit-search-cancel-button {
+  display: none;
+}
+
+.searchClear {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  place-items: center;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.searchClear:hover {
+  color: var(--color-text-strong);
+}
+
+.searchClear svg {
+  width: 16px;
+  height: 16px;
+}
+
+.listToggle {
+  display: flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 7px var(--space-4);
+  border: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.listToggle:hover {
+  color: var(--color-text-strong);
+}
+
+.listToggleIcon {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  transition: transform 120ms ease;
+}
+
+.listToggleIconOpen {
+  transform: rotate(90deg);
+}
+
 .modelList {
   border-top: 1px solid var(--color-border);
 }
@@ -903,6 +973,7 @@
   .input,
   .inputWide,
   .providerTypeControl,
+  .searchInputWrap,
   .secretInputWrap {
     width: 100%;
   }

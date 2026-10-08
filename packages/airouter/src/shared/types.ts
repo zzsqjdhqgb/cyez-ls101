@@ -1,18 +1,18 @@
+import type {
+  AIRouterLocalSpeechProviderType,
+  AIRouterSpeechProviderType
+} from './speech-providers'
+
+// 语音 Provider 类型清单改由 speech-providers.ts 的常量数组派生（单一来源），
+// 这里只保留 re-export 以维持既有的导入路径。
+export type {
+  AIRouterLocalSpeechProviderType,
+  AIRouterOnlineSpeechProviderType,
+  AIRouterSpeechProviderType
+} from './speech-providers'
+
 export type AIRouterProviderType = 'openai-compatible' | 'anthropic'
 export type AIRouterImageProviderType = 'manual' | 'openai-compatible'
-export type AIRouterSpeechProviderType =
-  | 'openai-compatible'
-  | 'elevenlabs'
-  | 'pocket-tts'
-  | 'qwen-tts'
-export type AIRouterOnlineSpeechProviderType = Extract<
-  AIRouterSpeechProviderType,
-  'openai-compatible' | 'elevenlabs'
->
-export type AIRouterLocalSpeechProviderType = Extract<
-  AIRouterSpeechProviderType,
-  'pocket-tts' | 'qwen-tts'
->
 export type AIRouterSpeechProviderKind = 'online' | 'local'
 export type AIRouterQwenTtsBackend = 'cpu' | 'cuda'
 export type AIRouterSpeechRole = 'default' | 'man' | 'woman'
@@ -341,6 +341,9 @@ export type AIRouterImageGenerationEvent =
 export interface AIRouterSpeechVoiceConfig {
   id: string
   enabled: boolean
+  // 远端发现的音色显示名（如 ElevenLabs / MiniMax 的 voice_name）。可选字段，
+  // 旧配置与手动添加的音色没有该值；undefined 字段在 JSON 序列化时自然丢弃。
+  name?: string
 }
 
 export interface AIRouterSpeechProviderConfig {
