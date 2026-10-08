@@ -1,5 +1,20 @@
 # TODO: AIRouter 语音 Provider 系列代码审核问题清单
 
+## 状态（2026-10 更新）
+
+**问题 1-18 与测试缺口已全部修复**（含 MiniMax 限流内部重试功能），通过全部验证：
+airouter 119/119、renderer 274/274、`yarn typecheck`、`yarn lint`、`xvfb-run -a yarn test:smoke`
+（14/14）全绿。修复未提交，等待用户执行 git 操作。
+
+**唯一剩余项：第六节「提交卫生」**——`4a5f7fa`/`85496a2` 的 message 与内容互换
+（squash 或 reword，见第六节），这属于历史整理，需要用户在提交本轮修复时顺带决定。
+
+后续维护提醒：新增在线语音 Provider 时，改动点已收敛为两处——
+`packages/airouter/src/shared/speech-providers.ts` 的常量数组 +
+`packages/airouter/src/main/speech-service.ts` 的 `onlineSpeechAdapters` 表
+（Record 键完整性检查会强制补齐）。注意保留 MiniMax 限流重试
+（`requestMinimaxSpeechPayload` / `MinimaxRateLimitError` / `sleepForDuration`）。
+
 ## 背景
 
 对 dev 上的 `3b906af`（ElevenLabs speech）与 `feat/minimax` 上的 `ecc6d78` / `b8e39b2`
@@ -11,7 +26,7 @@
 bug、一组成体系的结构重复、若干健壮性缺口与提交切分错位。计划：**先做功能修改，再回来
 修本清单**。
 
-行号以 85496a2 为准，后续代码移动后按内容定位。
+行号以 85496a2 为准，后续代码移动后按内容定位。以下各节保留原始审核记录供追溯。
 
 ## 一、运行时 bug（已复现，优先修）
 

@@ -47,7 +47,9 @@ describe('AIRouterSpeechService', () => {
   }
 
   // 反复让出宏任务直到谓词满足，用于把真实 I/O 链路推进到断言点，不触碰伪造的定时器。
-  async function flushUntil(predicate: () => boolean, maxTurns = 100): Promise<void> {
+  // 实测从发起合成到首次 fetch 需要 40-75 个 setImmediate 轮次，高负载下偶发更多
+  // （见过 133），预算给足 1000 轮以避免偶发超时（每轮开销极小）。
+  async function flushUntil(predicate: () => boolean, maxTurns = 1000): Promise<void> {
     for (let turn = 0; turn < maxTurns && !predicate(); turn += 1) {
       await new Promise<void>((resolve) => setImmediate(resolve))
     }
@@ -414,6 +416,167 @@ describe('AIRouterSpeechService', () => {
     ).rejects.toThrow('Invalid API key')
   })
 
+  it('rejects an empty ElevenLabs response body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(0), {
+        status: 200,
+        headers: { 'content-type': 'application/octet-stream' }
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'eleven-empty',
+      name: 'ElevenLabs Empty',
+      kind: 'online',
+      type: 'elevenlabs',
+      models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'eleven-secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'eleven-empty', modelId: 'eleven_multilingual_v2', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成结果为空')
+  })
+
+  it('keeps the path prefix of a custom ElevenLabs base URL', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(createPcm(240)), {
+        status: 200,
+        headers: { 'content-type': 'application/octet-stream' }
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'eleven-gateway',
+      name: 'ElevenLabs Gateway',
+      kind: 'online',
+      type: 'elevenlabs',
+      baseUrl: 'https://gw.example.com/eleven',
+      models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+      voices: [{ id: '21m00Tcm4TlvDq8ikWAM', enabled: true }],
+      apiKey: 'eleven-secret'
+    })
+
+    await service.synthesizeSpeech({
+      text: 'Hello',
+      routing: {
+        default: {
+          providerConfigId: 'eleven-gateway',
+          modelId: 'eleven_multilingual_v2',
+          voiceId: '21m00Tcm4TlvDq8ikWAM'
+        }
+      }
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://gw.example.com/eleven/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM?output_format=pcm_24000',
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+
+  it('rejects an ElevenLabs response that is not PCM audio', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(createPcm(240)), {
+        status: 200,
+        headers: { 'content-type': 'audio/mpeg' }
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'eleven-mp3',
+      name: 'ElevenLabs MP3',
+      kind: 'online',
+      type: 'elevenlabs',
+      models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'eleven-secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'eleven-mp3', modelId: 'eleven_multilingual_v2', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成结果不是 PCM 音频')
+  })
+
+  it('accepts an ElevenLabs PCM response without an audio content type', async () => {
+    const pcm = createPcm(240)
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(pcm), {
+        status: 200,
+        headers: { 'content-type': 'application/octet-stream' }
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'eleven-octets',
+      name: 'ElevenLabs Octets',
+      kind: 'online',
+      type: 'elevenlabs',
+      models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'eleven-secret'
+    })
+
+    const result = await service.synthesizeSpeech({
+      text: 'Hello',
+      routing: {
+        default: { providerConfigId: 'eleven-octets', modelId: 'eleven_multilingual_v2', voiceId: 'voice' }
+      }
+    })
+
+    expect(result).toEqual(
+      expect.objectContaining({ format: 'wav', mediaType: 'audio/wav', sampleRate: 24000 })
+    )
+  })
+
+  it.each(['team/voice', 'bad#voice'])(
+    'encodes the ElevenLabs voice ID %s before it enters the URL path',
+    async (voiceId) => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(new Uint8Array(createPcm(240)), {
+          status: 200,
+          headers: { 'content-type': 'application/octet-stream' }
+        })
+      )
+      vi.stubGlobal('fetch', fetchMock)
+      await service.saveProviderConfig({
+        id: 'eleven-voice-id',
+        name: 'ElevenLabs Voice ID',
+        kind: 'online',
+        type: 'elevenlabs',
+        models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+        voices: [{ id: voiceId, enabled: true }],
+        apiKey: 'eleven-secret'
+      })
+
+      await service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: {
+            providerConfigId: 'eleven-voice-id',
+            modelId: 'eleven_multilingual_v2',
+            voiceId
+          }
+        }
+      })
+
+      // '#' 会让 query 落进 fragment 被丢弃，'/' 会改写路径语义，两者都必须先编码。
+      const url = new URL(String(fetchMock.mock.calls[0][0]))
+      expect(url.searchParams.get('output_format')).toBe('pcm_24000')
+      expect(url.pathname).toBe(`/v1/text-to-speech/${encodeURIComponent(voiceId)}`)
+    }
+  )
+
   it('keeps an empty API key usable for unauthenticated compatible services', async () => {
     const audio = createWav([0, 0, 0, 0])
     const fetchMock = vi.fn().mockResolvedValue(
@@ -648,7 +811,95 @@ describe('AIRouterSpeechService', () => {
           default: { providerConfigId: 'minimax-empty', modelId: 'speech-2.8-hd', voiceId: 'voice' }
         }
       })
-    ).rejects.toThrow('语音合成结果大小无效')
+    ).rejects.toThrow('语音合成结果缺少有效音频数据')
+  })
+
+  it('rejects a MiniMax response that is not PCM audio', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: { audio: Buffer.from(createPcm(240)).toString('hex'), status: 2 },
+          extra_info: { audio_format: 'mp3' },
+          base_resp: { status_code: 0, status_msg: 'success' }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'minimax-mp3',
+      name: 'MiniMax MP3',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'minimax-mp3', modelId: 'speech-2.8-hd', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成结果不是 PCM 音频')
+  })
+
+  it('rejects a MiniMax response with non-hex audio', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: { audio: 'not-hex-audio', status: 2 },
+          extra_info: { audio_format: 'pcm' },
+          base_resp: { status_code: 0, status_msg: 'success' }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'minimax-nonhex',
+      name: 'MiniMax NonHex',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'minimax-nonhex', modelId: 'speech-2.8-hd', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成结果缺少有效音频数据')
+  })
+
+  it('rejects a MiniMax text longer than the single-request limit before any request', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'minimax-long',
+      name: 'MiniMax Long',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'a'.repeat(10_001),
+        routing: {
+          default: { providerConfigId: 'minimax-long', modelId: 'speech-2.8-hd', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成文本超过 MiniMax 单次请求的 10000 字符上限（当前 10001 字符）')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 
   it('lists MiniMax text-to-speech models without a network call', async () => {

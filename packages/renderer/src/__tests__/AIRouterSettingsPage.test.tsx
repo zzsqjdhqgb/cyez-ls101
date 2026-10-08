@@ -702,7 +702,8 @@ describe('AIRouterSettingsPage', () => {
           type: 'elevenlabs',
           baseUrl: 'https://api.elevenlabs.io',
           models: [{ id: 'eleven_multilingual_v2', enabled: true }],
-          voices: [{ id: 'TX3LPaxmHKxFdv7VOQHJ', enabled: true }]
+          // 远端发现的音色显示名会随 Provider 配置一起保存。
+          voices: [{ id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', enabled: true }]
         })
       )
     )
@@ -776,10 +777,71 @@ describe('AIRouterSettingsPage', () => {
           type: 'minimax',
           baseUrl: 'https://api.minimax.io',
           models: [{ id: 'speech-2.8-hd', enabled: true }],
-          voices: [{ id: 'English_Graceful_Lady', enabled: true }]
+          // 远端发现的音色显示名会随 Provider 配置一起保存。
+          voices: [{ id: 'English_Graceful_Lady', name: 'Graceful Lady', enabled: true }]
         })
       )
     )
+  })
+
+  it('keeps discovered voice names when the editor is reopened', async () => {
+    const listSpeechVoices = vi
+      .fn()
+      .mockResolvedValue([{ id: 'English_Graceful_Lady', name: 'Graceful Lady' }])
+    const saveSpeechConfig = vi
+      .fn()
+      .mockImplementation(async (input: AIRouterSpeechProviderConfigInput) => ({
+        id: 'speech-minimax',
+        name: input.name,
+        kind: input.kind,
+        type: input.type,
+        baseUrl: input.baseUrl ?? '',
+        modelPackageId: '',
+        modelPackageVersion: '',
+        models: input.models,
+        voices: input.voices,
+        hasApiKey: false
+      }))
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechModels: vi.fn().mockResolvedValue([{ id: 'speech-2.8-hd' }]),
+      listSpeechVoices,
+      saveSpeechConfig
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
+    fireEvent.click(await within(dialog).findByLabelText('speech-2.8-hd'))
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取音色列表' }))
+    const voiceLabel = 'Graceful Lady (English_Graceful_Lady)'
+    fireEvent.click(await within(dialog).findByLabelText(voiceLabel))
+    expect(within(dialog).getByLabelText(voiceLabel)).toBeChecked()
+
+    fireEvent.change(within(dialog).getByLabelText('语音配置名称'), {
+      target: { value: 'MiniMax 语音' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    await waitFor(() => expect(saveSpeechConfig).toHaveBeenCalledOnce())
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: '取消' })).toBeEnabled()
+    )
+
+    // 保存的 summary 会把远端显示名带回：重新打开编辑器时音色仍显示名称而非裸 ID。
+    fireEvent.click(within(dialog).getByRole('button', { name: '取消' }))
+    fireEvent.click(await screen.findByRole('button', { name: /MiniMax 语音/ }))
+    const reopened = screen.getByRole('dialog', { name: 'MiniMax 语音' })
+
+    expect(within(reopened).getByLabelText(voiceLabel)).toBeChecked()
+    expect(within(reopened).queryByLabelText('English_Graceful_Lady')).toBeNull()
+    const voiceSelect = within(reopened).getByLabelText('测试语音音色') as HTMLSelectElement
+    expect(voiceSelect.selectedOptions[0]?.textContent).toBe(voiceLabel)
   })
 
   it('offers MiniMax 国内版 with its regional base URL', async () => {
@@ -798,6 +860,28 @@ describe('AIRouterSettingsPage', () => {
 
     expect(within(dialog).getByLabelText('语音 Base URL')).toHaveValue('https://api.minimax.cn')
     expect(within(dialog).getByRole('button', { name: '获取音色列表' })).toBeInTheDocument()
+  })
+
+  it('hints the base URL convention per provider type', async () => {
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([])
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    expect(
+      within(dialog).getByText('兼容服务的 API 根地址，通常以 /v1 结尾。')
+    ).toBeInTheDocument()
+
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax' }
+    })
+    expect(
+      within(dialog).getByText('API 根地址，不要包含 /v1，请求路径会自动拼接。')
+    ).toBeInTheDocument()
   })
 
   it('filters a long voice list without dropping hidden selections', async () => {
@@ -898,6 +982,284 @@ describe('AIRouterSettingsPage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: /展开列表/ }))
     expect(within(dialog).getByLabelText(graceful)).toBeChecked()
     expect(within(dialog).getByLabelText('my-clone')).not.toBeChecked()
+  })
+
+  it('recovers a collapsed voice list after it shrinks below the collapse threshold', async () => {
+    const voices = [
+      { id: 'English_Graceful_Lady', name: 'Graceful Lady' },
+      { id: 'Chinese (Mandarin)_News_Anchor', name: 'News Anchor' },
+      { id: 'English_Insightful_Speaker', name: 'Insightful Speaker' },
+      { id: 'Japanese_Whisper_Belle', name: 'Whisper Belle' },
+      { id: 'ttv-voice-1' },
+      { id: 'my-clone', name: 'My Clone' },
+      { id: 'clone-voice-2' }
+    ]
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechVoices: vi.fn().mockResolvedValue(voices)
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取音色列表' }))
+
+    const graceful = 'Graceful Lady (English_Graceful_Lady)'
+    await waitFor(() => expect(within(dialog).getByLabelText(graceful)).toBeInTheDocument())
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '收起列表' }))
+    expect(within(dialog).getByRole('button', { name: /展开列表/ })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    )
+    expect(within(dialog).queryByLabelText(graceful)).toBeNull()
+
+    // 切换 Provider 类型清空音色列表，ToggleList 内部的收起状态被保留下来。
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'elevenlabs' }
+    })
+    expect(within(dialog).getByText('尚未添加音色。')).toBeInTheDocument()
+
+    // 手动添加 5 个音色（低于折叠阈值）：列表不再可折叠，残留的收起状态必须被忽略。
+    for (const id of ['v1', 'v2', 'v3', 'v4', 'v5']) {
+      fireEvent.change(within(dialog).getByLabelText('手动语音音色 ID'), {
+        target: { value: id }
+      })
+      fireEvent.click(within(dialog).getAllByRole('button', { name: '添加' })[1])
+    }
+
+    expect(within(dialog).queryByLabelText('搜索音色')).toBeNull()
+    expect(within(dialog).queryByRole('button', { name: /展开列表/ })).toBeNull()
+    for (const id of ['v1', 'v2', 'v3', 'v4', 'v5']) {
+      expect(within(dialog).getByLabelText(id)).toBeInTheDocument()
+    }
+  })
+
+  it('clears the stale voice search filter when deletions drop the list below the threshold', async () => {
+    const voices = [
+      { id: 'English_Graceful_Lady', name: 'Graceful Lady' },
+      { id: 'Chinese (Mandarin)_News_Anchor', name: 'News Anchor' },
+      { id: 'English_Insightful_Speaker', name: 'Insightful Speaker' },
+      { id: 'Japanese_Whisper_Belle', name: 'Whisper Belle' },
+      { id: 'ttv-voice-1' },
+      { id: 'my-clone', name: 'My Clone' },
+      { id: 'clone-voice-2' }
+    ]
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechVoices: vi.fn().mockResolvedValue(voices)
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取音色列表' }))
+
+    const graceful = 'Graceful Lady (English_Graceful_Lady)'
+    const newsAnchor = 'News Anchor (Chinese (Mandarin)_News_Anchor)'
+    const clone = 'My Clone (my-clone)'
+    await waitFor(() => expect(within(dialog).getByLabelText(newsAnchor)).toBeInTheDocument())
+
+    // 搜索 “clone” 命中两个音色。
+    fireEvent.change(within(dialog).getByLabelText('搜索音色'), {
+      target: { value: 'clone' }
+    })
+    expect(within(dialog).getByLabelText(clone)).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('clone-voice-2')).toBeInTheDocument()
+    expect(within(dialog).queryByLabelText(newsAnchor)).toBeNull()
+
+    // 逐个删除匹配项：总数跌破 6 后搜索框消失，过滤词必须随之清空。
+    fireEvent.click(within(dialog).getByRole('button', { name: '移除语音音色 my-clone' }))
+    expect(within(dialog).queryByLabelText(clone)).toBeNull()
+    fireEvent.click(within(dialog).getByRole('button', { name: '移除语音音色 clone-voice-2' }))
+
+    expect(within(dialog).queryByLabelText('搜索音色')).toBeNull()
+    expect(within(dialog).queryByText('没有匹配的音色。')).toBeNull()
+    for (const label of [
+      graceful,
+      newsAnchor,
+      'Insightful Speaker (English_Insightful_Speaker)',
+      'Whisper Belle (Japanese_Whisper_Belle)',
+      'ttv-voice-1'
+    ]) {
+      expect(within(dialog).getByLabelText(label)).toBeInTheDocument()
+    }
+  })
+
+  it('keeps voice edits made while the voice discovery request is in flight', async () => {
+    let resolveVoices: (voices: Array<{ id: string }>) => void = () => {}
+    const listSpeechVoices = vi.fn().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveVoices = resolve
+        })
+    )
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechVoices
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax' }
+    })
+
+    // 手动添加一个默认勾选的音色。
+    fireEvent.change(within(dialog).getByLabelText('手动语音音色 ID'), {
+      target: { value: 'my-voice' }
+    })
+    fireEvent.click(within(dialog).getAllByRole('button', { name: '添加' })[1])
+    expect(within(dialog).getByLabelText('my-voice')).toBeChecked()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取音色列表' }))
+    await waitFor(() => expect(listSpeechVoices).toHaveBeenCalledOnce())
+
+    // 请求挂起期间取消勾选（jsdom 的 fireEvent 仍会触发已禁用控件，正好模拟
+    // 与请求并发的用户操作）。
+    fireEvent.click(within(dialog).getByLabelText('my-voice'))
+    expect(within(dialog).getByLabelText('my-voice')).not.toBeChecked()
+
+    resolveVoices([{ id: 'remote-voice' }])
+    await waitFor(() => expect(within(dialog).getByLabelText('remote-voice')).toBeInTheDocument())
+    // 发现结果落地后，请求期间取消勾选的操作不能被旧快照回滚。
+    expect(within(dialog).getByLabelText('my-voice')).not.toBeChecked()
+  })
+
+  it('disables voice list controls while the voice discovery request is in flight', async () => {
+    let resolveVoices: (voices: Array<{ id: string }>) => void = () => {}
+    const listSpeechVoices = vi.fn().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveVoices = resolve
+        })
+    )
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechVoices
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax' }
+    })
+
+    // 手动添加 6 个音色以显示搜索框与折叠控件。
+    for (const id of ['voice-1', 'voice-2', 'voice-3', 'voice-4', 'voice-5', 'voice-6']) {
+      fireEvent.change(within(dialog).getByLabelText('手动语音音色 ID'), {
+        target: { value: id }
+      })
+      fireEvent.click(within(dialog).getAllByRole('button', { name: '添加' })[1])
+    }
+    fireEvent.change(within(dialog).getByLabelText('搜索音色'), {
+      target: { value: 'voice-1' }
+    })
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取音色列表' }))
+    await waitFor(() => expect(listSpeechVoices).toHaveBeenCalledOnce())
+
+    // busy 期间：勾选、删除、折叠与清除搜索按钮全部禁用。
+    expect(within(dialog).getByLabelText('voice-1')).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: '移除语音音色 voice-1' })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: '清除音色搜索' })).toBeDisabled()
+    expect(within(dialog).getByRole('button', { name: '收起列表' })).toBeDisabled()
+
+    resolveVoices([{ id: 'remote-voice' }])
+    await waitFor(() => expect(within(dialog).getByText('获取到 1 个音色')).toBeInTheDocument())
+    expect(within(dialog).getByRole('button', { name: '清除音色搜索' })).toBeEnabled()
+    fireEvent.click(within(dialog).getByRole('button', { name: '清除音色搜索' }))
+    expect(within(dialog).getByLabelText('voice-1')).toBeChecked()
+    expect(within(dialog).getByLabelText('remote-voice')).toBeInTheDocument()
+  })
+
+  it('collapses and expands a long model list with aria-expanded state', async () => {
+    const models = ['model-a', 'model-b', 'model-c', 'model-d', 'model-e', 'model-f']
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechModels: vi.fn().mockResolvedValue(models.map((id) => ({ id })))
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'minimax' }
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
+    await waitFor(() => expect(within(dialog).getByLabelText('model-a')).toBeInTheDocument())
+
+    // 音色列表只有 0 项：不渲染搜索框，模型列表是唯一的折叠控件。
+    expect(within(dialog).queryByLabelText('搜索音色')).toBeNull()
+    const collapse = within(dialog).getByRole('button', { name: '收起列表' })
+    expect(collapse).toHaveAttribute('aria-expanded', 'true')
+
+    fireEvent.click(collapse)
+    expect(within(dialog).queryByLabelText('model-a')).toBeNull()
+    const expand = within(dialog).getByRole('button', { name: /展开列表/ })
+    expect(expand).toHaveAttribute('aria-expanded', 'false')
+    expect(expand).toHaveTextContent('共 6 项')
+
+    fireEvent.click(expand)
+    expect(within(dialog).getByLabelText('model-a')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: '收起列表' })).toHaveAttribute(
+      'aria-expanded',
+      'true'
+    )
+  })
+
+  it('filters a long model list without dropping hidden selections', async () => {
+    const models = ['tts-1', 'tts-2-hd', 'tts-3', 'tts-4', 'tts-5', 'gpt-4o-mini-tts']
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([]),
+      listSpeechModels: vi.fn().mockResolvedValue(models.map((id) => ({ id })))
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.click(within(dialog).getByRole('button', { name: '获取模型列表' }))
+
+    await waitFor(() => expect(within(dialog).getByLabelText('tts-1')).toBeInTheDocument())
+    const search = within(dialog).getByLabelText('搜索模型') as HTMLInputElement
+    expect(within(dialog).queryByRole('button', { name: '清除模型搜索' })).toBeNull()
+
+    fireEvent.change(search, { target: { value: 'tts-2' } })
+
+    expect(within(dialog).getByLabelText('tts-2-hd')).toBeInTheDocument()
+    expect(within(dialog).queryByLabelText('tts-1')).toBeNull()
+
+    fireEvent.click(within(dialog).getByLabelText('tts-2-hd'))
+    expect(within(dialog).getByLabelText('tts-2-hd')).toBeChecked()
+
+    fireEvent.change(search, { target: { value: '不存在的模型' } })
+    expect(within(dialog).getByText('没有匹配的模型。')).toBeInTheDocument()
+
+    // 清除按钮使用项目的 icon 组件，点击后恢复完整列表并保留勾选状态。
+    fireEvent.click(within(dialog).getByRole('button', { name: '清除模型搜索' }))
+    expect(search.value).toBe('')
+    expect(within(dialog).getByLabelText('tts-2-hd')).toBeChecked()
+    expect(within(dialog).getByLabelText('tts-1')).not.toBeChecked()
   })
 
   it('keeps Qwen on CPU while CUDA runtime packaging is disabled', async () => {
