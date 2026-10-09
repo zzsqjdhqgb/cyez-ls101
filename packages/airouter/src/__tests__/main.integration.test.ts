@@ -36,7 +36,7 @@ const {
         encryptString: vi.fn((value: string) => new TextEncoder().encode(value)),
         decryptString: vi.fn((value: Uint8Array) => new TextDecoder().decode(value))
       },
-      app: { getVersion: vi.fn(() => '0.3.1'), once: vi.fn() },
+      app: { getVersion: vi.fn(() => '0.3.1'), once: vi.fn(), on: vi.fn(), quit: vi.fn() },
       BrowserWindow: { fromWebContents: vi.fn(() => null) },
       dialog: { showOpenDialog: vi.fn() }
     },
@@ -121,6 +121,8 @@ describe('AIRouter main integration', () => {
     electronMocks.handle.mockClear()
     electronMocks.on.mockClear()
     electronMocks.app.once.mockClear()
+    electronMocks.app.on.mockClear()
+    electronMocks.app.quit.mockClear()
     generateImageMock.mockReset()
     recognizeSpeechMock.mockReset()
     assessPronunciationMock.mockReset()
@@ -135,7 +137,33 @@ describe('AIRouter main integration', () => {
   })
 
   afterEach(async () => {
+    vi.restoreAllMocks()
     await rm(baseDir, { recursive: true, force: true })
+  })
+
+  it('waits for IndexTTS cleanup on repeated quit requests', async () => {
+    const { IndexTtsSynthesizer } = await import('../main/index-tts')
+    let finishDisposal!: () => void
+    const disposal = vi.spyOn(IndexTtsSynthesizer.prototype, 'dispose').mockReturnValue(
+      new Promise<void>((resolve) => {
+        finishDisposal = resolve
+      })
+    )
+    const { registerAIRouter } = await import('../main')
+    registerAIRouter({ baseDir })
+    const beforeQuit = electronMocks.app.on.mock.calls.find(
+      ([event]) => event === 'before-quit'
+    )![1] as (event: { preventDefault: () => void }) => void
+    const preventDefault = vi.fn()
+    beforeQuit({ preventDefault })
+    beforeQuit({ preventDefault })
+    expect(preventDefault).toHaveBeenCalledTimes(2)
+    expect(disposal).toHaveBeenCalledOnce()
+    expect(electronMocks.app.quit).not.toHaveBeenCalled()
+    finishDisposal()
+    await vi.waitFor(() => expect(electronMocks.app.quit).toHaveBeenCalledOnce())
+    beforeQuit({ preventDefault })
+    expect(preventDefault).toHaveBeenCalledTimes(2)
   })
 
   it('wires provider handlers to the real config and secret stores', async () => {

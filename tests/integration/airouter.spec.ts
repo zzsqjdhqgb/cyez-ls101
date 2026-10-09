@@ -50,7 +50,7 @@ interface SpeechProviderInput {
   id?: string
   name: string
   kind: 'online' | 'local'
-  type: 'openai-compatible' | 'pocket-tts' | 'qwen-tts'
+  type: 'openai-compatible' | 'pocket-tts' | 'qwen-tts' | 'index-tts'
   baseUrl?: string
   modelPackageId?: string
   modelPackageVersion?: string
@@ -1252,6 +1252,81 @@ test('AR-28 manages a local TTS model package and its Provider lifecycle', async
   await packageConfirm.getByRole('button', { name: '删除模型包' }).click()
   await expect(page.getByText('已安装 0 个模型包')).toBeVisible()
   await expect(page.evaluate(() => window.airouter.listSpeechModelPackages())).resolves.toEqual([])
+})
+
+test('AR-28b imports IndexTTS reference voices and configures its CUDA provider', async () => {
+  const model = Buffer.from('GGUF integration fixture')
+  const reference = createSilentWav()
+  const hash = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex')
+  const manifest = {
+    format: 'ls101.tts-model-package',
+    formatVersion: 1,
+    package: { id: 'integration-index', version: '1.0.0', name: 'Integration IndexTTS' },
+    runtime: { engine: 'index-tts', engineApiVersion: 1 },
+    assets: [
+      { path: 'model.gguf', kind: 'tts-model', size: model.length, sha256: hash(model) },
+      {
+        path: 'man.wav',
+        kind: 'speaker-reference',
+        size: reference.length,
+        sha256: hash(reference)
+      },
+      {
+        path: 'woman.wav',
+        kind: 'speaker-reference',
+        size: reference.length,
+        sha256: hash(reference)
+      }
+    ],
+    models: [
+      {
+        id: 'index',
+        name: 'IndexTTS 2.5',
+        artifacts: { 'tts-model': ['model.gguf'] },
+        parameters: {}
+      }
+    ],
+    voices: [
+      { id: 'man', name: 'Man', files: ['man.wav'] },
+      { id: 'woman', name: 'Woman', files: ['woman.wav'] }
+    ]
+  }
+  const packagePath = path.join(userDataDir, 'index.zip')
+  await writeFile(
+    packagePath,
+    zipSync({
+      'manifest.json': strToU8(JSON.stringify(manifest)),
+      'model.gguf': model,
+      'man.wav': reference,
+      'woman.wav': reference
+    })
+  )
+  await openAirouter('语音合成')
+  await page.getByRole('button', { name: '添加 Provider' }).click()
+  const editor = page.getByRole('dialog')
+  await editor.getByLabel('语音配置名称').fill('Local Index')
+  await editor.getByLabel('语音运行方式').selectOption('local')
+  await editor.getByLabel('语音 Provider 类型').selectOption('index-tts')
+  await expect(editor.getByText('需要先导入 IndexTTS 2.5 模型包')).toBeVisible()
+  await selectFileInElectronDialog(packagePath)
+  await editor.getByRole('button', { name: '导入模型包' }).click()
+  await expect(editor.getByRole('checkbox', { name: 'IndexTTS 2.5 (index)' })).toBeChecked()
+  await expect(editor.getByRole('checkbox', { name: 'Man (man)', exact: true })).toBeChecked()
+  await expect(editor.getByRole('checkbox', { name: 'Woman (woman)', exact: true })).toBeChecked()
+  await editor.getByRole('button', { name: '保存 Provider' }).click()
+  await expect(page.getByText('已保存“Local Index”')).toBeVisible()
+  const configs = await page.evaluate(() => window.airouter.listSpeechProviderConfigs())
+  expect(configs[0]).toMatchObject({
+    type: 'index-tts',
+    backend: 'cuda',
+    voices: [
+      { id: 'man', enabled: true },
+      { id: 'woman', enabled: true }
+    ]
+  })
+  await page.reload()
+  await openAirouter('语音合成')
+  await expect(page.getByRole('button', { name: /Local Index/ })).toContainText('CUDA')
 })
 
 test('AR-29 configures and tests an online TTS Provider through the UI', async () => {

@@ -55,6 +55,8 @@ export interface AIRouterLocalSpeechRequest {
 
 export interface AIRouterLocalSpeechSynthesizer {
   synthesize(request: AIRouterLocalSpeechRequest): Promise<AIRouterGeneratedAudio>
+  releasePackage?(id: string, version: string, remove: () => Promise<void>): Promise<void>
+  releaseAssets?<T>(operation: () => Promise<T>): Promise<T>
 }
 
 export interface AIRouterSpeechServiceOptions {
@@ -90,11 +92,19 @@ export class AIRouterSpeechService {
   }
 
   importModelPackage(filePath: string): Promise<AIRouterSpeechModelPackageImportResult> {
-    return this.modelStore.importPackage(filePath)
+    const importPackage = (): Promise<AIRouterSpeechModelPackageImportResult> =>
+      this.modelStore.importPackage(filePath)
+    // Import may replace an installed version and collect obsolete blobs.
+    const indexTts = this.localSynthesizers['index-tts']
+    return indexTts?.releaseAssets ? indexTts.releaseAssets(importPackage) : importPackage()
   }
 
-  deleteModelPackage(id: string, version: string): Promise<void> {
-    return this.modelStore.deletePackage(id, version)
+  async deleteModelPackage(id: string, version: string): Promise<void> {
+    const manifest = await this.modelStore.getPackage(id, version)
+    const synthesizer = this.localSynthesizers[manifest.runtime.engine]
+    const remove = (): Promise<void> => this.modelStore.deletePackage(id, version)
+    if (synthesizer?.releasePackage) await synthesizer.releasePackage(id, version, remove)
+    else await remove()
   }
 
   async listProviderConfigs(): Promise<AIRouterSpeechProviderConfigSummary[]> {
@@ -359,6 +369,9 @@ export class AIRouterSpeechService {
     ) {
       throw new Error('Qwen TTS 计算后端无效')
     }
+    if (input.type === 'index-tts' && input.backend !== undefined && input.backend !== 'cuda') {
+      throw new Error('IndexTTS 当前需要 CUDA 计算后端')
+    }
     if (input.kind === 'online') {
       const baseUrl = (input.baseUrl?.trim() || DEFAULT_BASE_URL).replace(/\/$/, '')
       assertHttpUrl(baseUrl)
@@ -397,7 +410,8 @@ export class AIRouterSpeechService {
       modelPackageVersion,
       models: modelPackageId ? models : [],
       voices: modelPackageId ? voices : [],
-      ...(input.type === 'qwen-tts' ? { backend: 'cpu' as const } : {})
+      ...(input.type === 'qwen-tts' ? { backend: 'cpu' as const } : {}),
+      ...(input.type === 'index-tts' ? { backend: 'cuda' as const } : {})
     }
   }
 
@@ -427,7 +441,11 @@ export class AIRouterSpeechService {
     return {
       ...document,
       providers: document.providers.map((config) =>
-        config.type === 'qwen-tts' ? { ...config, backend: 'cpu' } : config
+        config.type === 'qwen-tts'
+          ? { ...config, backend: 'cpu' }
+          : config.type === 'index-tts'
+            ? { ...config, backend: 'cuda' }
+            : config
       )
     }
   }
@@ -469,7 +487,8 @@ function assertProviderConfigInput(
   if (
     candidate.type !== 'openai-compatible' &&
     candidate.type !== 'pocket-tts' &&
-    candidate.type !== 'qwen-tts'
+    candidate.type !== 'qwen-tts' &&
+    candidate.type !== 'index-tts'
   ) {
     throw new Error('语音 Provider 类型无效')
   }
@@ -509,7 +528,8 @@ function isProviderConfig(value: unknown): value is AIRouterSpeechProviderConfig
     (candidate.kind === 'online' || candidate.kind === 'local') &&
     (candidate.type === 'openai-compatible' ||
       candidate.type === 'pocket-tts' ||
-      candidate.type === 'qwen-tts') &&
+      candidate.type === 'qwen-tts' ||
+      candidate.type === 'index-tts') &&
     typeof candidate.baseUrl === 'string' &&
     typeof candidate.modelPackageId === 'string' &&
     typeof candidate.modelPackageVersion === 'string' &&

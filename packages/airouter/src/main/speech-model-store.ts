@@ -6,6 +6,7 @@ import { Transform } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import yauzl, { type Entry, type ZipFile } from 'yauzl'
 import { strFromU8 } from 'fflate'
+import { assertIndexTtsManifest } from './index-tts-model'
 import type {
   AIRouterSpeechRecognitionModelPackageImportResult,
   AIRouterSpeechRecognitionModelPackageManifest,
@@ -582,6 +583,7 @@ function parseManifestJson(
     throw new Error('模型包 manifest.json 不是有效 JSON')
   }
   if (!isManifest(parsed, packageKind)) throw new Error('模型包 manifest.json 格式无效')
+  if (packageKind === 'tts') assertIndexTtsManifest(parsed as AIRouterSpeechModelPackageManifest)
   return parsed as AIRouterSpeechModelPackageManifest
 }
 
@@ -652,7 +654,9 @@ function isRuntime(value: unknown, packageKind: 'tts' | 'asr'): boolean {
   return (
     (packageKind === 'asr'
       ? candidate.engine === 'qwen3-asr'
-      : candidate.engine === 'pocket-tts' || candidate.engine === 'qwen-tts') &&
+      : candidate.engine === 'pocket-tts' ||
+        candidate.engine === 'qwen-tts' ||
+        candidate.engine === 'index-tts') &&
     candidate.engineApiVersion === ENGINE_API_VERSION &&
     (candidate.minimumAppVersion === undefined || isSemanticVersion(candidate.minimumAppVersion))
   )

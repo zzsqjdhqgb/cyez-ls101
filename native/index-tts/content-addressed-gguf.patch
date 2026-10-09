@@ -1,0 +1,68 @@
+diff --git a/include/engine/framework/assets/tensor_source.h b/include/engine/framework/assets/tensor_source.h
+index 12321a5..dc345a3 100644
+--- a/include/engine/framework/assets/tensor_source.h
++++ b/include/engine/framework/assets/tensor_source.h
+@@ -220,6 +220,9 @@ struct PreparedModelDirectory {
+     std::filesystem::path model_root;
+     std::optional<std::filesystem::path> standalone_gguf;
+ };
++// Content-addressed model stores may omit the filename extension.
++[[nodiscard]] bool is_gguf_file(const std::filesystem::path & path);
++
+ // *.gguf files directly inside `directory`, sorted by name; empty when it is not a directory.
+ [[nodiscard]] std::vector<std::filesystem::path> directory_gguf_files(const std::filesystem::path & directory);
+ // The one GGUF a model directory stands for: `model.gguf` when present, otherwise the sole
+diff --git a/src/framework/assets/tensor_source.cpp b/src/framework/assets/tensor_source.cpp
+index f5d0da2..ac12aac 100644
+--- a/src/framework/assets/tensor_source.cpp
++++ b/src/framework/assets/tensor_source.cpp
+@@ -1576,6 +1576,13 @@ std::vector<float> tensor_data_to_f32(std::string_view name, const TensorData &
+     return decode_tensor_data_f32(name, tensor);
+ }
+ 
++bool is_gguf_file(const std::filesystem::path & path) {
++    if (!engine::io::is_existing_file(path)) return false;
++    std::ifstream input(path, std::ios::binary);
++    char magic[4] = {};
++    return input.read(magic, sizeof(magic)) && std::memcmp(magic, "GGUF", 4) == 0;
++}
++
+ std::shared_ptr<const TensorSource> open_tensor_source(const std::filesystem::path & path) {
+     return open_tensor_source(path, TensorSourceOptions{});
+ }
+@@ -1592,7 +1599,7 @@ std::shared_ptr<const TensorSource> open_tensor_source(
+     if (extension == ".safetensors") {
+         return std::make_shared<SafeTensorSource>(path, options);
+     }
+-    if (extension == ".gguf") {
++    if (is_gguf_file(path)) {
+         return std::make_shared<GgufTensorSource>(path, options);
+     }
+     throw std::runtime_error("unsupported tensor source format: " + path.string());
+@@ -1838,7 +1845,7 @@ PreparedModelDirectory prepare_model_directory(const std::filesystem::path & mod
+     } else {
+         throw std::runtime_error("model path does not exist: " + model_path.string());
+     }
+-    if (engine::io::is_existing_file(gguf_path) && lower_ascii(gguf_path.extension().string()) == ".gguf") {
++    if (is_gguf_file(gguf_path)) {
+         const auto canonical_gguf = std::filesystem::weakly_canonical(gguf_path);
+         if (gguf_has_embedded_sidecars(gguf_path)) {
+             return {materialize_gguf_sidecars(gguf_path), canonical_gguf};
+diff --git a/src/framework/model_spec/package.cpp b/src/framework/model_spec/package.cpp
+index ea58610..a16e7b3 100644
+--- a/src/framework/model_spec/package.cpp
++++ b/src/framework/model_spec/package.cpp
+@@ -52,12 +52,7 @@ std::string model_spec_description(const std::filesystem::path & spec_path) {
+ }
+ 
+ bool is_gguf_file(const std::filesystem::path & path) {
+-    if (!engine::io::is_existing_file(path))
+-        return false;
+-    std::string extension = path.extension().string();
+-    std::transform(extension.begin(), extension.end(), extension.begin(),
+-                   [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
+-    return extension == ".gguf";
++    return assets::is_gguf_file(path);
+ }
+ 
+ std::string gguf_file_list(const std::vector<std::filesystem::path> & files) {

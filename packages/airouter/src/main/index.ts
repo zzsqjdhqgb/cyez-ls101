@@ -34,6 +34,7 @@ import { AIRouterSpeechRecognitionService } from './speech-recognition-service'
 import { AIRouterPronunciationAssessmentService } from './pronunciation-assessment-service'
 import { PocketTtsSynthesizer } from './pocket-tts'
 import { QwenTtsSynthesizer } from './qwen-tts'
+import { IndexTtsSynthesizer } from './index-tts'
 
 export { AIRouterService } from './service'
 export { AIRouterImageService } from './image-service'
@@ -44,6 +45,7 @@ export { AIRouterSpeechModelStore, AIRouterSpeechRecognitionModelStore } from '.
 export { AIRouterExtensionStore } from './extension-store'
 export { PocketTtsSynthesizer } from './pocket-tts'
 export { QwenTtsSynthesizer } from './qwen-tts'
+export { IndexTtsSynthesizer } from './index-tts'
 export type { AIRouterServiceOptions } from './service'
 export type {
   AIRouterLocalSpeechRequest,
@@ -68,6 +70,7 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
   const service = new AIRouterService(options)
   const imageService = new AIRouterImageService(options)
   const qwenTtsSynthesizer = new QwenTtsSynthesizer()
+  const indexTtsSynthesizer = new IndexTtsSynthesizer()
   const speechService = new AIRouterSpeechService({
     baseDir: options.baseDir,
     appVersion: app.getVersion(),
@@ -75,10 +78,24 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
     secretStorage: options.secretStorage,
     localSynthesizers: {
       'pocket-tts': new PocketTtsSynthesizer(options.workerUrls?.pocketTts),
-      'qwen-tts': qwenTtsSynthesizer
+      'qwen-tts': qwenTtsSynthesizer,
+      'index-tts': indexTtsSynthesizer
     }
   })
   app.once('will-quit', () => qwenTtsSynthesizer.dispose())
+  let indexTtsDisposed = false
+  let indexTtsDisposal: Promise<void> | undefined
+  app.on('before-quit', (event) => {
+    if (indexTtsDisposed) return
+    event.preventDefault()
+    indexTtsDisposal ??= indexTtsSynthesizer
+      .dispose()
+      .catch((error) => console.error(error))
+      .finally(() => {
+        indexTtsDisposed = true
+        app.quit()
+      })
+  })
   const recognitionService = new AIRouterSpeechRecognitionService({
     baseDir: options.baseDir,
     appVersion: app.getVersion(),

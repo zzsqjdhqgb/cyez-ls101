@@ -70,13 +70,15 @@ type SpeechFeedbackScope =
 const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   'pocket-tts': 'Pocket TTS (WASM)',
-  'qwen-tts': 'Qwen3-TTS 0.6B'
+  'qwen-tts': 'Qwen3-TTS 0.6B',
+  'index-tts': 'IndexTTS 2.5'
 }
 
 const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   'pocket-tts': 'Pocket TTS',
-  'qwen-tts': 'Qwen3-TTS 0.6B'
+  'qwen-tts': 'Qwen3-TTS 0.6B',
+  'index-tts': 'IndexTTS 2.5'
 }
 
 export function AIRouterSpeechSettingsPage({
@@ -297,6 +299,7 @@ export function AIRouterSpeechSettingsPage({
                     <span>{providerLabels[config.type]}</span>
                     <span>{config.kind === 'local' ? '本地' : '在线'}</span>
                     {config.type === 'qwen-tts' ? <span>CPU</span> : null}
+                    {config.type === 'index-tts' ? <span>CUDA</span> : null}
                     <span>{config.models.filter((model) => model.enabled).length} 个模型</span>
                     <span>{config.voices.filter((voice) => voice.enabled).length} 个音色</span>
                   </span>
@@ -468,7 +471,7 @@ export function AIRouterSpeechSettingsPage({
                       setDraft({
                         ...draft,
                         type: event.target.value as AIRouterSpeechProviderType,
-                        backend: 'cpu',
+                        backend: event.target.value === 'index-tts' ? 'cuda' : 'cpu',
                         modelPackageId: '',
                         modelPackageVersion: '',
                         models: [],
@@ -483,6 +486,7 @@ export function AIRouterSpeechSettingsPage({
                       <>
                         <option value="pocket-tts">Pocket TTS (WASM)</option>
                         <option value="qwen-tts">Qwen3-TTS 0.6B</option>
+                        <option value="index-tts">IndexTTS 2.5 (CUDA)</option>
                       </>
                     )}
                   </select>
@@ -1093,7 +1097,14 @@ function toInput(
     baseUrl: draft.kind === 'online' ? draft.baseUrl : undefined,
     modelPackageId: draft.kind === 'local' ? draft.modelPackageId : undefined,
     modelPackageVersion: draft.kind === 'local' ? draft.modelPackageVersion : undefined,
-    backend: draft.kind === 'local' && draft.type === 'qwen-tts' ? 'cpu' : undefined,
+    backend:
+      draft.kind === 'local'
+        ? draft.type === 'qwen-tts'
+          ? 'cpu'
+          : draft.type === 'index-tts'
+            ? 'cuda'
+            : undefined
+        : undefined,
     models: draft.models,
     voices: draft.voices,
     apiKey:

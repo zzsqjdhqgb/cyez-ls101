@@ -148,6 +148,12 @@ extraResources:
       - '!**/cublas*.dll'
       - '!**/nvJitLink*.dll'
       - '!**/LICENSE.NVIDIA-CUDA.html'
+  - from: externals/ai/index-tts/runtime
+    to: index-tts
+    filter:
+      - '**/*'
+      - '!**/ls101-index-tts-helper-cpu*'
+      - '!**/build-cpu.json'
   - from: resources/media
     to: media
   - from: resources/builtin

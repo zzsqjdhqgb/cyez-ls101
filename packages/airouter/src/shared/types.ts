@@ -1,6 +1,10 @@
 export type AIRouterProviderType = 'openai-compatible' | 'anthropic'
 export type AIRouterImageProviderType = 'manual' | 'openai-compatible'
-export type AIRouterSpeechProviderType = 'openai-compatible' | 'pocket-tts' | 'qwen-tts'
+export type AIRouterSpeechProviderType =
+  | 'openai-compatible'
+  | 'pocket-tts'
+  | 'qwen-tts'
+  | 'index-tts'
 export type AIRouterLocalSpeechProviderType = Exclude<
   AIRouterSpeechProviderType,
   'openai-compatible'

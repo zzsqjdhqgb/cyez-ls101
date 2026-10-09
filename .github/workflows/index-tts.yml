@@ -1,0 +1,190 @@
+name: IndexTTS Assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Asset release to build
+        type: choice
+        required: true
+        default: runtime
+        options: [runtime, model, both]
+      publish:
+        description: Publish immutable prereleases after validation
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: index-tts-assets-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  runtime:
+    if: inputs.target != 'model'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux-x64
+          - os: windows-2022
+            target: win32-x64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - uses: ilammy/msvc-dev-cmd@v1
+        if: runner.os == 'Windows'
+        with:
+          arch: x64
+      - uses: Jimver/cuda-toolkit@v0.2.36
+        with:
+          cuda: '12.8.1'
+          method: network
+          sub-packages: >-
+            ${{ runner.os == 'Windows' && '["nvcc","cudart","cublas","cublas_dev","cufft","cufft_dev","nvjitlink","thrust"]' || '["nvcc","cudart","cudart_dev","thrust"]' }}
+          non-cuda-sub-packages: >-
+            ${{ runner.os == 'Windows' && '[]' || '["libcublas","libcublas-dev","libcufft","libcufft-dev","libnvjitlink","libnvjitlink-dev"]' }}
+      - name: Build CUDA helper and stage dependencies
+        shell: bash
+        run: |
+          export INDEX_TTS_CUDA_LICENSE_FILE="$RUNNER_TEMP/LICENSE.NVIDIA-CUDA.html"
+          curl --fail --location https://docs.nvidia.com/cuda/archive/12.8.1/eula/index.html --output "$INDEX_TTS_CUDA_LICENSE_FILE"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            export INDEX_TTS_CUDA_REDIST_DIR="$CUDA_PATH/bin"
+          else
+            export INDEX_TTS_CUDA_REDIST_DIR="$CUDA_PATH/lib64"
+          fi
+          node scripts/index-tts/build-runtime.mjs --backend cuda
+      - name: Record platform asset digests and validate dependency closure
+        shell: bash
+        env:
+          RUNTIME_TARGET: ${{ matrix.target }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs')
+          const path = require('node:path')
+          const crypto = require('node:crypto')
+          const { execFileSync, spawnSync } = require('node:child_process')
+          const config = JSON.parse(fs.readFileSync('scripts/index-tts/assets.json', 'utf8'))
+          const target = process.env.RUNTIME_TARGET
+          const directory = path.resolve('externals/ai/index-tts/runtime', target)
+          const names = fs.readdirSync(directory).filter(name => !name.includes('-cpu'))
+          const env = { ...process.env, ...(process.platform === 'linux' ? { LD_LIBRARY_PATH: [directory, process.env.LD_LIBRARY_PATH].filter(Boolean).join(':') } : {}) }
+          const helper = names.find(name => /^ls101-index-tts-helper-cuda/.test(name))
+          const probe = spawnSync(path.join(directory, helper), [], { encoding: 'utf8', env, timeout: 30000 })
+          if (probe.status !== 1 || !probe.stderr?.includes('An absolute --model path is required')) throw new Error(`Helper startup failed: ${probe.stderr || probe.error || probe.status}`)
+          for (const dependency of ['cublas', 'cublasLt', 'cudart', 'cufft', 'nvJitLink']) {
+            if (!names.some(name => name.includes(dependency))) throw new Error(`Missing CUDA dependency: ${dependency}`)
+          }
+          if (process.platform === 'linux') {
+            for (const name of names.filter(name => /\.so(?:\.[\d.]+)?$|helper-cuda$/.test(name))) {
+              const dependencies = execFileSync('ldd', [path.join(directory, name)], { encoding: 'utf8', env })
+              if (/not found/.test(dependencies)) throw new Error(dependencies)
+            }
+          } else {
+            for (const file of names.filter(name => /\.dll$|\.exe$/.test(name))) {
+              const dependencies = execFileSync('dumpbin', ['/DEPENDENTS', path.join(directory, file)], { encoding: 'utf8' })
+              for (const name of dependencies.match(/[A-Za-z0-9_.-]+\.dll/gi) ?? []) {
+                if (/^(cublas|cudart|cufft|nvJitLink|msvcp|vcruntime|concrt)/i.test(name) && !names.some(file => file.toLowerCase() === name.toLowerCase())) throw new Error(`Missing ${name} required by ${file}`)
+              }
+            }
+          }
+          fs.mkdirSync('release-assets', { recursive: true })
+          const assets = names.sort().map(name => {
+            const bytes = fs.readFileSync(path.join(directory, name))
+            const releaseName = `${target}-${name}`
+            fs.copyFileSync(path.join(directory, name), path.join('release-assets', releaseName))
+            return { target, path: name, name: releaseName, size: bytes.length, sha256: crypto.createHash('sha256').update(bytes).digest('hex') }
+          })
+          fs.writeFileSync(`release-assets/${target}-manifest.json`, JSON.stringify({ revision: config.runtime.revision, ggmlTree: config.runtime.ggmlTree, assets }, null, 2) + '\n')
+          NODE
+      - uses: actions/upload-artifact@v4
+        with:
+          name: index-tts-${{ matrix.target }}
+          path: release-assets/*
+
+  model:
+    if: inputs.target != 'runtime'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Download and verify immutable GGUF
+        run: |
+          node scripts/index-tts/download-release-assets.mjs --models-only --verify
+          node scripts/index-tts/model-release.mjs --output release-assets
+      - uses: actions/upload-artifact@v4
+        with:
+          name: index-tts-model
+          path: release-assets/*
+
+  publish-runtime:
+    if: inputs.publish && inputs.target != 'model'
+    needs: runtime
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: index-tts-*-x64
+          path: release-assets
+          merge-multiple: true
+      - name: Publish unused runtime tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          node <<'NODE'
+          const {execFileSync} = require('child_process')
+          const fs = require('fs')
+          const release = require('./scripts/index-tts/assets.json').runtimeRelease
+          for (const args of [['release','view',release.tag],['api',`repos/${process.env.GH_REPO}/git/ref/tags/${release.tag}`]]) {
+            try { execFileSync('gh',args,{stdio:'ignore'}); throw new Error(`Existing tag: ${release.tag}`) }
+            catch (error) { if (!error.status) throw error }
+          }
+          execFileSync('gh',['release','create',release.tag,'--target',process.env.GITHUB_SHA,'--prerelease','--title',`IndexTTS Runtime ${release.version}`,'--notes','Native IndexTTS helper. Platform manifests record exact digests; pin them in scripts/index-tts/assets.json before enabling automatic setup.',...fs.readdirSync('release-assets').map(name=>`release-assets/${name}`)],{stdio:'inherit'})
+          NODE
+
+  publish-model:
+    if: inputs.publish && inputs.target != 'runtime'
+    needs: model
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          name: index-tts-model
+          path: release-assets
+      - name: Publish unused model tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          node <<'NODE'
+          const {execFileSync} = require('child_process')
+          const fs = require('fs')
+          const release = require('./scripts/index-tts/assets.json').modelRelease
+          for (const args of [['release','view',release.tag],['api',`repos/${process.env.GH_REPO}/git/ref/tags/${release.tag}`]]) {
+            try { execFileSync('gh',args,{stdio:'ignore'}); throw new Error(`Existing tag: ${release.tag}`) }
+            catch (error) { if (!error.status) throw error }
+          }
+          execFileSync('gh',['release','create',release.tag,'--target',process.env.GITHUB_SHA,'--prerelease','--title',`IndexTTS Model ${release.version}`,'--notes','Pinned Q8_0 GGUF split into assets below the GitHub size limit, with original model notices. Pin release.parts from index-tts-model-manifest.json before enabling modelRelease.published.',...fs.readdirSync('release-assets').map(name=>`release-assets/${name}`)],{stdio:'inherit'})
+          NODE

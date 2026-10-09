@@ -19,6 +19,11 @@ test('product documentation setup keeps runtime assets and skips full models', (
       arguments: [],
       environment: { LS101_QWEN_TTS_RUNTIME_ONLY: '1' }
     },
+    {
+      script: 'index-tts/download-release-assets.mjs',
+      arguments: [],
+      environment: { LS101_INDEX_TTS_RUNTIME_ONLY: '1' }
+    },
     { script: 'generate-icons.js', arguments: [], environment: {} }
   ])
 })
@@ -30,6 +35,7 @@ test('default setup retains all installation tasks', () => {
       'sherpa-no-tts.js',
       'airouter/update-model-catalog.mjs',
       'qwen-tts/download-release-assets.mjs',
+      'index-tts/download-release-assets.mjs',
       'download-tts-assets.js',
       'download-stt-models.js',
       'download-pronunciation-model.js',
@@ -51,6 +57,7 @@ test('setup forwards explicit verification to every downloaded asset task', () =
       .map((task) => [task.script, task.arguments]),
     [
       ['qwen-tts/download-release-assets.mjs', ['--verify-upstream']],
+      ['index-tts/download-release-assets.mjs', ['--verify-upstream']],
       ['download-tts-assets.js', ['--verify-upstream']],
       ['download-stt-models.js', ['--verify-upstream']],
       ['download-pronunciation-model.js', ['--verify-upstream']]

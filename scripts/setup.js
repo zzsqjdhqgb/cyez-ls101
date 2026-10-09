@@ -19,6 +19,11 @@ const tasks = [
     assetVerification: true,
     productDocsEnvironment: { LS101_QWEN_TTS_RUNTIME_ONLY: '1' }
   },
+  {
+    script: 'index-tts/download-release-assets.mjs',
+    assetVerification: true,
+    productDocsEnvironment: { LS101_INDEX_TTS_RUNTIME_ONLY: '1' }
+  },
   { script: 'download-tts-assets.js', assetVerification: true, modelDownload: true },
   { script: 'download-stt-models.js', assetVerification: true, modelDownload: true },
   { script: 'download-pronunciation-model.js', assetVerification: true, modelDownload: true },

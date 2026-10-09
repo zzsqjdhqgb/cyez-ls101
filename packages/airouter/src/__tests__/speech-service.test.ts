@@ -50,6 +50,18 @@ describe('AIRouterSpeechService', () => {
     expect(cpu.backend).toBe('cpu')
   })
 
+  it('uses CUDA for IndexTTS and rejects a CPU configuration', async () => {
+    const config = {
+      name: 'Index',
+      kind: 'local' as const,
+      type: 'index-tts' as const,
+      models: [],
+      voices: []
+    }
+    expect((await service.saveProviderConfig(config)).backend).toBe('cuda')
+    await expect(service.saveProviderConfig({ ...config, backend: 'cpu' })).rejects.toThrow('CUDA')
+  })
+
   it('normalizes a stored CUDA provider to CPU before returning it', async () => {
     const configStorage = new JsonConfigStorage(baseDir)
     await configStorage.write(

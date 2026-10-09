@@ -144,6 +144,7 @@ AI 模型、TTS runtime 和发音评测扩展使用带 manifest 和校验信息�
 - [docs/testing.md](docs/testing.md)：测试分层、命令和诊断产物
 - [docs/engineering/testing/README.md](docs/engineering/testing/README.md)：Electron 测试维护约定
 - [docs/engineering/qwen-tts.md](docs/engineering/qwen-tts.md)：Qwen TTS runtime 和模型包
+- [docs/engineering/index-tts.md](docs/engineering/index-tts.md)：IndexTTS 2.5 runtime、可变音色和模型包
 - [docs/engineering/airouter-model-catalog.md](docs/engineering/airouter-model-catalog.md)：AI Router 模型目录
 
 ## 许可证

@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "runtime": {
+    "repository": "https://github.com/0xShug0/audio.cpp.git",
+    "revision": "c7f5743f037d588049c63aa75e9b4fdb279cfe01",
+    "ggmlTree": "5191d4c73bdae6762f0b8df17904c144d6525b07",
+    "cudaArchitectures": "75;86-real;89-real;120a-real"
+  },
+  "runtimeRelease": {
+    "repository": "zzsqjdhqgb/cyez-ls101",
+    "version": "0.1.0",
+    "tag": "index-tts-runtime-v0.1.0",
+    "published": false,
+    "assets": []
+  },
+  "modelRelease": {
+    "repository": "zzsqjdhqgb/cyez-ls101",
+    "version": "1.0.0",
+    "tag": "index-tts-model-v1.0.0",
+    "published": false,
+    "parts": [
+      {
+        "name": "index-tts2_5-q8_0.gguf.part-0001",
+        "size": 1073741824,
+        "sha256": "0368d2ff002b9ee74d13084953d567ffa5b9e4c15d9fbdd989d43f035b931d2f"
+      },
+      {
+        "name": "index-tts2_5-q8_0.gguf.part-0002",
+        "size": 1073741824,
+        "sha256": "5ff77353f7b0a7d2b6534cddb8638a5945d37fa399ff95303b8955882b40dca9"
+      },
+      {
+        "name": "index-tts2_5-q8_0.gguf.part-0003",
+        "size": 1073741824,
+        "sha256": "ae13dab612641cc346ed58d2ec85563065635a51c313383ef7376935deaae937"
+      },
+      {
+        "name": "index-tts2_5-q8_0.gguf.part-0004",
+        "size": 281729856,
+        "sha256": "347e52912a2245c8c0f37238014784622285f12574424e841c4ef93f27060749"
+      }
+    ]
+  },
+  "model": {
+    "id": "IndexTeam/IndexTTS-2.5",
+    "revision": "c39ce5ba981572cb187443877ff559dfb246ce63",
+    "ggufRepository": "audio-cpp/audio.cpp-gguf",
+    "ggufRevision": "9c78726d0d2cf7ee8511e68ef003490c1251062f",
+    "file": "index-tts2_5-q8_0.gguf",
+    "upstreamPath": "IndexTTS2.5-GGUF/index-tts2_5-q8_0.gguf",
+    "quantization": "q8_0",
+    "size": 3502955328,
+    "sha256": "5e827b2072042e4a1b21ccf24a5cb4f71cb1011403067a0a9b039311d8b38628"
+  },
+  "package": {
+    "id": "index-tts-2.5-q8_0",
+    "name": "IndexTTS 2.5 Q8_0",
+    "version": "0.1.0",
+    "minimumAppVersion": "0.4.2"
+  },
+  "voices": [
+    {
+      "id": "american-man",
+      "name": "American English Man",
+      "file": "native/qwen-tts/voice-design/american-man.wav",
+      "provenance": "native/qwen-tts/voice-design/american-man.json",
+      "sha256": "1ae5ac5b80ba218a08441f623896368db080af2a47250fe979e7950b08ca7a66",
+      "license": "Apache-2.0 (Qwen VoiceDesign model); generated reference audio",
+      "languageCodes": ["en"]
+    },
+    {
+      "id": "american-woman",
+      "name": "American English Woman",
+      "file": "native/qwen-tts/voice-design/american-woman.wav",
+      "provenance": "native/qwen-tts/voice-design/american-woman.json",
+      "sha256": "d84992242a33494813263e795d1bc401335b79dda96de6c829c3743bc15847ac",
+      "license": "Apache-2.0 (Qwen VoiceDesign model); generated reference audio",
+      "languageCodes": ["en"]
+    }
+  ]
+}
