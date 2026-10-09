@@ -36,6 +36,13 @@ CPU helper 和固定音色行为保留。
 源码构建目录为 `externals/ai/index-tts/downloads/`。脚本检查固定提交和 GGML tree，
 只接受仓库内的上游补丁；有其他源码修改时拒绝构建。
 
+CUDA CI 沿用 Qwen 的 sccache，将 C、C++、CUDA 编译器产物写入 GitHub Actions
+缓存。每个可缓存的编译单元完成后即写入，不依赖整个 job 成功；后续测试或打包失败
+不会撤销已经写入的条目。job 的 post 步骤显示缓存命中、写入及写入错误统计。首次
+构建仍需编译；缓存服务限流或写入失败可能减少后续可复用的条目。此缓存不包含
+CUDA Toolkit 安装包或完整运行时发布资产。本地设置 `SCCACHE_PATH` 可启用同一
+编译器 launcher；未设置时直接使用编译器。
+
 Linux CUDA 构建示例：
 
 ```bash

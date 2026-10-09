@@ -22,6 +22,7 @@ if (args.length !== 2 || args[0] !== '--backend' || !['cpu', 'cuda'].includes(ar
     'Usage: yarn index-tts:build-runtime --backend cuda|cpu (CPU is for native development)'
   )
 const backend = args[1]
+const compilerLauncher = process.env.SCCACHE_PATH?.trim()
 const config = loadConfig()
 const target = runtimeTarget()
 if (!target) throw new Error('IndexTTS supports Linux/Windows x64')
@@ -83,6 +84,13 @@ run('cmake', [
   '-G',
   'Ninja',
   '-DCMAKE_BUILD_TYPE=Release',
+  ...(compilerLauncher
+    ? [
+        `-DCMAKE_C_COMPILER_LAUNCHER=${compilerLauncher}`,
+        `-DCMAKE_CXX_COMPILER_LAUNCHER=${compilerLauncher}`,
+        `-DCMAKE_CUDA_COMPILER_LAUNCHER=${compilerLauncher}`
+      ]
+    : []),
   `-DAUDIOCPP_SOURCE_DIR=${source}`,
   `-DENGINE_ENABLE_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
   '-DENGINE_ENABLE_OPENMP=OFF',
