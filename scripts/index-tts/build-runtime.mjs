@@ -116,7 +116,7 @@ const helper = `ls101-index-tts-helper-${backend}${process.platform === 'win32' 
 try {
   const [binary, library] = readFileSync(path.join(build, 'runtime-files.txt'), 'utf8')
     .trim()
-    .split('\n')
+    .split(/\r?\n/)
   copyFileSync(binary, path.join(runtime, helper))
   if (process.platform !== 'win32') chmodSync(path.join(runtime, helper), 0o755)
   copyFileSync(library, path.join(runtime, path.basename(library)))

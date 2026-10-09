@@ -50,7 +50,7 @@ jobs:
           cuda: '12.8.1'
           method: network
           sub-packages: >-
-            ${{ runner.os == 'Windows' && '["nvcc","cudart","cublas","cublas_dev","cufft","cufft_dev","nvjitlink","thrust"]' || '["nvcc","cudart","cudart_dev","thrust"]' }}
+            ${{ runner.os == 'Windows' && '["nvcc","cudart","cublas","cublas_dev","cufft","cufft_dev","nvjitlink","thrust"]' || '["nvcc","cudart","cudart-dev","cccl"]' }}
           non-cuda-sub-packages: >-
             ${{ runner.os == 'Windows' && '[]' || '["libcublas","libcublas-dev","libcufft","libcufft-dev","libnvjitlink","libnvjitlink-dev"]' }}
       - name: Build CUDA helper and stage dependencies
