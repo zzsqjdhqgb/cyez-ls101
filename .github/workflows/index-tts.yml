@@ -36,6 +36,8 @@ jobs:
     timeout-minutes: 120
     env:
       SCCACHE_GHA_ENABLED: 'true'
+      # Some CUDA units take longer than sccache's 10-minute idle timeout.
+      SCCACHE_IDLE_TIMEOUT: '0'
     steps:
       - uses: actions/checkout@v6
         with:
@@ -58,7 +60,8 @@ jobs:
       - name: Set up CUDA compiler cache
         uses: mozilla-actions/sccache-action@v0.0.11
         with:
-          version: v0.17.0
+          # 0.18 fixes nvcc's escaped string defines on Windows (sccache#2811).
+          version: ${{ runner.os == 'Windows' && 'v0.18.0' || 'v0.17.0' }}
       - name: Build CUDA helper and stage dependencies
         shell: bash
         run: |
