@@ -83,8 +83,8 @@ RUN corepack enable && corepack prepare yarn@4.15.0
 
 # 2. 安装 Claude Code、OpenAI Codex 和 DeepSeek Harness
 RUN npm i -g \
-    @anthropic-ai/claude-code@2.1.263 \
-    @openai/codex@0.153.4 \
+    @anthropic-ai/claude-code@2.1.293 \
+    @openai/codex@0.161.0 \
     @deepseek-ai/dsh@0.2.0-rc.2
 
 # 设置工作目录为仓库代码挂载点
