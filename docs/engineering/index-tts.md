@@ -43,8 +43,9 @@ CUDA CI 沿用 Qwen 的 sccache，将 C、C++、CUDA 编译器产物写入 GitHu
 CUDA Toolkit 安装包或完整运行时发布资产。本地设置 `SCCACHE_PATH` 可启用同一
 编译器 launcher；未设置时直接使用编译器。
 
-Windows CI 固定 sccache 0.18.0，包含 [nvcc 转义引号解析修复](https://github.com/mozilla/sccache/pull/2811)，
-用于处理上游 `engine_runtime` 的字符串宏；Linux CI 使用 0.17.0。CI 设置
+Linux 与 Windows CI 统一固定 sccache 0.18.0，包含 [nvcc 转义引号解析修复](https://github.com/mozilla/sccache/pull/2811)，
+用于处理 Windows 上游 `engine_runtime` 的字符串宏。升级版本会改变 GitHub 缓存
+命名空间和编译缓存键，因此首次使用 0.18.0 的 Linux 构建需要重新编译。CI 设置
 `SCCACHE_IDLE_TIMEOUT=0`，避免超过默认 10 分钟的 CUDA 编译导致服务退出、丢失
 当前统计和正在处理的编译请求。
 

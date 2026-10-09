@@ -61,7 +61,7 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.11
         with:
           # 0.18 fixes nvcc's escaped string defines on Windows (sccache#2811).
-          version: ${{ runner.os == 'Windows' && 'v0.18.0' || 'v0.17.0' }}
+          version: v0.18.0
       - name: Build CUDA helper and stage dependencies
         shell: bash
         run: |
