@@ -15,6 +15,7 @@ import {
 import path from 'node:path'
 import os from 'node:os'
 import { externalRoot, loadConfig, root, runtimeTarget } from './config.mjs'
+import { cudaCompilerLauncher } from './cuda-compiler-launcher.mjs'
 
 const args = process.argv.slice(2)
 if (args.length !== 2 || args[0] !== '--backend' || !['cpu', 'cuda'].includes(args[1]))
@@ -76,8 +77,8 @@ if (!currentDiff)
     input: `${patch}\n`,
     stdio: ['pipe', 'inherit', 'inherit']
   })
-if (backend === 'cuda' && process.platform === 'win32')
-  console.log('[index-tts] Windows CUDA uses nvcc directly to bypass sccache stalls')
+if (backend === 'cuda' && process.platform === 'win32' && compilerLauncher)
+  console.log('[index-tts] Windows CUDA cache enabled; only ggml-cuda/mmvf.cu bypasses sccache')
 run('cmake', [
   '-S',
   path.join(root, 'native', 'index-tts'),
@@ -93,8 +94,8 @@ run('cmake', [
       ]
     : []),
   // Windows sccache 0.18.0 repeatedly leaves ggml-cuda/mmvf.cu unfinished.
-  // Set the launcher explicitly to clear any previous CMake cache entry.
-  `-DCMAKE_CUDA_COMPILER_LAUNCHER=${process.platform === 'win32' ? '' : (compilerLauncher ?? '')}`,
+  // Selectively bypass that input; explicitly clear stale settings without a cache.
+  `-DCMAKE_CUDA_COMPILER_LAUNCHER=${cudaCompilerLauncher(compilerLauncher)}`,
   `-DAUDIOCPP_SOURCE_DIR=${source}`,
   `-DENGINE_ENABLE_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
   '-DENGINE_ENABLE_OPENMP=OFF',

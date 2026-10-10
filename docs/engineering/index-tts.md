@@ -43,12 +43,16 @@ Windows 头文件把 `INFINITY` 展开为 `(float)1e+300`，nvcc 对这种有意
 写法反复报警。以上选项仅作用于对应目标的 NVIDIA CUDA 编译；其他警告、错误和
 构建进度继续输出。
 
-CUDA CI 沿用 Qwen 的 sccache：Linux 缓存 C、C++、CUDA 编译器产物，Windows 仅
-缓存 C、C++，CUDA 直接调用 nvcc。[Windows 构建日志](https://github.com/zzsqjdhqgb/cyez-ls101/actions/runs/37998933634)
+CUDA CI 沿用 Qwen 的 sccache：Linux 和 Windows 都缓存 C、C++、CUDA 编译器产物，
+Windows 仅让上游 `ggml-cuda/mmvf.cu` 直接调用 nvcc。
+[Windows 构建日志](https://github.com/zzsqjdhqgb/cyez-ls101/actions/runs/37998933634)
 显示 sccache 0.18.0 下约 12 分钟完成 411/418 个任务后，连续 106 分钟没有任务完成；
 与直接编译基线相比，唯一未完成的源文件是 `mmvf.cu`。直接编译基线已完成编译、
-链接和 CTest；绕过 Windows CUDA 缓存的 CI 验证仍待完成。脚本显式清空 Windows
-的 CUDA launcher，避免复用旧 CMake 缓存中的设置。
+链接和 CTest；全部 CUDA 绕过缓存的后续两轮据人工观察均耗时 40 多分钟，因此改为
+仅绕过这个源文件。Windows CUDA launcher 通过 Node.js 根据编译输入选择 nvcc 或
+sccache，原样传递参数、编译输出和退出码；绕过时日志输出一行提示。
+选择性缓存方案仍需 Windows CUDA CI 验证。脚本每次配置都显式设置 CUDA launcher，
+未设置 `SCCACHE_PATH` 时清空该项，避免复用旧 CMake 缓存中的设置。
 
 缓存写入 GitHub Actions。每个可缓存的编译单元完成后即写入，不依赖整个 job 成功；
 后续测试或打包失败不会撤销已经写入的条目。job 的 post 步骤显示缓存命中、写入及
