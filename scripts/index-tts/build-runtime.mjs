@@ -76,6 +76,8 @@ if (!currentDiff)
     input: `${patch}\n`,
     stdio: ['pipe', 'inherit', 'inherit']
   })
+if (backend === 'cuda' && process.platform === 'win32')
+  console.log('[index-tts] Windows CUDA uses nvcc directly to bypass sccache stalls')
 run('cmake', [
   '-S',
   path.join(root, 'native', 'index-tts'),
@@ -87,10 +89,12 @@ run('cmake', [
   ...(compilerLauncher
     ? [
         `-DCMAKE_C_COMPILER_LAUNCHER=${compilerLauncher}`,
-        `-DCMAKE_CXX_COMPILER_LAUNCHER=${compilerLauncher}`,
-        `-DCMAKE_CUDA_COMPILER_LAUNCHER=${compilerLauncher}`
+        `-DCMAKE_CXX_COMPILER_LAUNCHER=${compilerLauncher}`
       ]
     : []),
+  // Windows sccache 0.18.0 repeatedly leaves ggml-cuda/mmvf.cu unfinished.
+  // Set the launcher explicitly to clear any previous CMake cache entry.
+  `-DCMAKE_CUDA_COMPILER_LAUNCHER=${process.platform === 'win32' ? '' : (compilerLauncher ?? '')}`,
   `-DAUDIOCPP_SOURCE_DIR=${source}`,
   `-DENGINE_ENABLE_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
   '-DENGINE_ENABLE_OPENMP=OFF',

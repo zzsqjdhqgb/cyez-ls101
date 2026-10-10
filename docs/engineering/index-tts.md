@@ -36,18 +36,29 @@ CPU helper 和固定音色行为保留。
 源码构建目录为 `externals/ai/index-tts/downloads/`。脚本检查固定提交和 GGML tree，
 只接受仓库内的上游补丁；有其他源码修改时拒绝构建。
 
-CUDA CI 沿用 Qwen 的 sccache，将 C、C++、CUDA 编译器产物写入 GitHub Actions
-缓存。每个可缓存的编译单元完成后即写入，不依赖整个 job 成功；后续测试或打包失败
-不会撤销已经写入的条目。job 的 post 步骤显示缓存命中、写入及写入错误统计。首次
-构建仍需编译；缓存服务限流或写入失败可能减少后续可复用的条目。此缓存不包含
-CUDA Toolkit 安装包或完整运行时发布资产。本地设置 `SCCACHE_PATH` 可启用同一
-编译器 launcher；未设置时直接使用编译器。
+Linux 和 Windows 的上游 GGML CUDA 目标仅屏蔽 nvcc 的未使用变量警告
+`#177-D`、`#550-D`，同时消除这些警告附带的重复模板实例化调用链，以便观察构建结果。
+其他警告（包括浮点范围警告 `#221-D`）、错误和构建进度继续输出。该选项仅作用于
+`ggml-cuda` 目标的 NVIDIA CUDA 编译。
 
-Linux 与 Windows CI 统一固定 sccache 0.18.0，包含 [nvcc 转义引号解析修复](https://github.com/mozilla/sccache/pull/2811)，
-用于处理 Windows 上游 `engine_runtime` 的字符串宏。升级版本会改变 GitHub 缓存
-命名空间和编译缓存键，因此首次使用 0.18.0 的 Linux 构建需要重新编译。CI 设置
-`SCCACHE_IDLE_TIMEOUT=0`，避免超过默认 10 分钟的 CUDA 编译导致服务退出、丢失
-当前统计和正在处理的编译请求。
+CUDA CI 沿用 Qwen 的 sccache：Linux 缓存 C、C++、CUDA 编译器产物，Windows 仅
+缓存 C、C++，CUDA 直接调用 nvcc。[Windows 构建日志](https://github.com/zzsqjdhqgb/cyez-ls101/actions/runs/37998933634)
+显示 sccache 0.18.0 下约 12 分钟完成 411/418 个任务后，连续 106 分钟没有任务完成；
+与直接编译基线相比，唯一未完成的源文件是 `mmvf.cu`。直接编译基线已完成编译、
+链接和 CTest；绕过 Windows CUDA 缓存的 CI 验证仍待完成。脚本显式清空 Windows
+的 CUDA launcher，避免复用旧 CMake 缓存中的设置。
+
+缓存写入 GitHub Actions。每个可缓存的编译单元完成后即写入，不依赖整个 job 成功；
+后续测试或打包失败不会撤销已经写入的条目。job 的 post 步骤显示缓存命中、写入及
+写入错误统计。首次构建仍需编译；缓存服务限流或写入失败可能减少后续可复用的条目。
+此缓存不包含
+CUDA Toolkit 安装包或完整运行时发布资产。本地设置 `SCCACHE_PATH` 可启用上述
+平台对应的编译器 launcher；未设置时直接使用编译器。
+
+Linux 与 Windows CI 统一固定 sccache 0.18.0，包含 [nvcc 转义引号解析修复](https://github.com/mozilla/sccache/pull/2811)。
+升级版本会改变 GitHub 缓存命名空间和编译缓存键，因此首次使用 0.18.0 的 Linux
+构建需要重新编译。CI 设置 `SCCACHE_IDLE_TIMEOUT=0`，避免超过默认 10 分钟的 CUDA
+编译导致服务退出、丢失当前统计和正在处理的编译请求。
 
 Linux CUDA 构建示例：
 

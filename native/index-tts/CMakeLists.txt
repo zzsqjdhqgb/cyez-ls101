@@ -20,6 +20,13 @@ set(ENGINE_ENABLE_METAL OFF CACHE BOOL "No Metal" FORCE)
 set(ENGINE_ENABLE_VULKAN OFF CACHE BOOL "No Vulkan" FORCE)
 set(ENGINE_ENABLE_LLAMAFILE OFF CACHE BOOL "No llamafile" FORCE)
 add_subdirectory("${AUDIOCPP_SOURCE_DIR}" audiocpp EXCLUDE_FROM_ALL)
+if(TARGET ggml-cuda)
+  # Unused variables in vendored CUDA templates produce thousands of repeated
+  # diagnostics and instantiation traces. Suppress only those diagnostic IDs.
+  target_compile_options(ggml-cuda PRIVATE
+    "$<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--diag-suppress=177,550>"
+  )
+endif()
 # This private library is always shipped with its matching helper. Keep a single
 # filename in the runtime bundle instead of platform-specific version symlinks.
 set_property(TARGET audiocpp PROPERTY VERSION)
