@@ -38,8 +38,10 @@ CPU helper 和固定音色行为保留。
 
 Linux 和 Windows 的上游 GGML CUDA 目标仅屏蔽 nvcc 的未使用变量警告
 `#177-D`、`#550-D`，同时消除这些警告附带的重复模板实例化调用链，以便观察构建结果。
-其他警告（包括浮点范围警告 `#221-D`）、错误和构建进度继续输出。该选项仅作用于
-`ggml-cuda` 目标的 NVIDIA CUDA 编译。
+Windows 的上游 `ggml-cuda`、`engine_runtime` 目标另外屏蔽浮点范围警告 `#221-D`：
+Windows 头文件把 `INFINITY` 展开为 `(float)1e+300`，nvcc 对这种有意表示无穷大的
+写法反复报警。以上选项仅作用于对应目标的 NVIDIA CUDA 编译；其他警告、错误和
+构建进度继续输出。
 
 CUDA CI 沿用 Qwen 的 sccache：Linux 缓存 C、C++、CUDA 编译器产物，Windows 仅
 缓存 C、C++，CUDA 直接调用 nvcc。[Windows 构建日志](https://github.com/zzsqjdhqgb/cyez-ls101/actions/runs/37998933634)

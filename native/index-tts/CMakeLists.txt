@@ -27,6 +27,17 @@ if(TARGET ggml-cuda)
     "$<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--diag-suppress=177,550>"
   )
 endif()
+if(WIN32)
+  # Windows expands INFINITY to a float cast of 1e+300. NVCC warns about the
+  # intentional overflow used for infinity sentinels in these vendored targets.
+  foreach(cuda_target IN ITEMS ggml-cuda engine_runtime)
+    if(TARGET ${cuda_target})
+      target_compile_options(${cuda_target} PRIVATE
+        "$<$<COMPILE_LANG_AND_ID:CUDA,NVIDIA>:--diag-suppress=221>"
+      )
+    endif()
+  endforeach()
+endif()
 # This private library is always shipped with its matching helper. Keep a single
 # filename in the runtime bundle instead of platform-specific version symlinks.
 set_property(TARGET audiocpp PROPERTY VERSION)
