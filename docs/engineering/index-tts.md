@@ -44,22 +44,24 @@ Windows 头文件把 `INFINITY` 展开为 `(float)1e+300`，nvcc 对这种有意
 构建进度继续输出。
 
 CUDA CI 沿用 Qwen 的 sccache：Linux 和 Windows 都缓存 C、C++、CUDA 编译器产物，
-Windows 仅让上游 `ggml-cuda/mmvf.cu` 直接调用 nvcc。
-[Windows 构建日志](https://github.com/zzsqjdhqgb/cyez-ls101/actions/runs/37998933634)
-显示 sccache 0.18.0 下约 12 分钟完成 411/418 个任务后，连续 106 分钟没有任务完成；
-与直接编译基线相比，唯一未完成的源文件是 `mmvf.cu`。直接编译基线已完成编译、
-链接和 CTest；全部 CUDA 绕过缓存的后续两轮据人工观察均耗时 40 多分钟，因此改为
-仅绕过这个源文件。Windows CUDA launcher 通过 Node.js 根据编译输入选择 nvcc 或
-sccache，原样传递参数、编译输出和退出码；绕过时日志输出一行提示。
-选择性缓存方案仍需 Windows CUDA CI 验证。脚本每次配置都显式设置 CUDA launcher，
-未设置 `SCCACHE_PATH` 时清空该项，避免复用旧 CMake 缓存中的设置。
+包括上游 `ggml-cuda/mmvf.cu`，CMake 直接使用 sccache 作为编译器 launcher。
+CI 在缓存服务启动前设置 `SCCACHE_MAX_FRAME_LENGTH=16777216`（16 MiB）。
+sccache 0.18.0 默认的单次响应上限为 8 MiB，响应包含完整的编译 stdout/stderr；
+Windows 直接编译基线中 `mmvf.cu` 的输出约 8.2 MiB，超过该上限。
+最小编译复现表明，响应过大会导致编译和缓存写入成功后客户端仍等待返回，缓存命中
+也会出现相同问题；扩大到 16 MiB 后首次编译和缓存命中均能正常返回。
+恢复 `mmvf.cu` 缓存后的完整 Windows CUDA 构建仍需 CI 验证。
+脚本每次配置都显式设置 CUDA launcher，覆盖先前的选择性 launcher；未设置
+`SCCACHE_PATH` 时清空该项，避免复用旧 CMake 缓存中的设置。
 
 缓存写入 GitHub Actions。每个可缓存的编译单元完成后即写入，不依赖整个 job 成功；
 后续测试或打包失败不会撤销已经写入的条目。job 的 post 步骤显示缓存命中、写入及
 写入错误统计。首次构建仍需编译；缓存服务限流或写入失败可能减少后续可复用的条目。
 此缓存不包含
 CUDA Toolkit 安装包或完整运行时发布资产。本地设置 `SCCACHE_PATH` 可启用上述
-平台对应的编译器 launcher；未设置时直接使用编译器。
+编译器 launcher；未设置时直接使用编译器。使用本地缓存时，在启动 sccache 服务前
+也应设置 `SCCACHE_MAX_FRAME_LENGTH=16777216`；已有服务需要先停止，再以新环境
+启动。这个设置不改变编译缓存键，无需清除已有缓存。
 
 Linux 与 Windows CI 统一固定 sccache 0.18.0，包含 [nvcc 转义引号解析修复](https://github.com/mozilla/sccache/pull/2811)。
 升级版本会改变 GitHub 缓存命名空间和编译缓存键，因此首次使用 0.18.0 的 Linux

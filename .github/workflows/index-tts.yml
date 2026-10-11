@@ -38,6 +38,9 @@ jobs:
       SCCACHE_GHA_ENABLED: 'true'
       # Some CUDA units take longer than sccache's 10-minute idle timeout.
       SCCACHE_IDLE_TIMEOUT: '0'
+      # mmvf diagnostics can exceed the default 8 MiB response limit.
+      # Set this before the sccache action starts the server.
+      SCCACHE_MAX_FRAME_LENGTH: '16777216'
     steps:
       - uses: actions/checkout@v6
         with:
