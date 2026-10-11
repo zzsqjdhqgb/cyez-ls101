@@ -190,16 +190,27 @@ yarn index-tts:test-runtime --backend cpu
 yarn index-tts:test-runtime --backend cuda
 ```
 
-脚本使用同一 PID 完成男 → 女 → 男，以固定 seed 检查前后男声结果摘要一致，
-保存 WAV、启动时间、推理时间和 Linux RSS 到
-`dist/index-tts-validation-<backend>/`。输入 GGUF 复制为无扩展名的 SHA-256 文件名，
-覆盖应用真实资产命名方式。helper 使用独立 OS 临时目录，退出后删除上游展开的
-tokenizer/config。
+脚本以相同英文文本和 seed 完成男 → 女 → 男，再单独生成中文，检查无效参考音频后
+继续推理。每次在 `dist/index-tts-validation-<backend>/run-测试 <随机串>/` 保存独立
+报告、WAV 和完整诊断；失败时也保存报告。记录加载与推理耗时、Linux/Windows
+进程内存及可取得的 CUDA 显存样本。输入 GGUF 复制为无扩展名的 SHA-256 文件名，
+模型与参考 WAV 的路径含空格和中文。helper 使用独立 OS 临时目录，退出后删除
+模型副本和上游展开文件。`--cycles 5` 可增加声线切换循环。
+
+CI 产物可用 `yarn index-tts:install-runtime --artifact-dir <下载目录>` 校验并安装，
+无需重新编译。完整的平台安装、GPU 推理、应用与离线验收步骤见
+[CUDA 平台验收](index-tts-validation.md)。
 
 2026-10-09 重启后 Linux CPU 实测：模型就绪 9.7 秒，三次短句分别约 57、64、54 秒；
 输出 22050 Hz，RSS 约 2.8 GiB，峰值约 3.4 GiB。两个固定 seed 男声 WAV
 完全相同。CPU 结果说明模型与协议链路可运行；GPU/显存、长时间多音色切换、两平台
 离线首次推理、Windows 中文路径和音质尚未完成验收。
+
+2026-10-11 新验收工具验证：98 项脚本测试、改动脚本的 ESLint 与格式检查通过。
+Linux CPU 真实 Q8_0 验收保存五份 22050 Hz WAV、一次预期的参考音频错误和
+266 份资源样本；同一 helper 完成所有请求，前后男声摘要一致，错误后女声推理恢复。
+模型加载约 8 秒，五次正常推理分别约 51、56、47、42、56 秒；正常退出后模型副本
+和展开目录已清理。本次结果用于验证验收工具，CUDA 与人工验收仍待完成。
 
 应用和脚本检查：
 

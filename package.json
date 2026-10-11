@@ -43,6 +43,7 @@
     "qwen-tts:download": "node scripts/qwen-tts/download-release-assets.mjs",
     "qwen-tts:prepare": "node scripts/qwen-tts/prepare-package.mjs",
     "index-tts:build-runtime": "node scripts/index-tts/build-runtime.mjs",
+    "index-tts:install-runtime": "node scripts/index-tts/install-runtime.mjs",
     "index-tts:download": "node scripts/index-tts/download-release-assets.mjs",
     "index-tts:build-package": "node scripts/index-tts/build-package.mjs",
     "index-tts:prepare": "node scripts/index-tts/prepare-package.mjs",
