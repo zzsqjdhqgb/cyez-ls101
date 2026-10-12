@@ -120,13 +120,23 @@ test('student enrollment, maintenance, practice and durable receipt run through 
         window as unknown as { lab: { invoke(name: string, input?: unknown): Promise<unknown> } }
       ).lab.invoke('foreground.set', 'idle')
     )
+    // Resources above fflate's 160 KB threshold are deflated in a blob: Worker; recordings hit
+    // this path in real practice, so the student CSP must allow it or saving hangs forever.
+    const attachment = {
+      filename: 'data.bin',
+      packagePath: 'resources/attachment/data.bin',
+      mediaType: 'application/octet-stream'
+    }
+    const attachmentBytes = new Uint8Array(200_000)
+    for (let offset = 0; offset < attachmentBytes.length; offset += 65_536)
+      crypto.getRandomValues(attachmentBytes.subarray(offset, offset + 65_536))
     const exam: ExamPackage = {
       format: 'ls101-exam',
       formatVersion: 1,
       packageId: randomUUID(),
       examData: {
         title: '机房集成练习',
-        resources: {},
+        resources: { attachment },
         player: {
           pages: [{ id: 'one', content: [], timeline: [{ type: 'countdown', seconds: 0 }] }],
           recordingIndices: []
@@ -138,12 +148,12 @@ test('student enrollment, maintenance, practice and durable receipt run through 
         formatVersion: 1,
         meta: { examPackageId: '', examTitle: '机房集成练习' },
         schemaUses: [],
-        resources: {}
+        resources: { attachment }
       }
     }
     exam.submissionTemplate.meta.examPackageId = exam.packageId
     const examFile = join(root, 'exam.lsexam')
-    await writeFile(examFile, await encodeExamPackage(exam, {}))
+    await writeFile(examFile, await encodeExamPackage(exam, { attachment: attachmentBytes }))
     const imported = await teacher.request<Schema<'ExamImport'>>('postTeacherExams', {
       archive: await transport.registerArchive(target.connectionId, examFile),
       idempotencyKey: randomUUID()
