@@ -138,6 +138,8 @@ test('starts a hardened application window and exposes every preload bridge', as
 
   expect(rendererState).toEqual({
     airouter: [
+      'cancelCudaRuntimeInstall',
+      'cancelIndexTtsRuntimeInstall',
       'deleteImageProviderConfig',
       'deletePronunciationAssessmentExtension',
       'deleteProviderConfig',
@@ -145,10 +147,14 @@ test('starts a hardened application window and exposes every preload bridge', as
       'deleteSpeechProviderConfig',
       'deleteSpeechRecognitionModelPackage',
       'deleteSpeechRecognitionProviderConfig',
+      'getCudaRuntimeStatus',
+      'getIndexTtsRuntimeStatus',
       'getPronunciationAssessmentExtensionStatus',
       'importPronunciationAssessmentExtension',
       'importSpeechModelPackage',
       'importSpeechRecognitionModelPackage',
+      'installCudaRuntime',
+      'installIndexTtsRuntime',
       'listImageModels',
       'listImageProviderConfigs',
       'listModels',
@@ -167,6 +173,8 @@ test('starts a hardened application window and exposes every preload bridge', as
       'readProviderApiKey',
       'readSpeechProviderApiKey',
       'readSpeechRecognitionProviderApiKey',
+      'removeCudaRuntime',
+      'removeIndexTtsRuntime',
       'saveImageProviderConfig',
       'saveProviderConfig',
       'saveSpeechProviderConfig',

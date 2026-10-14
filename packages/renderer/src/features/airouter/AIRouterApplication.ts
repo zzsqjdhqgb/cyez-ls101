@@ -14,6 +14,8 @@ import type {
   AIRouterSpeechProviderConfigSummary,
   AIRouterSpeechProviderType,
   AIRouterQwenTtsCudaProbeResult,
+  AIRouterCudaRuntimeStatus,
+  AIRouterIndexTtsRuntimeStatus,
   AIRouterSpeechRecognitionModelOption,
   AIRouterSpeechRecognitionModelPackageImportResult,
   AIRouterSpeechRecognitionModelPackageSummary,
@@ -63,6 +65,14 @@ export interface AIRouterApplication {
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
   probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
+  getCudaRuntimeStatus(): Promise<AIRouterCudaRuntimeStatus>
+  installCudaRuntime(): Promise<AIRouterCudaRuntimeStatus>
+  cancelCudaRuntimeInstall(): Promise<void>
+  removeCudaRuntime(): Promise<void>
+  getIndexTtsRuntimeStatus(): Promise<AIRouterIndexTtsRuntimeStatus>
+  installIndexTtsRuntime(): Promise<AIRouterIndexTtsRuntimeStatus>
+  cancelIndexTtsRuntimeInstall(): Promise<void>
+  removeIndexTtsRuntime(): Promise<void>
   getPronunciationExtensionStatus(): Promise<AIRouterPronunciationAssessmentExtensionStatus>
   importPronunciationExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null>
   deletePronunciationExtension(): Promise<void>
@@ -109,6 +119,14 @@ export function createAIRouterApplication(
     listSpeechVoices: (request) => client.listSpeechVoices(request),
     testSpeechConnection: (request) => client.testSpeechConnection(request),
     probeQwenTtsCuda: () => client.probeQwenTtsCuda(),
+    getCudaRuntimeStatus: () => client.getCudaRuntimeStatus(),
+    installCudaRuntime: () => client.installCudaRuntime(),
+    cancelCudaRuntimeInstall: () => client.cancelCudaRuntimeInstall(),
+    removeCudaRuntime: () => client.removeCudaRuntime(),
+    getIndexTtsRuntimeStatus: () => client.getIndexTtsRuntimeStatus(),
+    installIndexTtsRuntime: () => client.installIndexTtsRuntime(),
+    cancelIndexTtsRuntimeInstall: () => client.cancelIndexTtsRuntimeInstall(),
+    removeIndexTtsRuntime: () => client.removeIndexTtsRuntime(),
     getPronunciationExtensionStatus: () => client.getPronunciationAssessmentExtensionStatus(),
     importPronunciationExtension: () => client.importPronunciationAssessmentExtension(),
     deletePronunciationExtension: () => client.deletePronunciationAssessmentExtension(),

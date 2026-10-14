@@ -28,6 +28,7 @@ import {
   MessageSquareText,
   Mic,
   Brain,
+  Cpu,
   Plus,
   Save,
   TestTube2,
@@ -61,6 +62,7 @@ import { AIRouterImageSettingsPage } from './AIRouterImageSettingsPage'
 import { AIRouterSpeechSettingsPage } from './AIRouterSpeechSettingsPage'
 import { AIRouterSpeechRecognitionSettingsPage } from './AIRouterSpeechRecognitionSettingsPage'
 import { AIRouterPronunciationSettingsPage } from './AIRouterPronunciationSettingsPage'
+import { AIRouterRuntimeSettingsPage } from './AIRouterRuntimeSettingsPage'
 import styles from './AIRouterSettingsPage.module.css'
 
 interface ProviderDraft {
@@ -201,7 +203,8 @@ const sections = [
   { id: 'image', label: '图像生成', icon: ImageIcon },
   { id: 'speech-synthesis', label: '语音合成', icon: AudioLines },
   { id: 'speech-recognition', label: '语音识别', icon: Mic },
-  { id: 'pronunciation', label: 'AI 语音评测', icon: Brain }
+  { id: 'pronunciation', label: 'AI 语音评测', icon: Brain },
+  { id: 'runtime', label: '运行时', icon: Cpu }
 ] as const
 
 export function AIRouterSettingsPage({
@@ -300,6 +303,10 @@ export function AIRouterSettingsPage({
           <Route
             path="pronunciation"
             element={<AIRouterPronunciationSettingsPage application={application} />}
+          />
+          <Route
+            path="runtime"
+            element={<AIRouterRuntimeSettingsPage application={application} />}
           />
           <Route path="*" element={<Navigate replace to="text" />} />
         </Routes>

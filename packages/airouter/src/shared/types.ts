@@ -502,6 +502,42 @@ export interface AIRouterQwenTtsCudaProbeResult {
   message?: string
 }
 
+export type AIRouterCudaRuntimeState = 'unsupported' | 'not-installed' | 'installing' | 'installed'
+
+export interface AIRouterCudaRuntimeStatus {
+  state: AIRouterCudaRuntimeState
+  /** Runtime bundle version pinned by this application build. */
+  version: string
+  /** `${process.platform}-${process.arch}` of the running application. */
+  platform: string
+  totalBytes: number
+  /** Bytes verified so far; equals totalBytes once installed. */
+  downloadedBytes: number
+  fileCount: number
+  /** Error from the most recent failed install attempt, if any. */
+  lastError?: string
+}
+
+export type AIRouterIndexTtsRuntimeState =
+  | 'unsupported'
+  | 'not-installed'
+  | 'installing'
+  | 'installed'
+
+export interface AIRouterIndexTtsRuntimeStatus {
+  state: AIRouterIndexTtsRuntimeState
+  /** Runtime bundle version pinned by this application build. */
+  version: string
+  /** `${process.platform}-${process.arch}` of the running application. */
+  platform: string
+  totalBytes: number
+  /** Bytes verified so far; equals totalBytes once installed. */
+  downloadedBytes: number
+  fileCount: number
+  /** Error from the most recent failed install attempt, if any. */
+  lastError?: string
+}
+
 export interface AIRouterSpeechVoiceListInput {
   config: AIRouterSpeechProviderConfigInput
   modelId: string
@@ -543,6 +579,14 @@ export interface AIRouterClient {
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
   probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
+  getCudaRuntimeStatus(): Promise<AIRouterCudaRuntimeStatus>
+  installCudaRuntime(): Promise<AIRouterCudaRuntimeStatus>
+  cancelCudaRuntimeInstall(): Promise<void>
+  removeCudaRuntime(): Promise<void>
+  getIndexTtsRuntimeStatus(): Promise<AIRouterIndexTtsRuntimeStatus>
+  installIndexTtsRuntime(): Promise<AIRouterIndexTtsRuntimeStatus>
+  cancelIndexTtsRuntimeInstall(): Promise<void>
+  removeIndexTtsRuntime(): Promise<void>
   listSpeechRecognitionProviderConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
   saveSpeechRecognitionProviderConfig(
     config: AIRouterSpeechRecognitionProviderConfigInput
@@ -616,6 +660,14 @@ export interface AIRouterBridge {
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
   probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
+  getCudaRuntimeStatus(): Promise<AIRouterCudaRuntimeStatus>
+  installCudaRuntime(): Promise<AIRouterCudaRuntimeStatus>
+  cancelCudaRuntimeInstall(): Promise<void>
+  removeCudaRuntime(): Promise<void>
+  getIndexTtsRuntimeStatus(): Promise<AIRouterIndexTtsRuntimeStatus>
+  installIndexTtsRuntime(): Promise<AIRouterIndexTtsRuntimeStatus>
+  cancelIndexTtsRuntimeInstall(): Promise<void>
+  removeIndexTtsRuntime(): Promise<void>
   listSpeechRecognitionProviderConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
   saveSpeechRecognitionProviderConfig(
     config: AIRouterSpeechRecognitionProviderConfigInput

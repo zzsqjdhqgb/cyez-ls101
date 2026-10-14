@@ -174,6 +174,30 @@ const airouterBridge: AIRouterBridge = {
   probeQwenTtsCuda() {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.probeQwenTtsCuda)
   },
+  getCudaRuntimeStatus() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.cudaRuntimeStatus)
+  },
+  installCudaRuntime() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.installCudaRuntime)
+  },
+  cancelCudaRuntimeInstall() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.cancelCudaRuntimeInstall)
+  },
+  removeCudaRuntime() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.removeCudaRuntime)
+  },
+  getIndexTtsRuntimeStatus() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.indexTtsRuntimeStatus)
+  },
+  installIndexTtsRuntime() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.installIndexTtsRuntime)
+  },
+  cancelIndexTtsRuntimeInstall() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.cancelIndexTtsRuntimeInstall)
+  },
+  removeIndexTtsRuntime() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.removeIndexTtsRuntime)
+  },
   listSpeechRecognitionProviderConfigs() {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionConfigs)
   },

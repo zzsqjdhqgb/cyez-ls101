@@ -115,6 +115,7 @@ export function AIRouterSpeechSettingsPage({
   const [deletePackageTarget, setDeletePackageTarget] =
     useState<AIRouterSpeechModelPackageSummary | null>(null)
   const [testAudioUrl, setTestAudioUrl] = useState<string | null>(null)
+  const [cudaRuntimeInstalled, setCudaRuntimeInstalled] = useState(false)
 
   const loadSettings = useCallback(async (): Promise<void> => {
     const requestId = loadRequest.current + 1
@@ -129,6 +130,15 @@ export function AIRouterSpeechSettingsPage({
       if (requestId !== loadRequest.current) return
       setConfigs(nextConfigs)
       setPackages(nextPackages)
+      // Runtime status only gates the CUDA option; failing to read it must not block the page.
+      void application
+        .getCudaRuntimeStatus()
+        .then((status) => {
+          if (requestId === loadRequest.current) {
+            setCudaRuntimeInstalled(status.state === 'installed')
+          }
+        })
+        .catch(() => undefined)
     } catch (reason) {
       if (requestId !== loadRequest.current) return
       setConfigs(null)
@@ -306,7 +316,9 @@ export function AIRouterSpeechSettingsPage({
                   <span className={styles.providerMeta}>
                     <span>{providerLabels[config.type]}</span>
                     <span>{config.kind === 'local' ? '本地' : '在线'}</span>
-                    {config.type === 'qwen-tts' ? <span>CPU</span> : null}
+                    {config.type === 'qwen-tts' ? (
+                      <span>{config.backend === 'cuda' ? 'CUDA' : 'CPU'}</span>
+                    ) : null}
                     <span>{config.models.filter((model) => model.enabled).length} 个模型</span>
                     <span>{config.voices.filter((voice) => voice.enabled).length} 个音色</span>
                   </span>
@@ -571,6 +583,37 @@ export function AIRouterSpeechSettingsPage({
                       </div>
                     </SettingsRow>
                   </>
+                ) : null}
+                {draft.kind === 'local' && draft.type === 'qwen-tts' ? (
+                  <SettingsRow
+                    label="计算后端"
+                    description={
+                      cudaRuntimeInstalled
+                        ? 'CUDA 需要兼容的 NVIDIA 显卡驱动。'
+                        : 'CUDA 需要先在“运行时”选项卡中下载 CUDA 运行时。'
+                    }
+                  >
+                    <select
+                      aria-label="Qwen TTS 计算后端"
+                      className={styles.input}
+                      disabled={Boolean(busy)}
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          backend: event.target.value as AIRouterQwenTtsBackend
+                        })
+                      }
+                      value={draft.backend}
+                    >
+                      <option value="cpu">CPU</option>
+                      <option
+                        disabled={!cudaRuntimeInstalled && draft.backend !== 'cuda'}
+                        value="cuda"
+                      >
+                        CUDA{cudaRuntimeInstalled ? '' : '（未安装运行时）'}
+                      </option>
+                    </select>
+                  </SettingsRow>
                 ) : null}
               </SettingsSection>
 
@@ -1150,7 +1193,7 @@ function fromConfig(config: AIRouterSpeechProviderConfigSummary): SpeechProvider
     ...config,
     models: config.models.map((model) => ({ ...model })),
     voices: config.voices.map((voice) => ({ ...voice })),
-    backend: config.type === 'qwen-tts' ? 'cpu' : (config.backend ?? 'cpu'),
+    backend: config.backend ?? 'cpu',
     apiKey: ''
   }
 }
@@ -1169,7 +1212,7 @@ function toInput(
     baseUrl: draft.kind === 'online' ? draft.baseUrl : undefined,
     modelPackageId: draft.kind === 'local' ? draft.modelPackageId : undefined,
     modelPackageVersion: draft.kind === 'local' ? draft.modelPackageVersion : undefined,
-    backend: draft.kind === 'local' && draft.type === 'qwen-tts' ? 'cpu' : undefined,
+    backend: draft.kind === 'local' && draft.type === 'qwen-tts' ? draft.backend : undefined,
     models: draft.models,
     voices: draft.voices,
     apiKey:

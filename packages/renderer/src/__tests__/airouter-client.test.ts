@@ -244,6 +244,28 @@ function bridgeWith(overrides: Partial<AIRouterBridge>): AIRouterBridge {
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
     probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
+    getCudaRuntimeStatus: vi.fn().mockResolvedValue({
+      state: 'not-installed',
+      version: '0.3.1',
+      platform: 'linux-x64',
+      totalBytes: 1,
+      downloadedBytes: 0,
+      fileCount: 1
+    }),
+    installCudaRuntime: vi.fn(),
+    cancelCudaRuntimeInstall: vi.fn(),
+    removeCudaRuntime: vi.fn(),
+    getIndexTtsRuntimeStatus: vi.fn().mockResolvedValue({
+      state: 'not-installed',
+      version: '0.1.0',
+      platform: 'linux-x64',
+      totalBytes: 1,
+      downloadedBytes: 0,
+      fileCount: 1
+    }),
+    installIndexTtsRuntime: vi.fn(),
+    cancelIndexTtsRuntimeInstall: vi.fn(),
+    removeIndexTtsRuntime: vi.fn(),
     listSpeechRecognitionModels: vi.fn(),
     listSpeechRecognitionProviderConfigs: vi.fn(),
     saveSpeechRecognitionProviderConfig: vi.fn(),

@@ -460,7 +460,7 @@ export class AIRouterSpeechService {
       modelPackageVersion,
       models: modelPackageId ? models : [],
       voices: modelPackageId ? voices : [],
-      ...(input.type === 'qwen-tts' ? { backend: 'cpu' as const } : {})
+      ...(input.type === 'qwen-tts' ? { backend: input.backend ?? ('cpu' as const) } : {})
     }
   }
 
@@ -490,7 +490,7 @@ export class AIRouterSpeechService {
     return {
       ...document,
       providers: document.providers.map((config) =>
-        config.type === 'qwen-tts' ? { ...config, backend: 'cpu' } : config
+        config.type === 'qwen-tts' ? { ...config, backend: config.backend ?? 'cpu' } : config
       )
     }
   }

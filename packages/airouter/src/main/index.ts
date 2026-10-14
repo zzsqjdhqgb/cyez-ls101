@@ -34,6 +34,8 @@ import { AIRouterSpeechRecognitionService } from './speech-recognition-service'
 import { AIRouterPronunciationAssessmentService } from './pronunciation-assessment-service'
 import { PocketTtsSynthesizer } from './pocket-tts'
 import { QwenTtsSynthesizer } from './qwen-tts'
+import { CudaRuntimeManager } from './cuda-runtime'
+import { IndexTtsRuntimeManager } from './index-tts-runtime'
 
 export { AIRouterService } from './service'
 export { AIRouterImageService } from './image-service'
@@ -44,6 +46,12 @@ export { AIRouterSpeechModelStore, AIRouterSpeechRecognitionModelStore } from '.
 export { AIRouterExtensionStore } from './extension-store'
 export { PocketTtsSynthesizer } from './pocket-tts'
 export { QwenTtsSynthesizer } from './qwen-tts'
+export { CudaRuntimeManager, CUDA_RUNTIME_BUNDLES, CUDA_RUNTIME_VERSION } from './cuda-runtime'
+export {
+  IndexTtsRuntimeManager,
+  INDEX_TTS_RUNTIME_BUNDLES,
+  INDEX_TTS_RUNTIME_VERSION
+} from './index-tts-runtime'
 export type { AIRouterServiceOptions } from './service'
 export type {
   AIRouterLocalSpeechRequest,
@@ -67,7 +75,11 @@ export interface AIRouterRegistrationOptions extends AIRouterServiceOptions {
 export function registerAIRouter(options: AIRouterRegistrationOptions): void {
   const service = new AIRouterService(options)
   const imageService = new AIRouterImageService(options)
-  const qwenTtsSynthesizer = new QwenTtsSynthesizer()
+  const cudaRuntime = new CudaRuntimeManager({ baseDir: options.baseDir })
+  const indexTtsRuntime = new IndexTtsRuntimeManager({ baseDir: options.baseDir })
+  const qwenTtsSynthesizer = new QwenTtsSynthesizer({
+    resolveCudaHelperPath: () => cudaRuntime.resolveQwenTtsHelperPath()
+  })
   const speechService = new AIRouterSpeechService({
     baseDir: options.baseDir,
     appVersion: app.getVersion(),
@@ -78,7 +90,10 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
       'qwen-tts': qwenTtsSynthesizer
     }
   })
-  app.once('will-quit', () => qwenTtsSynthesizer.dispose())
+  app.once('will-quit', () => {
+    cudaRuntime.cancelInstall()
+    qwenTtsSynthesizer.dispose()
+  })
   const recognitionService = new AIRouterSpeechRecognitionService({
     baseDir: options.baseDir,
     appVersion: app.getVersion(),
@@ -176,6 +191,22 @@ export function registerAIRouter(options: AIRouterRegistrationOptions): void {
     (_event, request: AIRouterSpeechConnectionTestInput) => speechService.testConnection(request)
   )
   ipcMain.handle(AIROUTER_CHANNELS.probeQwenTtsCuda, () => qwenTtsSynthesizer.probeCuda())
+  ipcMain.handle(AIROUTER_CHANNELS.cudaRuntimeStatus, () => cudaRuntime.getStatus())
+  ipcMain.handle(AIROUTER_CHANNELS.installCudaRuntime, () => cudaRuntime.install())
+  ipcMain.handle(AIROUTER_CHANNELS.cancelCudaRuntimeInstall, () => cudaRuntime.cancelInstall())
+  ipcMain.handle(AIROUTER_CHANNELS.removeCudaRuntime, async () => {
+    // Stop helpers that may hold the CUDA executable open before deleting it.
+    qwenTtsSynthesizer.dispose()
+    await cudaRuntime.remove()
+  })
+  ipcMain.handle(AIROUTER_CHANNELS.indexTtsRuntimeStatus, () => indexTtsRuntime.getStatus())
+  ipcMain.handle(AIROUTER_CHANNELS.installIndexTtsRuntime, () => indexTtsRuntime.install())
+  ipcMain.handle(AIROUTER_CHANNELS.cancelIndexTtsRuntimeInstall, () =>
+    indexTtsRuntime.cancelInstall()
+  )
+  ipcMain.handle(AIROUTER_CHANNELS.removeIndexTtsRuntime, async () => {
+    await indexTtsRuntime.remove()
+  })
   ipcMain.handle(AIROUTER_CHANNELS.listRecognitionConfigs, () =>
     recognitionService.listProviderConfigs()
   )

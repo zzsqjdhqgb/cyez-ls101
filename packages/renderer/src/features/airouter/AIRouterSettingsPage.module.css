@@ -981,3 +981,19 @@
     justify-self: start;
   }
 }
+
+.runtimeProgress {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.runtimeProgress progress {
+  flex: 1;
+  height: 6px;
+  accent-color: var(--color-accent);
+}

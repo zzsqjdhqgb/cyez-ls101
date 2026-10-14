@@ -50,8 +50,12 @@ interface HelperSession {
 export interface QwenTtsSynthesizerOptions {
   helperPath?: string
   helperPaths?: Partial<Record<AIRouterQwenTtsBackend, string>>
+  /** Resolves the CUDA helper from the on-demand runtime bundle; null when not installed. */
+  resolveCudaHelperPath?: () => Promise<string | null>
   spawnProcess?: typeof spawn
 }
+
+const CUDA_RUNTIME_MISSING = 'CUDA 运行时未安装，请先在 AI 引擎设置的“运行时”选项卡中下载'
 
 export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
   private readonly sessions = new Map<string, Promise<HelperSession>>()
@@ -85,8 +89,9 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
   }
 
   async probeCuda(): Promise<AIRouterQwenTtsCudaProbeResult> {
-    const helperPath = this.resolveHelperPath('cuda')
+    let helperPath: string
     try {
+      helperPath = await this.resolveHelperPath('cuda')
       await assertExecutableExists(helperPath)
     } catch (error) {
       return { available: false, message: error instanceof Error ? error.message : String(error) }
@@ -147,7 +152,7 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       throw new Error('Qwen TTS 模型包缺少 TTS、语音解码器或音色资产')
     }
     const parameters = parseRuntimeParameters(model.parameters)
-    const backend = 'cpu'
+    const backend: AIRouterQwenTtsBackend = request.provider.backend === 'cuda' ? 'cuda' : 'cpu'
     const [ttsModelPath, tokenizerPath, speakerPath] = await Promise.all([
       request.resolveAssetPath(ttsModelAsset),
       request.resolveAssetPath(tokenizerAsset),
@@ -226,7 +231,7 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     backend: AIRouterQwenTtsBackend,
     parameters: QwenRuntimeParameters
   ): Promise<HelperSession> {
-    const helperPath = this.resolveHelperPath(backend)
+    const helperPath = await this.resolveHelperPath(backend)
     await assertExecutableExists(helperPath)
     const args = [
       '--backend',
@@ -313,12 +318,15 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     }
   }
 
-  private resolveHelperPath(backend: AIRouterQwenTtsBackend): string {
-    return (
+  private async resolveHelperPath(backend: AIRouterQwenTtsBackend): Promise<string> {
+    const configured =
       this.options.helperPaths?.[backend] ??
-      (backend === 'cpu' ? this.options.helperPath : undefined) ??
-      resolveHelperPath(backend)
-    )
+      (backend === 'cpu' ? this.options.helperPath : undefined)
+    if (configured) return configured
+    if (backend === 'cpu') return resolveBundledCpuHelperPath()
+    const downloaded = await this.options.resolveCudaHelperPath?.()
+    if (!downloaded) throw new Error(CUDA_RUNTIME_MISSING)
+    return downloaded
   }
 
   private handleMessage(
@@ -450,9 +458,9 @@ function parseRuntimeParameters(parameters: Record<string, unknown>): QwenRuntim
   }
 }
 
-function resolveHelperPath(backend: AIRouterQwenTtsBackend): string {
+function resolveBundledCpuHelperPath(): string {
   const extension = process.platform === 'win32' ? '.exe' : ''
-  const executable = `ls101-qwen-tts-helper-${backend}${extension}`
+  const executable = `ls101-qwen-tts-helper-cpu${extension}`
   const relative = path.join('qwen-tts', `${process.platform}-${process.arch}`, executable)
   const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
   return electronApp.isPackaged

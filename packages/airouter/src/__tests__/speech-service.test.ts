@@ -27,7 +27,7 @@ describe('AIRouterSpeechService', () => {
     await rm(baseDir, { recursive: true, force: true })
   })
 
-  it('normalizes every new Qwen provider to CPU', async () => {
+  it('keeps the requested Qwen backend and defaults to CPU', async () => {
     const cuda = await service.saveProviderConfig({
       id: 'qwen-cuda',
       name: 'Qwen CUDA',
@@ -46,11 +46,11 @@ describe('AIRouterSpeechService', () => {
       voices: []
     })
 
-    expect(cuda.backend).toBe('cpu')
+    expect(cuda.backend).toBe('cuda')
     expect(cpu.backend).toBe('cpu')
   })
 
-  it('normalizes a stored CUDA provider to CPU before returning it', async () => {
+  it('preserves a stored CUDA provider backend', async () => {
     const configStorage = new JsonConfigStorage(baseDir)
     await configStorage.write(
       { scope: ['airouter'], key: 'speech-providers' },
@@ -74,7 +74,7 @@ describe('AIRouterSpeechService', () => {
     )
 
     await expect(service.listProviderConfigs()).resolves.toEqual([
-      expect.objectContaining({ id: 'legacy-qwen', backend: 'cpu' })
+      expect.objectContaining({ id: 'legacy-qwen', backend: 'cuda' })
     ])
   })
 

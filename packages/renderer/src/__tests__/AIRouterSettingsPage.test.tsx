@@ -708,8 +708,7 @@ describe('AIRouterSettingsPage', () => {
     )
   })
 
-  it('keeps Qwen on CPU while CUDA runtime packaging is disabled', async () => {
-    const probeQwenTtsCuda = vi.fn()
+  it('lets a Qwen provider switch backend once the CUDA runtime is installed', async () => {
     const saveSpeechConfig = vi
       .fn()
       .mockImplementation(async (input: AIRouterSpeechProviderConfigInput) => ({
@@ -721,8 +720,15 @@ describe('AIRouterSettingsPage', () => {
         hasApiKey: false
       }))
     const application = applicationWith({
-      probeQwenTtsCuda,
       saveSpeechConfig,
+      getCudaRuntimeStatus: vi.fn().mockResolvedValue({
+        state: 'installed',
+        version: '0.3.1',
+        platform: 'linux-x64',
+        totalBytes: 10,
+        downloadedBytes: 10,
+        fileCount: 2
+      }),
       listSpeechConfigs: vi.fn().mockResolvedValue([
         {
           id: 'qwen-local',
@@ -741,20 +747,79 @@ describe('AIRouterSettingsPage', () => {
     })
     renderAIRouter(application, '/settings/ai-router/speech-synthesis')
     const provider = await screen.findByRole('button', { name: /Qwen 本地语音/ })
-    expect(within(provider).getByText('CPU')).toBeInTheDocument()
+    expect(within(provider).getByText('CUDA')).toBeInTheDocument()
     fireEvent.click(provider)
     const dialog = screen.getByRole('dialog', { name: 'Qwen 本地语音' })
+    const backend = within(dialog).getByRole('combobox', { name: 'Qwen TTS 计算后端' })
+    expect(backend).toHaveValue('cuda')
+    await waitFor(() =>
+      expect(within(backend).getByRole('option', { name: 'CUDA' })).not.toBeDisabled()
+    )
 
-    expect(within(dialog).queryByRole('radiogroup', { name: 'Qwen TTS 计算后端' })).toBeNull()
-    expect(within(dialog).queryByRole('button', { name: '检测 CUDA' })).toBeNull()
-    expect(probeQwenTtsCuda).not.toHaveBeenCalled()
-
+    fireEvent.change(backend, { target: { value: 'cpu' } })
     fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
     await waitFor(() =>
       expect(saveSpeechConfig).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'qwen-local', backend: 'cpu' })
       )
     )
+  })
+
+  it('disables the CUDA backend until the runtime is downloaded', async () => {
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'qwen-local',
+          name: 'Qwen 本地语音',
+          kind: 'local',
+          type: 'qwen-tts',
+          baseUrl: '',
+          modelPackageId: '',
+          modelPackageVersion: '',
+          models: [],
+          voices: [],
+          backend: 'cpu',
+          hasApiKey: false
+        }
+      ])
+    })
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+    fireEvent.click(await screen.findByRole('button', { name: /Qwen 本地语音/ }))
+    const dialog = screen.getByRole('dialog', { name: 'Qwen 本地语音' })
+    const backend = within(dialog).getByRole('combobox', { name: 'Qwen TTS 计算后端' })
+    expect(within(backend).getByRole('option', { name: /CUDA/ })).toBeDisabled()
+  })
+
+  it('downloads the CUDA runtime from the runtime tab', async () => {
+    const notInstalled = {
+      state: 'not-installed' as const,
+      version: '0.3.1',
+      platform: 'linux-x64',
+      totalBytes: 2 * 1024 ** 3,
+      downloadedBytes: 0,
+      fileCount: 2
+    }
+    const installCudaRuntime = vi.fn().mockResolvedValue({
+      ...notInstalled,
+      state: 'installed',
+      downloadedBytes: notInstalled.totalBytes
+    })
+    const application = applicationWith({
+      getCudaRuntimeStatus: vi.fn().mockResolvedValue(notInstalled),
+      installCudaRuntime
+    })
+    renderAIRouter(application, '/settings/ai-router/runtime')
+
+    expect(await screen.findByRole('tab', { name: '运行时' })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
+    expect(await screen.findByText('未安装')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '下载并安装' }))
+
+    await waitFor(() => expect(installCudaRuntime).toHaveBeenCalledTimes(1))
+    expect(await screen.findByText('已安装')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '检测 CUDA' })).toBeInTheDocument()
   })
 
   it('manages image Providers without a default Provider control', async () => {
@@ -884,6 +949,21 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
     probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
+    getCudaRuntimeStatus: vi.fn().mockResolvedValue({
+      state: 'not-installed',
+      version: '0.3.1',
+      platform: 'linux-x64',
+      totalBytes: 1,
+      downloadedBytes: 0,
+      fileCount: 1
+    }),
+    installCudaRuntime: vi.fn(),
+    cancelCudaRuntimeInstall: vi.fn(),
+    removeCudaRuntime: vi.fn(),
+    getIndexTtsRuntimeStatus: vi.fn(),
+    installIndexTtsRuntime: vi.fn(),
+    cancelIndexTtsRuntimeInstall: vi.fn(),
+    removeIndexTtsRuntime: vi.fn(),
     getPronunciationExtensionStatus: vi.fn().mockResolvedValue({
       extensionId: 'charsiu-en-w2v2-pronunciation',
       requiredVersion: '1.0.0',

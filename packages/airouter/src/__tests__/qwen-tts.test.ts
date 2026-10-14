@@ -155,7 +155,7 @@ describe('QwenTtsSynthesizer', () => {
     expect(helper.killed).toBe(true)
   })
 
-  it('forces a CUDA provider request through the CPU helper', async () => {
+  it('runs a CUDA provider request through the downloaded CUDA helper', async () => {
     const helper = new FakeHelper()
     const spawnProcess = vi.fn(
       (
@@ -165,10 +165,8 @@ describe('QwenTtsSynthesizer', () => {
       ) => helper as unknown as ChildProcessWithoutNullStreams
     )
     const synthesizer = new QwenTtsSynthesizer({
-      helperPaths: {
-        cpu: helperPath,
-        cuda: path.join(directory, 'missing-cuda-helper')
-      },
+      helperPaths: { cpu: path.join(directory, 'missing-cpu-helper') },
+      resolveCudaHelperPath: async () => helperPath,
       spawnProcess: spawnProcess as unknown as typeof spawn
     })
 
@@ -179,10 +177,28 @@ describe('QwenTtsSynthesizer', () => {
 
     expect(spawnProcess).toHaveBeenCalledWith(
       helperPath,
-      expect.arrayContaining(['--backend', 'cpu']),
+      expect.arrayContaining(['--backend', 'cuda']),
       expect.any(Object)
     )
     synthesizer.dispose()
+  })
+
+  it('reports a missing CUDA runtime instead of falling back silently', async () => {
+    const spawnProcess = vi.fn()
+    const synthesizer = new QwenTtsSynthesizer({
+      helperPaths: { cpu: helperPath },
+      resolveCudaHelperPath: async () => null,
+      spawnProcess: spawnProcess as unknown as typeof spawn
+    })
+
+    await expect(
+      synthesizer.synthesize({ ...request, provider: { ...request.provider, backend: 'cuda' } })
+    ).rejects.toThrow('CUDA 运行时未安装')
+    await expect(synthesizer.probeCuda()).resolves.toMatchObject({
+      available: false,
+      message: expect.stringContaining('CUDA 运行时未安装')
+    })
+    expect(spawnProcess).not.toHaveBeenCalled()
   })
 
   it('terminates the helper when synthesis is aborted', async () => {
