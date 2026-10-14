@@ -31,6 +31,8 @@ export type {
   AIRouterQwenTtsCudaProbeResult,
   AIRouterCudaRuntimeState,
   AIRouterCudaRuntimeStatus,
+  AIRouterIndexTtsRuntimeState,
+  AIRouterIndexTtsRuntimeStatus,
   AIRouterSpeechRole,
   AIRouterSpeechRouting,
   AIRouterSpeechSegment,

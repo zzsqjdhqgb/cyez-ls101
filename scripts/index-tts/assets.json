@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 2,
+  "runtimeRelease": {
+    "repository": "zzsqjdhqgb/cyez-ls101",
+    "version": "0.1.0",
+    "tag": "index-tts-runtime-v0.1.0",
+    "prerelease": true,
+    "assets": []
+  },
+  "modelRelease": {
+    "repository": "zzsqjdhqgb/cyez-ls101",
+    "version": "0.1.0",
+    "tag": "index-tts-model-v0.1.0",
+    "prerelease": true,
+    "assets": []
+  },
+  "package": {
+    "version": "0.1.0"
+  },
+  "runtime": {
+    "repository": "https://github.com/lifeiteng/audio.cpp.git",
+    "revision": "c7f5743ae41d1b02fd4c050a84e2a165edbf7e66"
+  },
+  "model": {
+    "id": "IndexTeam/Index-TTS",
+    "file": "index-tts2_5-q8_0.gguf",
+    "revision": "a8d8c169f06d1af8a0d025f5fdebbeedb6f8a68e",
+    "size": 198660736,
+    "sha256": "5e827b2072042e4a1b21ccf24a5cb4f71cb1011403067a0a9b039311d8b38628"
+  }
+}
