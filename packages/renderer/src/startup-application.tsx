@@ -11,6 +11,7 @@ import './styles/global.css'
 
 type ActiveApplication = typeof import('./startup-active-application')
 
+/** 准备阶段只确定后续入口：许可证激活、旧数据整理或完整业务界面。 */
 type PreparedApplication =
   | { kind: 'license'; status: LicenseStatus }
   | { kind: 'migration'; info: LegacyDataInfo }
@@ -18,6 +19,7 @@ type PreparedApplication =
 
 let reactRoot: Root
 
+/** 创建共享 React 根节点，安装错误日志后异步推进应用启动。 */
 export function startApplication(root: HTMLElement, startupLogoAnimation: Promise<void>): void {
   reactRoot = createRoot(root, {
     onUncaughtError: (error, errorInfo) => {
@@ -42,7 +44,9 @@ export function startApplication(root: HTMLElement, startupLogoAnimation: Promis
   void renderApplication(startupLogoAnimation).catch(renderStartupError)
 }
 
+/** 并行准备业务与等待启动动画，满足两者后再切换首个交互界面。 */
 async function renderApplication(startupLogoAnimation: Promise<void>): Promise<void> {
+  // 动画结束后再保留一段停留时间，避免快速启动时占位界面一闪而过。
   const minimumStartupDuration = startupLogoAnimation.then(waitForStartupCompletionDelay)
   const [prepared] = await Promise.all([prepareApplication(), minimumStartupDuration])
   if (prepared.kind === 'license') {
@@ -58,10 +62,12 @@ async function renderApplication(startupLogoAnimation: Promise<void>): Promise<v
   prepared.application.renderActiveApplication(reactRoot, prepared.showReleaseNotes)
 }
 
+/** 等待主进程服务就绪，再按许可证与旧数据状态决定启动分支。 */
 async function prepareApplication(): Promise<PreparedApplication> {
   const startup = window.startup
   if (!startup) throw new Error('启动服务不可用')
   await runStartupPhase('main-process-readiness', () => startup.whenReady())
+  // 主进程日志通道已可用，此时补写早期缓存的渲染进程启动记录。
   enableRendererStartupTimingLogging()
   markRendererStartupMilestone('main-process-ready')
 
@@ -83,6 +89,7 @@ async function prepareApplication(): Promise<PreparedApplication> {
   }
 }
 
+/** 按需加载激活页；激活成功后仍需检查旧数据，再进入完整应用。 */
 async function renderLicenseActivation(status: LicenseStatus): Promise<void> {
   const { LicenseActivationPage } = await import('./features/license/LicenseActivationPage')
   markRendererStartupMilestone('license-interface-render-requested')
@@ -112,6 +119,7 @@ async function renderLicenseActivation(status: LicenseStatus): Promise<void> {
   )
 }
 
+/** 等待用户完成旧数据整理页面，再允许后续业务初始化继续。 */
 async function completeLegacyDataMigration(initialInfo: LegacyDataInfo): Promise<void> {
   const { LegacyDataMigrationPage } = await import('./features/legacy-data/LegacyDataMigrationPage')
   markRendererStartupMilestone('migration-interface-render-requested')
@@ -124,10 +132,12 @@ async function completeLegacyDataMigration(initialInfo: LegacyDataInfo): Promise
   })
 }
 
+/** 将完整业务依赖推迟到许可证和旧数据检查通过后加载。 */
 function loadActiveApplication(): Promise<ActiveApplication> {
   return import('./startup-active-application')
 }
 
+/** 将启动异常收敛到可重新加载的错误界面。 */
 function renderStartupError(reason: unknown): void {
   logger.error('Renderer application initialization failed', reason)
   const message = reason instanceof Error ? reason.message : '未知初始化错误'
@@ -144,6 +154,7 @@ function renderStartupError(reason: unknown): void {
   )
 }
 
+/** 补充 React 错误回调无法覆盖的全局异常与未处理 Promise 拒绝日志。 */
 function installGlobalErrorLogging(): void {
   window.addEventListener('error', (event) => {
     logger.error('Unhandled renderer error', event.error, {

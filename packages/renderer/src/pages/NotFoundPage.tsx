@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Page, PageHeader } from '../components/ui/Page'
 
+/** 未匹配到有效页面时展示空状态，并提供返回工作台的入口。 */
 export function NotFoundPage(): JSX.Element {
   const navigate = useNavigate()
 

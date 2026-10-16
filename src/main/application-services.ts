@@ -14,6 +14,7 @@ import { registerLicenseHandlers } from './license'
 import { LICENSE_RECEIPT_FILENAME, type LicenseServiceOptions } from './license-service'
 import { registerReportExportHandlers } from './report-export'
 
+/** 汇总服务注册所需的目录、日志与后台工作线程入口。 */
 interface ApplicationServiceOptions {
   builtinDataDirectory: string
   dataDirectory: string
@@ -23,6 +24,7 @@ interface ApplicationServiceOptions {
   workerUrls: ApplicationWorkerUrls
 }
 
+/** 在目录准备完成后，为渲染进程集中注册业务服务。 */
 export function registerApplicationServices(options: ApplicationServiceOptions): void {
   const {
     builtinDataDirectory,
@@ -32,12 +34,14 @@ export function registerApplicationServices(options: ApplicationServiceOptions):
     userDataDirectory,
     workerUrls
   } = options
+  // 旧数据服务与目录切换共用清理状态，归档未完成时阻止更换数据位置。
   const legacyDataService = new LegacyDataService(
     userDataDirectory,
     dataDirectory,
     createWorkerLegacyArchiveOperations(workerUrls.legacyData)
   )
 
+  // 用户数据与内置资源使用各自的目录，配置和 AI 服务使用用户数据目录。
   registerFileStoreHandlers({ baseDir: dataDirectory })
   registerBuiltinFileStoreHandlers({ baseDir: builtinDataDirectory })
   registerConfigStore({ baseDir: dataDirectory })
@@ -61,6 +65,7 @@ export function registerApplicationServices(options: ApplicationServiceOptions):
   registerRendererLogger(logger)
 }
 
+/** 许可证凭据固定保存在用户目录；仅本地集成测试允许注入验证码和时间。 */
 function createLicenseOptions(
   userDataDirectory: string,
   isLocalIntegrationTest: boolean
@@ -73,6 +78,7 @@ function createLicenseOptions(
   const expectedCodeHash = process.env['LS101_LICENSE_TEST_CODE_HASH']
   if (expectedCodeHash) options.expectedCodeHash = expectedCodeHash
 
+  // 固定时钟便于稳定验证许可证有效期，同时拒绝无效的测试时间。
   const fixedNow = process.env['LS101_LICENSE_TEST_NOW']
   if (fixedNow) {
     const fixedTime = Date.parse(fixedNow)

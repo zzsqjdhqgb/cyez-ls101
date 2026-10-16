@@ -6,6 +6,7 @@ import { Page, PageHeader } from '../components/ui/Page'
 import { useRegisteredSettingsPages, type SettingsPageRegistration } from '../app/settings-registry'
 import styles from './SettingsPage.module.css'
 
+/** 将注册的设置项按分组元数据归并，供总览页渲染。 */
 interface SettingsGroup {
   id: string
   label: string
@@ -13,6 +14,7 @@ interface SettingsGroup {
   pages: SettingsPageRegistration[]
 }
 
+/** 优先使用显式顺序；分组未配置顺序时采用该分组首次出现的位置。 */
 function groupSettingsPages(pages: readonly SettingsPageRegistration[]): SettingsGroup[] {
   const groups = new Map<string, SettingsGroup>()
 
@@ -27,6 +29,7 @@ function groupSettingsPages(pages: readonly SettingsPageRegistration[]): Setting
     groups.set(page.group.id, group)
   })
 
+  // 先排列分组，再在各组内按设置项顺序排序。
   return [...groups.values()]
     .sort((left, right) => left.order - right.order)
     .map((group) => ({
@@ -35,6 +38,7 @@ function groupSettingsPages(pages: readonly SettingsPageRegistration[]): Setting
     }))
 }
 
+/** 从设置注册表生成分组入口，并通过编码后的标识跳转到详情。 */
 export function SettingsOverviewPage(): JSX.Element {
   const navigate = useNavigate()
   const pages = useRegisteredSettingsPages()

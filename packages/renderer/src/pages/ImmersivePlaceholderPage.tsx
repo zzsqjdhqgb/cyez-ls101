@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Page, PageHeader } from '../components/ui/Page'
 
+/** 早期演示用的沉浸布局示例页；当前未注册路由，因此无法访问。 */
 export function ImmersivePlaceholderPage(): JSX.Element {
   const navigate = useNavigate()
 

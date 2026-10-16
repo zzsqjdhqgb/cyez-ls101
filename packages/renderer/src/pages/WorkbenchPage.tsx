@@ -17,6 +17,7 @@ import { useSubmissionLibrary } from '../features/submissions/SubmissionLibraryC
 import { useTemplateApplication } from '../features/templates/TemplateApplicationContext'
 import styles from './WorkbenchPage.module.css'
 
+/** 不同业务记录统一为工作台可展示、可跳转的最近工作条目。 */
 interface RecentWorkItem {
   id: string
   title: string
@@ -26,6 +27,7 @@ interface RecentWorkItem {
   icon: typeof Play
 }
 
+/** 一次汇总加载得到的统计值与最近工作列表。 */
 interface WorkbenchSnapshot {
   exams: number
   pendingSubmissions: number
@@ -79,9 +81,11 @@ const WORKBENCH_QUOTES = [
   }
 ] as const
 
+// 模块加载时随机选择寄语，避免组件重新渲染时反复切换。
 const STARTUP_QUOTE =
   WORKBENCH_QUOTES[Math.floor(Math.random() * WORKBENCH_QUOTES.length)] ?? WORKBENCH_QUOTES[0]
 
+/** 汇总各业务库状态，展示常用入口、最近工作与作答评分进度。 */
 export function WorkbenchPage(): JSX.Element {
   const navigate = useNavigate()
   const exams = useExamLibrary()
@@ -96,6 +100,7 @@ export function WorkbenchPage(): JSX.Element {
   useEffect(() => {
     let active = true
 
+    // 各库独立读取并行进行；任一请求失败时统一显示状态不可用提示。
     void Promise.all([
       exams.listRecords(),
       submissions.listEntries(),
@@ -113,8 +118,10 @@ export function WorkbenchPage(): JSX.Element {
           templateItems,
           schemaIds
         ]) => {
+          // 组件卸载或依赖切换后，不再写入旧请求的结果。
           if (!active) return
 
+          // 按各库返回顺序截取条目，再按试卷、作答、模板的顺序组合。
           const recentExams: RecentWorkItem[] = examRecords.slice(0, 2).map((record) => ({
             id: `exam:${record.packageId}`,
             title: record.title,
@@ -150,6 +157,7 @@ export function WorkbenchPage(): JSX.Element {
 
           setSnapshot({
             exams: examRecords.length,
+            // 已结算才计为完成，评分就绪但尚未结算的作答仍属于待处理。
             pendingSubmissions: submissionEntries.filter((entry) => !entry.settlement).length,
             completedSubmissions: submissionEntries.filter((entry) => entry.settlement).length,
             interfaces: publishedInterfaces.length,
@@ -172,6 +180,7 @@ export function WorkbenchPage(): JSX.Element {
     }
   }, [exams, interfaces, schemas, submissions, templates])
 
+  // 只有试卷数与待评分数会改变快捷操作说明，目标路径保持固定。
   const quickActions = useMemo<QuickAction[]>(
     () => [
       {
@@ -197,6 +206,7 @@ export function WorkbenchPage(): JSX.Element {
     [snapshot.exams, snapshot.pendingSubmissions]
   )
 
+  // 无作答记录时进度为零，避免除零产生无效百分比。
   const totalSubmissions = snapshot.pendingSubmissions + snapshot.completedSubmissions
   const completion = totalSubmissions
     ? Math.round((snapshot.completedSubmissions / totalSubmissions) * 100)
@@ -365,6 +375,7 @@ export function WorkbenchPage(): JSX.Element {
   )
 }
 
+/** 加载期间用占位符替代数字，避免把初始零值误读为真实统计。 */
 function StatusItem({
   icon: Icon,
   label,
@@ -387,6 +398,7 @@ function StatusItem({
   )
 }
 
+/** 为最近工作和待处理区域生成与 aria-labelledby 对应的标题。 */
 function SectionHeading({ title, detail }: { title: string; detail: string }): JSX.Element {
   return (
     <header className={styles.sectionHeading}>

@@ -5,11 +5,13 @@ import type {
   TemplatePreviewResult
 } from '@ls101/template-editor'
 
+/** 按模板声明的题型别名索引可供预览绑定的实例。 */
 type InstanceOptions = Record<
   string,
   Awaited<ReturnType<TemplateApplication['browser']['listInterfaceInstances']>>
 >
 
+/** 汇总预览编译状态、实例候选和当前绑定选择。 */
 export interface TemplatePreviewSession {
   compiling: boolean
   error: string | null
@@ -22,6 +24,7 @@ export interface TemplatePreviewSession {
   selectInstance(alias: string, instanceId: string): void
 }
 
+/** 仅在预览激活时加载题型实例，并在绑定齐全后编译当前文档。 */
 export function useTemplatePreview(
   application: TemplateApplication,
   document: TemplateDocument | null,
@@ -40,6 +43,7 @@ export function useTemplatePreview(
   const [error, setError] = useState<string | null>(null)
   const [refreshToken, setRefreshToken] = useState(0)
 
+  // 文档变化时重新查询各题型实例；清理标记阻止旧请求覆盖新状态。
   useEffect(() => {
     if (!active || !document) return
     let current = true
@@ -66,6 +70,7 @@ export function useTemplatePreview(
           Object.fromEntries(
             requirements.map((requirement) => {
               const options = nextOptions[requirement.alias] ?? []
+              // 保留仍然有效的选择，否则默认选中首个实例；无实例时使用空值。
               const retained = options.some(
                 (instance) => instance.instanceId === previous[requirement.alias]
               )
@@ -91,6 +96,7 @@ export function useTemplatePreview(
     }
   }, [active, application, document, requirements])
 
+  // 所有必需别名都选定实例后，才能构造完整的预览绑定。
   const missingInstances = requirements.some((requirement) => !selections[requirement.alias])
   const bindings = useMemo(
     () =>
@@ -103,6 +109,7 @@ export function useTemplatePreview(
   )
 
   useEffect(() => {
+    // 等待候选加载完成，避免使用上一次文档的绑定发起预览。
     if (!active || !document || !instancesReady || missingInstances) return
     let current = true
     void Promise.resolve()
@@ -114,6 +121,7 @@ export function useTemplatePreview(
         return application.templates.preview(document, bindings)
       })
       .then((nextResult) => {
+        // 切换文档或绑定后，即使旧编译已完成，也不再采用其结果。
         if (current && nextResult) setResult(nextResult)
       })
       .catch((reason: unknown) => {
@@ -141,6 +149,7 @@ export function useTemplatePreview(
     missingInstances,
     result,
     selections,
+    // 递增令牌可在文档与绑定未变化时手动触发重新编译。
     refresh: () => setRefreshToken((value) => value + 1),
     selectInstance
   }

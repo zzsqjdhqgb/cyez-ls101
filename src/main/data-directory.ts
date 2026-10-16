@@ -21,9 +21,12 @@ import {
 } from '@ls101/core-types'
 import { LEGACY_MIGRATION_RESIDUE_DIRECTORIES } from './legacy-data'
 
+// 数据位置配置保存在 Electron 用户目录；数据标记随业务目录移动。
 const FORMAT_VERSION = 1
 const BOOTSTRAP_FILENAME = 'data-location.json'
 const MARKER_FILENAME = '.ls101-data.json'
+
+/** 已就绪状态保留当前目录，以及尚未完成的暂存清理和旧目录删除记录。 */
 interface ReadyBootstrap {
   formatVersion: typeof FORMAT_VERSION
   state: 'ready'
@@ -32,6 +35,7 @@ interface ReadyBootstrap {
   oldDataDirectory?: OldDataDirectory
 }
 
+/** 暂存清理必须核对事务路径与文件系统身份，避免误删同名替代目录。 */
 interface PendingCleanup {
   migrationId: string
   target: string
@@ -41,11 +45,13 @@ interface PendingCleanup {
   stagingIdentity?: FileSystemIdentity
 }
 
+/** 使用设备号和 inode 识别目录本体，避免仅凭路径判断所有权。 */
 interface FileSystemIdentity {
   device: string
   inode: string
 }
 
+/** 迁移后保留的旧目录；删除时记录改名位置与接管身份，以支持中断恢复。 */
 interface OldDataDirectory {
   path: string
   directoryId: string
@@ -57,6 +63,7 @@ interface OldDataDirectory {
   deletionIdentity?: FileSystemIdentity
 }
 
+/** 复制迁移通过同级暂存目录完成校验，再切换到目标目录。 */
 interface CopyingBootstrap {
   formatVersion: typeof FORMAT_VERSION
   state: 'migrating'
@@ -72,6 +79,7 @@ interface CopyingBootstrap {
   pendingCleanups?: PendingCleanup[]
 }
 
+/** 旧版复制事务仅处理记录中的旧数据子目录。 */
 interface LegacyCopyingBootstrap {
   formatVersion: typeof FORMAT_VERSION
   state: 'migrating'
@@ -87,6 +95,7 @@ interface LegacyCopyingBootstrap {
   pendingCleanups?: PendingCleanup[]
 }
 
+/** 切换到已有受管目录，无需复制，但仍记录原目录供用户后续删除。 */
 interface UseExistingBootstrap {
   formatVersion: typeof FORMAT_VERSION
   state: 'migrating'
@@ -101,6 +110,7 @@ interface UseExistingBootstrap {
 type MigratingBootstrap = CopyingBootstrap | LegacyCopyingBootstrap | UseExistingBootstrap
 type Bootstrap = ReadyBootstrap | MigratingBootstrap
 
+/** 目录标记用于识别受管目录，迁移标识还用于判断事务是否已提交。 */
 interface DataDirectoryMarker {
   formatVersion: typeof FORMAT_VERSION
   kind: 'ls101-data-directory'
@@ -108,13 +118,16 @@ interface DataDirectoryMarker {
   migrationId?: string
 }
 
+/** 迁移清单只比较相对路径与文件大小，不计算内容哈希。 */
 interface FileManifestEntry {
   relativePath: string
   size: number
 }
 
+/** 启动时恢复未完成事务、重试清理，或创建默认业务目录。 */
 export async function initializeDataDirectory(userDataDir: string): Promise<string> {
   const bootstrap = await readBootstrap(userDataDir)
+  // 先完成迁移再提供目录，避免服务读写尚未提交的目标。
   if (bootstrap?.state === 'migrating') return finishPendingMigration(userDataDir, bootstrap)
   if (bootstrap) {
     const activeDataDirectory = await normalizeDirectory(bootstrap.activeDataDirectory)
@@ -144,17 +157,19 @@ export async function initializeDataDirectory(userDataDir: string): Promise<stri
     return defaultPath
   }
 
-  // Legacy profiles are archived and cleaned after the application has started.
-  // Creating the new directory here must not copy or remove any old root-level data.
+  // 旧版数据会在应用启动后归档并清理。
+  // 此处只创建新的业务目录，不复制或删除用户目录根部的旧数据。
   await createManagedDirectory(defaultPath)
   await writeReadyBootstrap(userDataDir, defaultPath)
   return defaultPath
 }
 
+/** 由旧数据归档服务提供清理状态，协调目录切换的前置条件。 */
 export interface DataDirectoryHandlerOptions {
   isLegacyCleanupPending?: () => boolean
 }
 
+/** 注册目录查询、选择、切换和旧目录删除接口；迁移计划在重启后执行。 */
 export function registerDataDirectoryHandlers(
   userDataDir: string,
   currentPath: string,
@@ -234,6 +249,7 @@ export function registerDataDirectoryHandlers(
     await scheduleMigration(userDataDir, currentPath, candidate.path, 'use-existing')
     relaunchAfterReply()
   })
+  // 先持久化删除意图，再尝试删除；中断或失败后可在后续启动时继续。
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.deleteOld, async () => {
     const bootstrap = await readReadyBootstrap(userDataDir)
     if (!bootstrap.oldDataDirectory) throw new Error('没有可删除的旧数据目录')
@@ -250,12 +266,14 @@ export function registerDataDirectoryHandlers(
   })
 }
 
+/** 旧版归档清理完成前不允许切换数据位置。 */
 function assertNoPendingLegacyCleanup(options: DataDirectoryHandlerOptions): void {
   if (options.isLegacyCleanupPending?.()) {
     throw new Error('请先完成旧版数据归档清理，再更改数据位置')
   }
 }
 
+/** 无法初始化目录时循环提供重试、选择已有目录和退出选项。 */
 export async function recoverDataDirectory(userDataDir: string, error: unknown): Promise<never> {
   let message = errorMessage(error)
   while (true) {
@@ -306,6 +324,7 @@ export async function recoverDataDirectory(userDataDir: string, error: unknown):
   }
 }
 
+/** 解析真实路径并排除危险位置，将候选分类为当前、受管或空目录。 */
 async function inspectCandidate(
   userDataDir: string,
   target: string,
@@ -342,6 +361,7 @@ async function inspectCandidate(
   return { path: normalizedTarget, kind: 'empty', sizeBytes: 0 }
 }
 
+/** 恢复已持久化的迁移计划；目标已有本事务标记时直接完成收尾。 */
 async function finishPendingMigration(
   userDataDir: string,
   bootstrap: MigratingBootstrap
@@ -360,6 +380,7 @@ async function finishPendingMigration(
   }
 
   assertMigrationPaths(bootstrap, target)
+  // 目标已带有完成标记，说明上次可能在改名提交后、更新配置前中断。
   if (await hasMigrationMarker(target, bootstrap.migrationId)) {
     await removeOwnedStaging(bootstrap)
     await writeReadyBootstrap(
@@ -397,6 +418,7 @@ async function finishPendingMigration(
   return target
 }
 
+/** 只持久化迁移意图与目录身份，实际复制留待重启后执行。 */
 async function scheduleMigration(
   userDataDir: string,
   source: string,
@@ -440,6 +462,7 @@ async function scheduleMigration(
   return migration
 }
 
+/** 复制受管目录并核对文件清单，校验通过后才写入本次迁移标记。 */
 async function prepareManagedStaging(
   userDataDir: string,
   bootstrap: CopyingBootstrap,
@@ -453,6 +476,7 @@ async function prepareManagedStaging(
   await writeMarker(bootstrap.staging, bootstrap.migrationId)
 }
 
+/** 按旧版事务白名单逐个复制子目录并校验，再标记暂存目录完成。 */
 async function prepareLegacyStaging(
   userDataDir: string,
   bootstrap: LegacyCopyingBootstrap
@@ -470,6 +494,7 @@ async function prepareLegacyStaging(
   await writeMarker(bootstrap.staging, bootstrap.migrationId)
 }
 
+/** 清理本事务拥有的暂存目录，并在新建后立即持久化其身份。 */
 async function recreateOwnedStaging(
   userDataDir: string,
   bootstrap: CopyingBootstrap | LegacyCopyingBootstrap
@@ -480,6 +505,7 @@ async function recreateOwnedStaging(
   await writeBootstrap(userDataDir, bootstrap)
 }
 
+/** 校验暂存标记后通过同级改名提交，目标被其他程序写入时保留其内容。 */
 async function commitCompletedStaging(
   bootstrap: CopyingBootstrap | LegacyCopyingBootstrap,
   target: string
@@ -509,6 +535,7 @@ async function commitCompletedStaging(
   }
 }
 
+/** 清理前先核对记录路径和父目录身份，拒绝处理已被替换的位置。 */
 async function removeOwnedStaging(bootstrap: PendingCleanup): Promise<void> {
   assertStoredMigrationPaths(bootstrap)
   if (!(await hasExpectedCleanupParentIdentity(bootstrap))) {
@@ -519,6 +546,7 @@ async function removeOwnedStaging(bootstrap: PendingCleanup): Promise<void> {
   await removeExistingOwnedStaging(bootstrap, stagingStats)
 }
 
+/** 拒绝链接、挂载点及身份不匹配的路径；所有权不明时只尝试删除空目录。 */
 async function removeExistingOwnedStaging(
   bootstrap: PendingCleanup,
   stagingStats: Awaited<ReturnType<typeof lstat>>
@@ -547,6 +575,7 @@ async function removeExistingOwnedStaging(
   await rm(bootstrap.staging, { recursive: true, force: true })
 }
 
+/** 恢复时改选目录需协调旧来源记录，并保留暂时无法清理的事务暂存目录。 */
 async function abandonPendingMigration(
   userDataDir: string,
   selected: string
@@ -585,6 +614,7 @@ async function abandonPendingMigration(
   }
 }
 
+/** 重新选择原目录时撤销其退休记录，否则确保新目录与待删位置互不包含。 */
 async function coordinateRetiredSource(
   selected: string,
   retiredSource: OldDataDirectory
@@ -600,6 +630,7 @@ async function coordinateRetiredSource(
   return retiredSource
 }
 
+/** 恢复旧目录前核对删除状态、父目录身份和目录标记。 */
 async function assertSelectedOldDataDirectory(
   selected: string,
   oldDataDirectory: OldDataDirectory
@@ -626,6 +657,7 @@ async function assertSelectedOldDataDirectory(
   }
 }
 
+/** 按顺序重试遗留暂存清理，只把尚未成功的记录保留下来。 */
 async function retryPendingCleanups(
   pendingCleanups: readonly PendingCleanup[]
 ): Promise<PendingCleanup[]> {
@@ -636,6 +668,7 @@ async function retryPendingCleanups(
   return remaining
 }
 
+/** 清理失败只记录警告并保留任务，避免阻止正常数据目录启动。 */
 async function tryRemovePendingCleanup(cleanup: PendingCleanup): Promise<boolean> {
   try {
     assertStoredMigrationPaths(cleanup)
@@ -653,6 +686,7 @@ async function tryRemovePendingCleanup(cleanup: PendingCleanup): Promise<boolean
   }
 }
 
+/** 禁止将待清理目录及其父子目录选为当前目录，避免后续清理波及业务数据。 */
 function assertSelectionSeparateFromPendingCleanups(
   selected: string,
   pendingCleanups: readonly PendingCleanup[]
@@ -674,18 +708,21 @@ async function assertNotPendingCleanupTarget(userDataDir: string, target: string
   assertSelectionSeparateFromPendingCleanups(target, bootstrap?.pendingCleanups ?? [])
 }
 
+/** 只有配置已处于就绪状态，设置页才可执行目录管理操作。 */
 async function readReadyBootstrap(userDataDir: string): Promise<ReadyBootstrap> {
   const bootstrap = await readBootstrap(userDataDir)
   if (bootstrap?.state !== 'ready') throw new Error('数据目录尚未准备完成')
   return bootstrap
 }
 
+/** 上次迁移的旧目录未处理前，禁止继续迁移以免积累多个待删来源。 */
 async function assertNoOldDataDirectory(userDataDir: string): Promise<void> {
   if ((await readReadyBootstrap(userDataDir)).oldDataDirectory) {
     throw new Error('请先删除旧数据目录，再更改数据位置')
   }
 }
 
+/** 切换前记录原目录标记和父目录身份，作为后续删除校验依据。 */
 async function captureOldDataDirectory(directory: string): Promise<OldDataDirectory> {
   const normalized = await normalizeDirectory(directory)
   const marker = await ensureDirectoryId(normalized)
@@ -698,6 +735,7 @@ async function captureOldDataDirectory(directory: string): Promise<OldDataDirect
   }
 }
 
+/** 记录暂存父目录身份，以识别卸载后重新挂载或路径被替换的情况。 */
 async function captureStagingParent(
   target: string
 ): Promise<Pick<PendingCleanup, 'parentPath' | 'parentIdentity'>> {
@@ -708,6 +746,7 @@ async function captureStagingParent(
   }
 }
 
+/** 为缺少目录标识的受管目录补写稳定标识，同时保留已有迁移标记。 */
 async function ensureDirectoryId(
   directory: string
 ): Promise<DataDirectoryMarker & { directoryId: string }> {
@@ -718,6 +757,7 @@ async function ensureDirectoryId(
   return { ...marker, directoryId }
 }
 
+/** 删除前确保旧目录与当前目录分离，且路径类型和目录标记仍与记录一致。 */
 async function validateOldDataDirectory(
   oldDataDirectory: OldDataDirectory,
   currentPath: string
@@ -745,6 +785,7 @@ async function validateOldDataDirectory(
   }
 }
 
+/** 生成确定的同级删除路径，使删除操作可以在重启后继续。 */
 function markOldDataDirectoryDeleting(oldDataDirectory: OldDataDirectory): OldDataDirectory {
   return {
     ...oldDataDirectory,
@@ -756,6 +797,7 @@ function markOldDataDirectoryDeleting(oldDataDirectory: OldDataDirectory): OldDa
   }
 }
 
+/** 先改名并持久化接管身份，再递归删除；中途失败则保留恢复记录。 */
 async function retryOldDataDirectoryDeletion(
   initialOldDataDirectory: OldDataDirectory,
   currentPath: string,
@@ -776,6 +818,7 @@ async function retryOldDataDirectoryDeletion(
         throw new Error('旧数据删除路径已被其他文件占用')
       }
       if (!(await hasExpectedParentIdentity(oldDataDirectory))) return oldDataDirectory
+      // 可能上次已完成改名但尚未记录接管，需先确认标记与原路径状态。
       if (!oldDataDirectory.deletionClaimed) {
         if (await pathExists(oldDataDirectory.path)) {
           throw new Error('旧数据删除路径已被占用，原目录仍然存在')
@@ -791,6 +834,7 @@ async function retryOldDataDirectoryDeletion(
         }
         await persistClaim(oldDataDirectory)
       } else if (
+        // 递归删除可能已删掉标记文件，接管后通过文件系统身份继续核对。
         !oldDataDirectory.deletionIdentity ||
         !sameFileSystemIdentity(
           fileSystemIdentity(deletionStats),
@@ -836,6 +880,7 @@ async function hasExpectedCleanupParentIdentity(cleanup: PendingCleanup): Promis
     : false
 }
 
+/** 转为字符串后可安全写入 JSON，并与后续读取到的身份进行比较。 */
 function fileSystemIdentity(stats: Awaited<ReturnType<typeof stat>>): FileSystemIdentity {
   return { device: String(stats.dev), inode: String(stats.ino) }
 }
@@ -844,6 +889,7 @@ function sameFileSystemIdentity(left: FileSystemIdentity, right: FileSystemIdent
   return left.device === right.device && left.inode === right.inode
 }
 
+/** 从复制事务提取重试清理所需的最小所有权记录。 */
 function pendingCleanupFromMigration(
   bootstrap: CopyingBootstrap | LegacyCopyingBootstrap
 ): PendingCleanup {
@@ -857,6 +903,7 @@ function pendingCleanupFromMigration(
   }
 }
 
+/** 递归复制普通文件和目录，拒绝符号链接，并生成按路径排序的源清单。 */
 async function copyTree(source: string, target: string): Promise<FileManifestEntry[]> {
   const sourceStats = await lstat(source)
   if (sourceStats.isSymbolicLink()) throw new Error(`数据目录中不支持符号链接：${source}`)
@@ -892,6 +939,7 @@ async function copyDirectoryContents(
   }
 }
 
+/** 遍历目标目录生成同序清单，也用于计算目录内普通文件的总大小。 */
 async function buildManifest(root: string): Promise<FileManifestEntry[]> {
   const manifest: FileManifestEntry[] = []
   await collectManifest(root, '', manifest)
@@ -912,6 +960,7 @@ async function collectManifest(
   }
 }
 
+/** 检查文件数量、相对路径和大小，防止未完整复制的暂存目录被提交。 */
 function assertMatchingManifests(
   source: readonly FileManifestEntry[],
   target: readonly FileManifestEntry[]
@@ -927,6 +976,7 @@ function assertMatchingManifests(
   }
 }
 
+/** 仅在目录不存在或为空时创建受管标记，避免接管无关数据。 */
 async function createManagedDirectory(directory: string): Promise<void> {
   const entries = await readdir(directory).catch((error: NodeJS.ErrnoException) => {
     if (error.code === 'ENOENT') return []
@@ -937,6 +987,7 @@ async function createManagedDirectory(directory: string): Promise<void> {
   await writeMarker(directory)
 }
 
+/** 将磁盘 JSON 作为未知输入逐项校验，再恢复为对应状态的事务记录。 */
 async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
   const filename = path.join(userDataDir, BOOTSTRAP_FILENAME)
   let value: unknown
@@ -1032,6 +1083,7 @@ async function readBootstrap(userDataDir: string): Promise<Bootstrap | null> {
   throw new Error('数据目录配置内容无效')
 }
 
+/** 校验待清理记录的路径和身份，并拒绝重复的迁移暂存任务。 */
 function parsePendingCleanups(value: unknown): PendingCleanup[] {
   if (value === undefined) return []
   if (!Array.isArray(value)) throw new Error('待清理迁移列表无效')
@@ -1062,6 +1114,7 @@ function parsePendingCleanups(value: unknown): PendingCleanup[] {
   return pendingCleanups
 }
 
+/** 校验清理所依赖的父目录身份，以及可选的暂存目录身份。 */
 function parseStagingLocation(
   value: Record<string, unknown>
 ): Pick<PendingCleanup, 'parentPath' | 'parentIdentity' | 'stagingIdentity'> {
@@ -1085,6 +1138,7 @@ function parseFileSystemIdentity(value: unknown, message: string): FileSystemIde
   return { device: value.device, inode: value.inode }
 }
 
+/** 解析旧目录记录；迁移来源不允许处于删除中状态。 */
 function parseOldDataDirectory(
   value: unknown,
   allowDeleting: boolean = true
@@ -1133,6 +1187,7 @@ function parseOldDataDirectory(
   return oldDataDirectory
 }
 
+/** 验证旧目录与删除路径的对应关系，以及删除接管字段的完整性。 */
 function assertOldDataDirectoryRecord(oldDataDirectory: OldDataDirectory): void {
   if (!path.isAbsolute(oldDataDirectory.path) || !path.isAbsolute(oldDataDirectory.parentPath)) {
     throw new Error('旧数据目录路径无效')
@@ -1162,6 +1217,7 @@ function assertOldDataDirectoryRecord(oldDataDirectory: OldDataDirectory): void 
   }
 }
 
+/** 持久化当前目录，同时保留仍需重试的清理和删除状态。 */
 async function writeReadyBootstrap(
   userDataDir: string,
   activeDataDirectory: string,
@@ -1181,6 +1237,7 @@ async function writeBootstrap(userDataDir: string, value: Bootstrap): Promise<vo
   await atomicWriteJson(path.join(userDataDir, BOOTSTRAP_FILENAME), value)
 }
 
+/** 为受管目录写入稳定目录标识，并可附带本次已完成的迁移标识。 */
 async function writeMarker(
   directory: string,
   migrationId?: string,
@@ -1195,6 +1252,7 @@ async function writeMarker(
   await atomicWriteJson(path.join(directory, MARKER_FILENAME), marker)
 }
 
+/** 先独占创建临时文件、刷盘并关闭，再替换配置文件以减少半写入风险。 */
 async function atomicWriteJson(filename: string, value: object): Promise<void> {
   await mkdir(path.dirname(filename), { recursive: true })
   const temporary = `${filename}.${randomUUID()}.tmp`
@@ -1213,6 +1271,7 @@ async function atomicWriteJson(filename: string, value: object): Promise<void> {
   }
 }
 
+/** 默认使用改名替换；Windows 拒绝覆盖已有文件时再删除旧文件并重试。 */
 async function replaceExistingFile(temporary: string, filename: string): Promise<void> {
   try {
     await rename(temporary, filename)
@@ -1238,6 +1297,7 @@ async function assertManagedDirectory(directory: string): Promise<void> {
     throw new Error(`不是可识别的 LS101 数据目录：${directory}`)
 }
 
+/** 校验目录标记的版本、类型和可选标识，拒绝把无效文件当作受管标记。 */
 async function readMarker(directory: string): Promise<DataDirectoryMarker> {
   const marker = JSON.parse(
     await readFile(path.join(directory, MARKER_FILENAME), 'utf8')
@@ -1262,6 +1322,7 @@ async function assertMarker(directory: string): Promise<void> {
   await readMarker(directory)
 }
 
+/** 标记缺失或格式无效表示事务未完成，其他访问错误仍向上抛出。 */
 async function hasMigrationMarker(directory: string, migrationId: string): Promise<boolean> {
   try {
     return (await readMarker(directory)).migrationId === migrationId
@@ -1285,6 +1346,7 @@ async function isManagedDirectory(directory: string): Promise<boolean> {
   }
 }
 
+/** 只接受已存在的目录，并解析符号链接以取得规范化的真实路径。 */
 async function normalizeDirectory(directory: string): Promise<string> {
   const resolved = path.resolve(directory)
   const stats = await statIfExists(resolved)
@@ -1292,6 +1354,7 @@ async function normalizeDirectory(directory: string): Promise<string> {
   return path.normalize(await realpath(resolved))
 }
 
+/** 目标尚不存在时解析其父目录，保留最终目录名供后续创建。 */
 async function normalizePotentialDirectory(directory: string): Promise<string> {
   if (typeof directory !== 'string' || !path.isAbsolute(directory)) {
     throw new Error('数据目录路径无效')
@@ -1306,6 +1369,7 @@ async function normalizePotentialDirectory(directory: string): Promise<string> {
   return path.join(parent, path.basename(resolved))
 }
 
+/** 暂存路径必须由目标路径和事务标识唯一推导，不能任意指定。 */
 function assertMigrationPaths(
   bootstrap: CopyingBootstrap | LegacyCopyingBootstrap | PendingCleanup,
   target: string
@@ -1315,6 +1379,7 @@ function assertMigrationPaths(
   if (!samePath(configured, expected)) throw new Error('数据目录迁移暂存路径与迁移事务不一致')
 }
 
+/** 对持久化路径做静态校验，确保目标和暂存目录都位于记录的父目录下。 */
 function assertStoredMigrationPaths(bootstrap: PendingCleanup): void {
   if (
     !path.isAbsolute(bootstrap.target) ||
@@ -1336,6 +1401,7 @@ function stagingPath(target: string, migrationId: string): string {
   return path.join(path.dirname(target), `.${path.basename(target)}.migrating-${migrationId}`)
 }
 
+/** 新旧目录必须完全分离，既不能相同，也不能互为父子目录。 */
 function assertSeparateDirectories(source: string, target: string): void {
   const relativeTarget = path.relative(source, target)
   const relativeSource = path.relative(target, source)
@@ -1348,6 +1414,7 @@ function assertSeparateDirectories(source: string, target: string): void {
   }
 }
 
+/** 提交阶段需要删除空目标并改名，因此不允许选择根目录或挂载点。 */
 async function assertReplaceableMigrationTarget(directory: string): Promise<void> {
   const parent = path.dirname(directory)
   if (samePath(directory, parent) || (await isMountPoint(directory, parent))) {
@@ -1355,6 +1422,7 @@ async function assertReplaceableMigrationTarget(directory: string): Promise<void
   }
 }
 
+/** 先比较设备号，再在 Linux 读取挂载表以识别同设备的绑定挂载。 */
 async function isMountPoint(directory: string, parent: string): Promise<boolean> {
   const [directoryStats, parentStats] = await Promise.all([
     statIfExists(directory),
@@ -1374,6 +1442,7 @@ async function isMountPoint(directory: string, parent: string): Promise<boolean>
   }
 }
 
+/** Linux 挂载表使用八进制转义表示空格等字符，比较路径前先解码。 */
 function decodeMountInfoPath(value: string): string {
   return path.normalize(
     value.replace(/\\([0-7]{3})/g, (_match, digits: string) =>
@@ -1435,6 +1504,7 @@ function isMigrationId(value: unknown): value is string {
   )
 }
 
+/** Windows 路径比较忽略大小写，其他平台按原字符串比较。 */
 function samePath(left: string, right: string): boolean {
   return process.platform === 'win32'
     ? left.toLocaleLowerCase() === right.toLocaleLowerCase()
@@ -1445,6 +1515,7 @@ function compareManifestEntries(left: FileManifestEntry, right: FileManifestEntr
   return left.relativePath.localeCompare(right.relativePath)
 }
 
+/** 稍后退出以留出 IPC 回复时间，重启后的初始化流程会执行迁移计划。 */
 function relaunchAfterReply(): void {
   setTimeout(() => {
     if (process.env['LS101_DISABLE_AUTO_RELAUNCH'] !== '1') app.relaunch()
@@ -1452,6 +1523,7 @@ function relaunchAfterReply(): void {
   }, 100)
 }
 
+/** 在独立进度窗口中执行迁移，无论成功或失败都确保关闭窗口。 */
 async function withMigrationWindow<T>(
   title: string,
   detail: string,
@@ -1502,6 +1574,7 @@ async function withMigrationWindow<T>(
   }
 }
 
+/** 迁移路径等内容写入进度页前先转义，避免被解释为 HTML。 */
 function escapeHtml(value: string): string {
   return value.replace(/[&<>"']/g, (character) => {
     const entities: Record<string, string> = {
