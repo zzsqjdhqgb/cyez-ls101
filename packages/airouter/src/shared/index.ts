@@ -6,6 +6,21 @@ export {
   PRONUNCIATION_EXTENSION_VERSION
 } from './constants'
 export type { AIRouterChannel } from './constants'
+export {
+  DEFAULT_SPEECH_PROVIDER_BASE_URLS,
+  isLocalSpeechProviderType,
+  isMinimaxSpeechProviderType,
+  isOnlineSpeechProviderType,
+  LOCAL_SPEECH_PROVIDER_TYPES,
+  MINIMAX_SPEECH_PROVIDER_TYPES,
+  ONLINE_SPEECH_PROVIDER_TYPES
+} from './speech-providers'
+export type {
+  AIRouterLocalSpeechProviderType,
+  AIRouterMinimaxSpeechProviderType,
+  AIRouterOnlineSpeechProviderType,
+  AIRouterSpeechProviderType
+} from './speech-providers'
 export type {
   AIRouterClient,
   AIRouterBridge,
@@ -34,8 +49,6 @@ export type {
   AIRouterSpeechProviderConfigInput,
   AIRouterSpeechProviderConfigSummary,
   AIRouterSpeechProviderKind,
-  AIRouterSpeechProviderType,
-  AIRouterOnlineSpeechProviderType,
   AIRouterQwenTtsBackend,
   AIRouterQwenTtsCudaProbeResult,
   AIRouterSpeechRole,

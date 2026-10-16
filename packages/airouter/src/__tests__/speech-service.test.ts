@@ -24,8 +24,59 @@ describe('AIRouterSpeechService', () => {
 
   afterEach(async () => {
     vi.unstubAllGlobals()
+    vi.useRealTimers()
     await rm(baseDir, { recursive: true, force: true })
   })
+
+  async function saveMinimaxSynthesisProvider(): Promise<void> {
+    await service.saveProviderConfig({
+      id: 'minimax-rpm',
+      name: 'MiniMax RPM',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'English_Graceful_Lady', enabled: true }],
+      apiKey: 'minimax-secret'
+    })
+  }
+
+  // 只伪造 setTimeout 与 Date：限流等待用 setTimeout、重试窗口用 Date.now，而配置
+  // 读取等真实 I/O 依赖 setImmediate 之后的宏任务阶段，保持真实才能让链路推进。
+  function useMinimaxRateLimitFakeTimers(): void {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+  }
+
+  // 反复让出宏任务直到谓词满足，用于把真实 I/O 链路推进到断言点，不触碰伪造的定时器。
+  // 实测从发起合成到首次 fetch 需要 40-75 个 setImmediate 轮次，高负载下偶发更多
+  // （见过 133），预算给足 1000 轮以避免偶发超时（每轮开销极小）。
+  async function flushUntil(predicate: () => boolean, maxTurns = 1000): Promise<void> {
+    for (let turn = 0; turn < maxTurns && !predicate(); turn += 1) {
+      await new Promise<void>((resolve) => setImmediate(resolve))
+    }
+  }
+
+  function synthesizeWithMinimaxRouting(options: { signal?: AbortSignal } = {}) {
+    return service.synthesizeSpeech(
+      {
+        text: 'Hello',
+        routing: {
+          default: {
+            providerConfigId: 'minimax-rpm',
+            modelId: 'speech-2.8-hd',
+            voiceId: 'English_Graceful_Lady'
+          }
+        }
+      },
+      options
+    )
+  }
+
+  function rateLimitedResponse(statusCode: number, statusMsg: string): Response {
+    return new Response(JSON.stringify({ base_resp: { status_code: statusCode, status_msg: statusMsg } }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' }
+    })
+  }
 
   it('normalizes every new Qwen provider to CPU', async () => {
     const cuda = await service.saveProviderConfig({
@@ -365,6 +416,167 @@ describe('AIRouterSpeechService', () => {
     ).rejects.toThrow('Invalid API key')
   })
 
+  it('rejects an empty ElevenLabs response body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(0), {
+        status: 200,
+        headers: { 'content-type': 'application/octet-stream' }
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'eleven-empty',
+      name: 'ElevenLabs Empty',
+      kind: 'online',
+      type: 'elevenlabs',
+      models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'eleven-secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'eleven-empty', modelId: 'eleven_multilingual_v2', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成结果为空')
+  })
+
+  it('keeps the path prefix of a custom ElevenLabs base URL', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(createPcm(240)), {
+        status: 200,
+        headers: { 'content-type': 'application/octet-stream' }
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'eleven-gateway',
+      name: 'ElevenLabs Gateway',
+      kind: 'online',
+      type: 'elevenlabs',
+      baseUrl: 'https://gw.example.com/eleven',
+      models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+      voices: [{ id: '21m00Tcm4TlvDq8ikWAM', enabled: true }],
+      apiKey: 'eleven-secret'
+    })
+
+    await service.synthesizeSpeech({
+      text: 'Hello',
+      routing: {
+        default: {
+          providerConfigId: 'eleven-gateway',
+          modelId: 'eleven_multilingual_v2',
+          voiceId: '21m00Tcm4TlvDq8ikWAM'
+        }
+      }
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://gw.example.com/eleven/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM?output_format=pcm_24000',
+      expect.objectContaining({ method: 'POST' })
+    )
+  })
+
+  it('rejects an ElevenLabs response that is not PCM audio', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(createPcm(240)), {
+        status: 200,
+        headers: { 'content-type': 'audio/mpeg' }
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'eleven-mp3',
+      name: 'ElevenLabs MP3',
+      kind: 'online',
+      type: 'elevenlabs',
+      models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'eleven-secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'eleven-mp3', modelId: 'eleven_multilingual_v2', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成结果不是 PCM 音频')
+  })
+
+  it('accepts an ElevenLabs PCM response without an audio content type', async () => {
+    const pcm = createPcm(240)
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Uint8Array(pcm), {
+        status: 200,
+        headers: { 'content-type': 'application/octet-stream' }
+      })
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'eleven-octets',
+      name: 'ElevenLabs Octets',
+      kind: 'online',
+      type: 'elevenlabs',
+      models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'eleven-secret'
+    })
+
+    const result = await service.synthesizeSpeech({
+      text: 'Hello',
+      routing: {
+        default: { providerConfigId: 'eleven-octets', modelId: 'eleven_multilingual_v2', voiceId: 'voice' }
+      }
+    })
+
+    expect(result).toEqual(
+      expect.objectContaining({ format: 'wav', mediaType: 'audio/wav', sampleRate: 24000 })
+    )
+  })
+
+  it.each(['team/voice', 'bad#voice'])(
+    'encodes the ElevenLabs voice ID %s before it enters the URL path',
+    async (voiceId) => {
+      const fetchMock = vi.fn().mockResolvedValue(
+        new Response(new Uint8Array(createPcm(240)), {
+          status: 200,
+          headers: { 'content-type': 'application/octet-stream' }
+        })
+      )
+      vi.stubGlobal('fetch', fetchMock)
+      await service.saveProviderConfig({
+        id: 'eleven-voice-id',
+        name: 'ElevenLabs Voice ID',
+        kind: 'online',
+        type: 'elevenlabs',
+        models: [{ id: 'eleven_multilingual_v2', enabled: true }],
+        voices: [{ id: voiceId, enabled: true }],
+        apiKey: 'eleven-secret'
+      })
+
+      await service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: {
+            providerConfigId: 'eleven-voice-id',
+            modelId: 'eleven_multilingual_v2',
+            voiceId
+          }
+        }
+      })
+
+      // '#' 会让 query 落进 fragment 被丢弃，'/' 会改写路径语义，两者都必须先编码。
+      const url = new URL(String(fetchMock.mock.calls[0][0]))
+      expect(url.searchParams.get('output_format')).toBe('pcm_24000')
+      expect(url.pathname).toBe(`/v1/text-to-speech/${encodeURIComponent(voiceId)}`)
+    }
+  )
+
   it('keeps an empty API key usable for unauthenticated compatible services', async () => {
     const audio = createWav([0, 0, 0, 0])
     const fetchMock = vi.fn().mockResolvedValue(
@@ -426,6 +638,442 @@ describe('AIRouterSpeechService', () => {
         }
       })
     ).rejects.toThrow('provider exploded')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    ['minimax', 'https://api.minimax.io'],
+    ['minimax-cn', 'https://api.minimax.cn']
+  ] as const)('maps %s speech requests and wraps hex PCM output into WAV', async (type, host) => {
+    const pcm = createPcm(480)
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: { audio: Buffer.from(pcm).toString('hex'), status: 2 },
+          extra_info: { audio_sample_rate: 24000, audio_channel: 1, audio_format: 'pcm' },
+          base_resp: { status_code: 0, status_msg: 'success' }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const saved = await service.saveProviderConfig({
+      id: 'minimax-speech',
+      name: 'MiniMax Speech',
+      kind: 'online',
+      type,
+      baseUrl: `${host}/`,
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'English_Graceful_Lady', enabled: true }],
+      apiKey: 'minimax-secret'
+    })
+
+    expect(saved).toEqual(
+      expect.objectContaining({
+        type,
+        baseUrl: host,
+        modelPackageId: '',
+        hasApiKey: true
+      })
+    )
+
+    const result = await service.synthesizeSpeech({
+      text: 'Hello',
+      routing: {
+        default: {
+          providerConfigId: 'minimax-speech',
+          modelId: 'speech-2.8-hd',
+          voiceId: 'English_Graceful_Lady'
+        }
+      }
+    })
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${host}/v1/t2a_v2`,
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ authorization: 'Bearer minimax-secret' }),
+        body: JSON.stringify({
+          model: 'speech-2.8-hd',
+          text: 'Hello',
+          stream: false,
+          output_format: 'hex',
+          voice_setting: { voice_id: 'English_Graceful_Lady' },
+          audio_setting: { format: 'pcm', sample_rate: 24000, channel: 1 }
+        })
+      })
+    )
+    expect(result).toEqual(
+      expect.objectContaining({
+        format: 'wav',
+        mediaType: 'audio/wav',
+        sampleRate: 24000,
+        channels: 1,
+        durationMs: 20
+      })
+    )
+    expect(readWavFormat(result.data)).toEqual({ sampleRate: 24000, channels: 1, bits: 16 })
+    expect(result.data.byteLength).toBe(pcm.byteLength + 44)
+  })
+
+  it.each([
+    ['minimax', 'https://api.minimax.io'],
+    ['minimax-cn', 'https://api.minimax.cn']
+  ] as const)('defaults a %s provider to its regional base URL', async (type, host) => {
+    const saved = await service.saveProviderConfig({
+      id: 'minimax-default',
+      name: 'MiniMax Default',
+      kind: 'online',
+      type,
+      models: [],
+      voices: []
+    })
+
+    expect(saved.baseUrl).toBe(host)
+  })
+
+  it.each(['minimax', 'minimax-cn'] as const)(
+    'rejects %s as a local provider runtime',
+    async (type) => {
+      await expect(
+        service.saveProviderConfig({
+          id: 'minimax-local',
+          name: 'MiniMax Local',
+          kind: 'local',
+          type,
+          models: [],
+          voices: []
+        })
+      ).rejects.toThrow('离线语音 Provider 类型无效')
+    }
+  )
+
+  it('reports MiniMax errors that arrive with an HTTP 200 response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            base_resp: {
+              status_code: 1004,
+              status_msg: "login fail: Please carry the API secret key in the 'Authorization' field"
+            }
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      )
+    )
+    await service.saveProviderConfig({
+      id: 'minimax-broken',
+      name: 'MiniMax Broken',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'wrong'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'minimax-broken', modelId: 'speech-2.8-hd', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow(/login fail.*1004/)
+  })
+
+  it('rejects a MiniMax response without hex audio', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ data: null, base_resp: { status_code: 0 } }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' }
+        })
+      )
+    )
+    await service.saveProviderConfig({
+      id: 'minimax-empty',
+      name: 'MiniMax Empty',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'minimax-empty', modelId: 'speech-2.8-hd', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成结果缺少有效音频数据')
+  })
+
+  it('rejects a MiniMax response that is not PCM audio', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: { audio: Buffer.from(createPcm(240)).toString('hex'), status: 2 },
+          extra_info: { audio_format: 'mp3' },
+          base_resp: { status_code: 0, status_msg: 'success' }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'minimax-mp3',
+      name: 'MiniMax MP3',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'minimax-mp3', modelId: 'speech-2.8-hd', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成结果不是 PCM 音频')
+  })
+
+  it('rejects a MiniMax response with non-hex audio', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: { audio: 'not-hex-audio', status: 2 },
+          extra_info: { audio_format: 'pcm' },
+          base_resp: { status_code: 0, status_msg: 'success' }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'minimax-nonhex',
+      name: 'MiniMax NonHex',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'Hello',
+        routing: {
+          default: { providerConfigId: 'minimax-nonhex', modelId: 'speech-2.8-hd', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成结果缺少有效音频数据')
+  })
+
+  it('rejects a MiniMax text longer than the single-request limit before any request', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    await service.saveProviderConfig({
+      id: 'minimax-long',
+      name: 'MiniMax Long',
+      kind: 'online',
+      type: 'minimax',
+      models: [{ id: 'speech-2.8-hd', enabled: true }],
+      voices: [{ id: 'voice', enabled: true }],
+      apiKey: 'secret'
+    })
+
+    await expect(
+      service.synthesizeSpeech({
+        text: 'a'.repeat(10_001),
+        routing: {
+          default: { providerConfigId: 'minimax-long', modelId: 'speech-2.8-hd', voiceId: 'voice' }
+        }
+      })
+    ).rejects.toThrow('语音合成文本超过 MiniMax 单次请求的 10000 字符上限（当前 10001 字符）')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('lists MiniMax text-to-speech models without a network call', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      service.listModels({
+        name: 'MiniMax',
+        kind: 'online',
+        type: 'minimax',
+        models: [],
+        voices: []
+      })
+    ).resolves.toEqual([
+      { id: 'speech-2.8-hd' },
+      { id: 'speech-2.8-turbo' },
+      { id: 'speech-2.6-hd' },
+      { id: 'speech-2.6-turbo' },
+      { id: 'speech-02-hd' },
+      { id: 'speech-02-turbo' },
+      { id: 'speech-01-hd' },
+      { id: 'speech-01-turbo' }
+    ])
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('lists MiniMax voices from the voice management endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          system_voice: [
+            { voice_id: 'English_Graceful_Lady', voice_name: 'Graceful Lady' },
+            { voice_id: 'Chinese (Mandarin)_News_Anchor', voice_name: 'News Anchor' }
+          ],
+          voice_cloning: [{ voice_id: 'my-clone' }],
+          voice_generation: [{ voice_id: 'English_Graceful_Lady' }],
+          base_resp: { status_code: 0, status_msg: 'success' }
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } }
+      )
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      service.listVoices({
+        config: {
+          name: 'MiniMax',
+          kind: 'online',
+          type: 'minimax',
+          models: [],
+          voices: [],
+          apiKey: 'minimax-secret'
+        },
+        modelId: 'speech-2.8-hd'
+      })
+    ).resolves.toEqual([
+      { id: 'English_Graceful_Lady', name: 'Graceful Lady' },
+      { id: 'my-clone', name: undefined },
+      { id: 'Chinese (Mandarin)_News_Anchor', name: 'News Anchor' }
+    ])
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.minimax.io/v1/get_voice',
+      expect.objectContaining({
+        method: 'POST',
+        headers: expect.objectContaining({ authorization: 'Bearer minimax-secret' }),
+        body: JSON.stringify({ voice_type: 'all' })
+      })
+    )
+  })
+
+  it('hides a MiniMax rate limit and retries after waiting ten seconds', async () => {
+    useMinimaxRateLimitFakeTimers()
+    const pcm = createPcm(480)
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ base_resp: { status_code: 1002, status_msg: 'rate limit exceeded' } }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: { audio: Buffer.from(pcm).toString('hex'), status: 2 },
+            extra_info: { audio_sample_rate: 24000, audio_channel: 1 },
+            base_resp: { status_code: 0, status_msg: 'success' }
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    await saveMinimaxSynthesisProvider()
+
+    const pending = synthesizeWithMinimaxRouting()
+    await flushUntil(() => fetchMock.mock.calls.length >= 1)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    // 未满 10 秒不发起第二次请求，错误也没有向外传递。
+    await vi.advanceTimersByTimeAsync(9_999)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(1)
+    const result = await pending
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result).toEqual(
+      expect.objectContaining({ format: 'wav', mediaType: 'audio/wav', sampleRate: 24000 })
+    )
+  })
+
+  it('retries a MiniMax HTTP 429 response until it clears', async () => {
+    useMinimaxRateLimitFakeTimers()
+    const pcm = createPcm(480)
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response('too many requests', {
+          status: 429,
+          headers: { 'content-type': 'text/plain' }
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: { audio: Buffer.from(pcm).toString('hex'), status: 2 },
+            extra_info: { audio_sample_rate: 24000, audio_channel: 1 },
+            base_resp: { status_code: 0, status_msg: 'success' }
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } }
+        )
+      )
+    vi.stubGlobal('fetch', fetchMock)
+    await saveMinimaxSynthesisProvider()
+
+    const pending = synthesizeWithMinimaxRouting()
+    await flushUntil(() => fetchMock.mock.calls.length >= 1)
+    await vi.advanceTimersByTimeAsync(10_000)
+    const result = await pending
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result.format).toBe('wav')
+  })
+
+  it('propagates a MiniMax rate limit after the retry window is exhausted', async () => {
+    useMinimaxRateLimitFakeTimers()
+    // 每次重试都返回全新的 Response：同一个 Response 的 body 只能被读取一次。
+    const fetchMock = vi.fn(async () => rateLimitedResponse(1039, 'TPM rate limit exceeded'))
+    vi.stubGlobal('fetch', fetchMock)
+    await saveMinimaxSynthesisProvider()
+
+    const pending = synthesizeWithMinimaxRouting()
+    await flushUntil(() => fetchMock.mock.calls.length >= 1)
+    // 先挂上拒绝断言再推进时间：拒绝发生在推进期间，晚挂会被判定为 unhandled rejection。
+    const rejection = expect(pending).rejects.toThrow(/TPM rate limit exceeded（1039）/)
+    await vi.advanceTimersByTimeAsync(90_000)
+    await rejection
+    // 首次请求 + 9 次等待重试，累计等待正好 90 秒。
+    expect(fetchMock).toHaveBeenCalledTimes(10)
+  })
+
+  it('stops waiting when a MiniMax rate-limit retry is aborted', async () => {
+    useMinimaxRateLimitFakeTimers()
+    const fetchMock = vi.fn(async () => rateLimitedResponse(1002, 'rate limit exceeded'))
+    vi.stubGlobal('fetch', fetchMock)
+    await saveMinimaxSynthesisProvider()
+
+    const controller = new AbortController()
+    const pending = synthesizeWithMinimaxRouting({ signal: controller.signal })
+    await flushUntil(() => fetchMock.mock.calls.length >= 1)
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    controller.abort()
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 

@@ -1,3 +1,12 @@
+export {
+  DEFAULT_SPEECH_PROVIDER_BASE_URLS,
+  isLocalSpeechProviderType,
+  isMinimaxSpeechProviderType,
+  isOnlineSpeechProviderType,
+  LOCAL_SPEECH_PROVIDER_TYPES,
+  MINIMAX_SPEECH_PROVIDER_TYPES,
+  ONLINE_SPEECH_PROVIDER_TYPES
+} from './shared'
 export type {
   AIRouterClient,
   AIRouterBridge,
@@ -12,6 +21,8 @@ export type {
   AIRouterImageRequest,
   AIRouterGeneratedAudio,
   AIRouterSpeechAudioFormat,
+  AIRouterLocalSpeechProviderType,
+  AIRouterMinimaxSpeechProviderType,
   AIRouterSpeechConnectionTestInput,
   AIRouterSpeechModelOption,
   AIRouterSpeechModelPackageAsset,

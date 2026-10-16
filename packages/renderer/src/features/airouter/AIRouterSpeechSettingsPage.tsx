@@ -7,8 +7,12 @@ import type {
   AIRouterSpeechProviderConfigSummary,
   AIRouterSpeechProviderKind,
   AIRouterSpeechProviderType,
-  AIRouterSpeechVoiceConfig,
-  AIRouterSpeechVoiceOption
+  AIRouterSpeechVoiceConfig
+} from '@ls101/airouter'
+import {
+  DEFAULT_SPEECH_PROVIDER_BASE_URLS,
+  isMinimaxSpeechProviderType,
+  isOnlineSpeechProviderType
 } from '@ls101/airouter'
 import {
   AudioLines,
@@ -72,20 +76,25 @@ type SpeechFeedbackScope =
 const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   elevenlabs: 'ElevenLabs',
+  minimax: 'MiniMax',
+  'minimax-cn': 'MiniMax 国内版',
   'pocket-tts': 'Pocket TTS (WASM)',
   'qwen-tts': 'Qwen3-TTS 0.6B'
 }
 
+// 模型包提示与 Provider 列表共用同一份显示名，仅本地运行时的 Pocket TTS
+// 在模型包语境下不带 WASM 后缀，从上表派生。
 const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
-  'openai-compatible': 'OpenAI Compatible',
-  elevenlabs: 'ElevenLabs',
-  'pocket-tts': 'Pocket TTS',
-  'qwen-tts': 'Qwen3-TTS 0.6B'
+  ...providerLabels,
+  'pocket-tts': 'Pocket TTS'
 }
 
-function defaultOnlineBaseUrl(type: AIRouterSpeechProviderType): string {
-  return type === 'elevenlabs' ? 'https://api.elevenlabs.io' : 'https://api.openai.com/v1'
+function supportsRemoteVoiceDiscovery(type: AIRouterSpeechProviderType): boolean {
+  return type === 'elevenlabs' || isMinimaxSpeechProviderType(type)
 }
+
+// 列表超过这个长度才显示搜索框和折叠控件，短列表不增加额外控件。
+const LONG_LIST_MIN_ITEMS = 6
 
 export function AIRouterSpeechSettingsPage({
   application = airouterApplication
@@ -100,7 +109,8 @@ export function AIRouterSpeechSettingsPage({
   const [draft, setDraft] = useState<SpeechProviderDraft | null>(null)
   const [manualModel, setManualModel] = useState('')
   const [manualVoice, setManualVoice] = useState('')
-  const [discoveredVoices, setDiscoveredVoices] = useState<AIRouterSpeechVoiceOption[]>([])
+  const [voiceSearch, setVoiceSearch] = useState('')
+  const [modelSearch, setModelSearch] = useState('')
   const [testModelId, setTestModelId] = useState('')
   const [testVoiceId, setTestVoiceId] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -153,6 +163,17 @@ export function AIRouterSpeechSettingsPage({
     [testAudioUrl]
   )
 
+  // 搜索框只在长列表上渲染：条目跌破阈值时必须清空过滤词，否则消失的
+  // 搜索框留下的旧过滤词会继续生效，列表会被锁死在「没有匹配」的空态。
+  const voiceCount = draft?.voices.length ?? 0
+  const modelCount = draft?.models.length ?? 0
+  useEffect(() => {
+    if (voiceCount < LONG_LIST_MIN_ITEMS) setVoiceSearch('')
+  }, [voiceCount])
+  useEffect(() => {
+    if (modelCount < LONG_LIST_MIN_ITEMS) setModelSearch('')
+  }, [modelCount])
+
   const localPackages =
     draft?.kind === 'local'
       ? (packages ?? []).filter((item) => item.runtime.engine === draft.type)
@@ -200,12 +221,18 @@ export function AIRouterSpeechSettingsPage({
     }
   }
 
+  // 切换运行方式或 Provider 类型都会清空列表内容，过滤词也要一并重置。
+  const resetSearchState = (): void => {
+    setVoiceSearch('')
+    setModelSearch('')
+  }
+
   const resetEditorState = (): void => {
     if (testAudioUrl) URL.revokeObjectURL(testAudioUrl)
     setTestAudioUrl(null)
     setManualModel('')
     setManualVoice('')
-    setDiscoveredVoices([])
+    resetSearchState()
     setTestModelId('')
     setTestVoiceId('')
     setApiKeyVisible(false)
@@ -450,13 +477,15 @@ export function AIRouterSpeechSettingsPage({
                     disabled={Boolean(draft.id) || Boolean(busy)}
                     onChange={(event) => {
                       const kind = event.target.value as AIRouterSpeechProviderKind
-                      const type: AIRouterSpeechProviderType =
-                        kind === 'online' ? 'openai-compatible' : 'pocket-tts'
+                      const type = kind === 'online' ? 'openai-compatible' : 'pocket-tts'
+                      resetSearchState()
                       setDraft({
                         ...draft,
                         kind,
                         type,
-                        baseUrl: kind === 'online' ? defaultOnlineBaseUrl(type) : '',
+                        baseUrl: isOnlineSpeechProviderType(type)
+                          ? DEFAULT_SPEECH_PROVIDER_BASE_URLS[type]
+                          : '',
                         modelPackageId: '',
                         modelPackageVersion: '',
                         models: [],
@@ -478,11 +507,14 @@ export function AIRouterSpeechSettingsPage({
                     disabled={Boolean(draft.id) || Boolean(busy)}
                     onChange={(event) => {
                       const type = event.target.value as AIRouterSpeechProviderType
-                      setDiscoveredVoices([])
+                      resetSearchState()
                       setDraft({
                         ...draft,
                         type,
-                        baseUrl: draft.kind === 'online' ? defaultOnlineBaseUrl(type) : '',
+                        baseUrl:
+                          draft.kind === 'online' && isOnlineSpeechProviderType(type)
+                            ? DEFAULT_SPEECH_PROVIDER_BASE_URLS[type]
+                            : '',
                         backend: 'cpu',
                         modelPackageId: '',
                         modelPackageVersion: '',
@@ -496,6 +528,8 @@ export function AIRouterSpeechSettingsPage({
                       <>
                         <option value="openai-compatible">OpenAI Compatible</option>
                         <option value="elevenlabs">ElevenLabs</option>
+                        <option value="minimax">MiniMax</option>
+                        <option value="minimax-cn">MiniMax 国内版</option>
                       </>
                     ) : (
                       <>
@@ -507,7 +541,14 @@ export function AIRouterSpeechSettingsPage({
                 </SettingsRow>
                 {draft.kind === 'online' ? (
                   <>
-                    <SettingsRow label="Base URL">
+                    <SettingsRow
+                      label="Base URL"
+                      description={
+                        draft.type === 'openai-compatible'
+                          ? '兼容服务的 API 根地址，通常以 /v1 结尾。'
+                          : 'API 根地址，不要包含 /v1，请求路径会自动拼接。'
+                      }
+                    >
                       <input
                         aria-label="语音 Base URL"
                         className={styles.inputWide}
@@ -623,6 +664,7 @@ export function AIRouterSpeechSettingsPage({
                     </SettingsSection>
                     {selectedPackage ? (
                       <ModelVoiceSections
+                        busy={busy}
                         draft={draft}
                         modelPackage={selectedPackage}
                         setDraft={setDraft}
@@ -657,7 +699,9 @@ export function AIRouterSpeechSettingsPage({
                     description={
                       draft.type === 'elevenlabs'
                         ? '从 ElevenLabs 获取可用模型列表，或手动添加模型 ID。'
-                        : '从兼容服务获取模型列表，或手动添加模型 ID。'
+                        : isMinimaxSpeechProviderType(draft.type)
+                          ? '使用 MiniMax 内置的语音模型列表，或手动添加模型 ID。'
+                          : '从兼容服务获取模型列表，或手动添加模型 ID。'
                     }
                   >
                     <div className={styles.modelToolbar}>
@@ -671,22 +715,27 @@ export function AIRouterSpeechSettingsPage({
                               const discovered = await application.listSpeechModels(
                                 toInput(draft, apiKeyBaseline, apiKeyLoaded)
                               )
-                              const existing = new Map(
-                                draft.models.map((model) => [model.id, model])
-                              )
-                              setDraft({
-                                ...draft,
-                                models: discovered
-                                  .map(
-                                    (model) =>
-                                      existing.get(model.id) ?? { id: model.id, enabled: false }
-                                  )
-                                  .concat(
-                                    draft.models.filter(
+                              // 函数式更新基于最新 draft 合并：请求期间用户对列表的
+                              // 勾选/删除操作不会被发起请求时的旧快照静默回滚。
+                              setDraft((current) => {
+                                if (!current) return current
+                                const existing = new Map(
+                                  current.models.map((model) => [model.id, model])
+                                )
+                                return {
+                                  ...current,
+                                  models: discovered
+                                    .map(
                                       (model) =>
-                                        !discovered.some((candidate) => candidate.id === model.id)
+                                        existing.get(model.id) ?? { id: model.id, enabled: false }
                                     )
-                                  )
+                                    .concat(
+                                      current.models.filter(
+                                        (model) =>
+                                          !discovered.some((candidate) => candidate.id === model.id)
+                                      )
+                                    )
+                                }
                               })
                               setFeedback((current) => ({
                                 ...current,
@@ -702,6 +751,30 @@ export function AIRouterSpeechSettingsPage({
                       >
                         获取模型列表
                       </Button>
+                      {draft.models.length >= LONG_LIST_MIN_ITEMS ? (
+                        <div className={styles.searchInputWrap}>
+                          <input
+                            aria-label="搜索模型"
+                            className={`${styles.input} ${styles.searchInput}`}
+                            disabled={Boolean(busy)}
+                            onChange={(event) => setModelSearch(event.target.value)}
+                            placeholder="搜索模型"
+                            type="search"
+                            value={modelSearch}
+                          />
+                          {modelSearch ? (
+                            <button
+                              aria-label="清除模型搜索"
+                              className={styles.searchClear}
+                              disabled={Boolean(busy)}
+                              onClick={() => setModelSearch('')}
+                              type="button"
+                            >
+                              <X aria-hidden="true" />
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <ManualEntry
                         ariaLabel="手动语音模型 ID"
                         disabled={Boolean(busy)}
@@ -724,7 +797,11 @@ export function AIRouterSpeechSettingsPage({
                       value={feedback.models}
                     />
                     <ToggleList
+                      collapsible={draft.models.length >= LONG_LIST_MIN_ITEMS}
+                      disabled={Boolean(busy)}
                       empty="尚未添加模型。"
+                      emptyFiltered="没有匹配的模型。"
+                      filter={modelSearch}
                       items={draft.models}
                       itemLabel={(id) => id}
                       removeLabel="移除语音模型"
@@ -736,11 +813,13 @@ export function AIRouterSpeechSettingsPage({
                     description={
                       draft.type === 'elevenlabs'
                         ? '从 ElevenLabs 获取账号可用音色列表，或手动添加 Voice ID。'
-                        : '添加 OpenAI Compatible 服务支持的音色 ID。'
+                        : isMinimaxSpeechProviderType(draft.type)
+                          ? '从 MiniMax 获取账号可用音色（含克隆音色）列表，或手动添加 Voice ID。'
+                          : '添加 OpenAI Compatible 服务支持的音色 ID。'
                     }
                   >
                     <div className={styles.modelToolbar}>
-                      {draft.type === 'elevenlabs' ? (
+                      {supportsRemoteVoiceDiscovery(draft.type) ? (
                         <Button
                           icon={Download}
                           disabled={Boolean(busy)}
@@ -752,24 +831,34 @@ export function AIRouterSpeechSettingsPage({
                                   config: toInput(draft, apiKeyBaseline, apiKeyLoaded),
                                   modelId: enabledModels[0]?.id ?? ''
                                 })
-                                const existing = new Map(
-                                  draft.voices.map((voice) => [voice.id, voice])
-                                )
-                                setDraft({
-                                  ...draft,
-                                  voices: discovered
-                                    .map(
-                                      (voice) =>
-                                        existing.get(voice.id) ?? { id: voice.id, enabled: false }
-                                    )
-                                    .concat(
-                                      draft.voices.filter(
-                                        (voice) =>
-                                          !discovered.some((candidate) => candidate.id === voice.id)
+                                // 与模型列表同理：基于 current 合并，避免回滚请求期间的操作。
+                                // 远端返回的显示名写进条目并随 Provider 配置一起保存，
+                                // 重新打开编辑器时不再只剩裸 ID（问题 14）。
+                                setDraft((current) => {
+                                  if (!current) return current
+                                  const existing = new Map(
+                                    current.voices.map((voice) => [voice.id, voice])
+                                  )
+                                  return {
+                                    ...current,
+                                    voices: discovered
+                                      .map((voice): AIRouterSpeechVoiceConfig => {
+                                        const prev = existing.get(voice.id)
+                                        return prev
+                                          ? // 已有条目保留用户勾选状态，仅刷新远端名称。
+                                            { ...prev, name: voice.name ?? prev.name }
+                                          : { id: voice.id, name: voice.name, enabled: false }
+                                      })
+                                      .concat(
+                                        current.voices.filter(
+                                          (voice) =>
+                                            !discovered.some(
+                                              (candidate) => candidate.id === voice.id
+                                            )
+                                        )
                                       )
-                                    )
+                                  }
                                 })
-                                setDiscoveredVoices(discovered)
                                 setFeedback((current) => ({
                                   ...current,
                                   voices: {
@@ -789,6 +878,30 @@ export function AIRouterSpeechSettingsPage({
                           已配置 {draft.voices.length} 个音色
                         </span>
                       )}
+                      {draft.voices.length >= LONG_LIST_MIN_ITEMS ? (
+                        <div className={styles.searchInputWrap}>
+                          <input
+                            aria-label="搜索音色"
+                            className={`${styles.input} ${styles.searchInput}`}
+                            disabled={Boolean(busy)}
+                            onChange={(event) => setVoiceSearch(event.target.value)}
+                            placeholder="搜索音色"
+                            type="search"
+                            value={voiceSearch}
+                          />
+                          {voiceSearch ? (
+                            <button
+                              aria-label="清除音色搜索"
+                              className={styles.searchClear}
+                              disabled={Boolean(busy)}
+                              onClick={() => setVoiceSearch('')}
+                              type="button"
+                            >
+                              <X aria-hidden="true" />
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
                       <ManualEntry
                         ariaLabel="手动语音音色 ID"
                         disabled={Boolean(busy)}
@@ -811,9 +924,14 @@ export function AIRouterSpeechSettingsPage({
                       value={feedback.voices}
                     />
                     <ToggleList
+                      collapsible={draft.voices.length >= LONG_LIST_MIN_ITEMS}
+                      disabled={Boolean(busy)}
                       empty="尚未添加音色。"
+                      emptyFiltered="没有匹配的音色。"
+                      filter={voiceSearch}
                       items={draft.voices}
-                      itemLabel={(id) => optionName(id, discoveredVoices)}
+                      // 音色显示名已随配置保存在 draft.voices 里，不再依赖瞬态发现结果。
+                      itemLabel={(id) => optionName(id, draft.voices)}
                       removeLabel="移除语音音色"
                       onChange={(voices) => setDraft({ ...draft, voices })}
                     />
@@ -849,7 +967,11 @@ export function AIRouterSpeechSettingsPage({
                     >
                       {enabledVoices.map((voice) => (
                         <option key={voice.id} value={voice.id}>
-                          {optionName(voice.id, selectedPackage?.voices)}
+                          {/* 在线 Provider 没有 selectedPackage，显示名同样来自 draft.voices。 */}
+                          {optionName(
+                            voice.id,
+                            draft.kind === 'online' ? draft.voices : selectedPackage?.voices
+                          )}
                         </option>
                       ))}
                     </select>
@@ -1020,10 +1142,12 @@ export function AIRouterSpeechSettingsPage({
 }
 
 function ModelVoiceSections({
+  busy,
   draft,
   modelPackage,
   setDraft
 }: {
+  busy: string | null
   draft: SpeechProviderDraft
   modelPackage: AIRouterSpeechModelPackageSummary
   setDraft: (draft: SpeechProviderDraft) => void
@@ -1032,6 +1156,7 @@ function ModelVoiceSections({
     <>
       <SettingsSection title="启用模型" description="选择这个 Provider 可以使用的模型。">
         <ToggleList
+          disabled={Boolean(busy)}
           empty="模型包中没有模型。"
           items={draft.models}
           itemLabel={(id) => optionName(id, modelPackage.models)}
@@ -1040,6 +1165,7 @@ function ModelVoiceSections({
       </SettingsSection>
       <SettingsSection title="启用音色" description="模型包中的音色适用于包内全部模型。">
         <ToggleList
+          disabled={Boolean(busy)}
           empty="模型包中没有音色。"
           items={draft.voices}
           itemLabel={(id) => optionName(id, modelPackage.voices)}
@@ -1080,26 +1206,59 @@ function ManualEntry({
 }
 
 function ToggleList<T extends { id: string; enabled: boolean }>({
+  collapsible = false,
+  disabled = false,
   empty,
+  emptyFiltered = '没有匹配的条目。',
+  filter,
   items,
   itemLabel,
   removeLabel,
   onChange
 }: {
+  collapsible?: boolean
+  disabled?: boolean
   empty: string
+  emptyFiltered?: string
+  filter?: string
   items: T[]
   itemLabel: (id: string) => string
   removeLabel?: string
   onChange: (items: T[]) => void
 }): JSX.Element {
+  const [collapsed, setCollapsed] = useState(false)
   if (!items.length) return <p className={styles.emptyModels}>{empty}</p>
+  const query = filter?.trim().toLowerCase() ?? ''
+  // 过滤只影响渲染：onChange 始终基于完整 items，隐藏的条目不会被丢掉。
+  const visible = query
+    ? items.filter((item) => itemLabel(item.id).toLowerCase().includes(query))
+    : items
+  // 搜索时强制展开，收起状态不会挡住搜索结果；列表跌破阈值后 collapsible 已为
+  // false，此时忽略残留的 collapsed，避免条目、空态和折叠按钮一起消失。
+  const showItems = query ? true : !(collapsible && collapsed)
   return (
     <div className={styles.modelList}>
-      {items.map((item) => (
+      {collapsible ? (
+        <button
+          aria-expanded={showItems}
+          className={styles.listToggle}
+          disabled={disabled}
+          onClick={() => setCollapsed((value) => !value)}
+          type="button"
+        >
+          <ChevronRight
+            aria-hidden="true"
+            className={`${styles.listToggleIcon} ${showItems ? styles.listToggleIconOpen : ''}`}
+          />
+          {showItems ? '收起列表' : `展开列表（共 ${items.length} 项）`}
+        </button>
+      ) : null}
+      {(showItems ? visible : []).map((item) => (
         <div className={styles.modelItem} key={item.id}>
           <label className={styles.modelToggle}>
             <input
               checked={item.enabled}
+              disabled={disabled}
               onChange={(event) =>
                 onChange(
                   items.map((candidate) =>
@@ -1117,6 +1276,7 @@ function ToggleList<T extends { id: string; enabled: boolean }>({
             <button
               aria-label={`${removeLabel} ${item.id}`}
               className={styles.removeModel}
+              disabled={disabled}
               onClick={() => onChange(items.filter((candidate) => candidate.id !== item.id))}
               type="button"
             >
@@ -1125,6 +1285,7 @@ function ToggleList<T extends { id: string; enabled: boolean }>({
           ) : null}
         </div>
       ))}
+      {showItems && !visible.length ? <p className={styles.emptyModels}>{emptyFiltered}</p> : null}
     </div>
   )
 }
@@ -1134,7 +1295,7 @@ function createDraft(): SpeechProviderDraft {
     name: '',
     kind: 'online',
     type: 'openai-compatible',
-    baseUrl: 'https://api.openai.com/v1',
+    baseUrl: DEFAULT_SPEECH_PROVIDER_BASE_URLS['openai-compatible'],
     modelPackageId: '',
     modelPackageVersion: '',
     models: [],
