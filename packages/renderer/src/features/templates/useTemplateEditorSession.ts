@@ -48,6 +48,7 @@ export interface TemplateEditorSession {
 
 export type TemplateEditorSource = 'local' | 'builtin'
 
+// 加载完成前的占位历史；编号 0 预留给加载生成的初始快照，因此 nextId 从 1 开始。
 const EMPTY_HISTORY: EditorHistory = {
   past: [],
   present: null,
@@ -65,6 +66,8 @@ export function useTemplateEditorSession(
   templateId: string,
   source: TemplateEditorSource = 'local'
 ): TemplateEditorSession {
+  // 会话状态双写：React state 驱动渲染，ref 供事件回调同步读取。apply/undo/redo/save
+  // 可能在同一帧内连续触发，这些操作一律以 ref 为准，不能依赖尚未提交的渲染结果。
   const [history, setHistory] = useState<EditorHistory>(EMPTY_HISTORY)
   // 同步引用让连续操作立即读到最新历史，不必等待 React 重新渲染。
   const historyRef = useRef(history)
@@ -72,20 +75,26 @@ export function useTemplateEditorSession(
   const selectedNodeIdRef = useRef(selectedNodeId)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  // 与 saving 并存的同步标记，用于在请求发出前就拒绝并发的保存与插入。
   const savingRef = useRef(false)
   const [error, setError] = useState<string | null>(null)
   const mountedRef = useRef(true)
 
+  // 历史与选区只能经由这两个函数写入，避免 ref 与 state 出现分叉。
   const replaceHistory = (value: EditorHistory): void => {
     historyRef.current = value
     setHistory(value)
   }
 
+  // 选区同样双写：读操作使用 ref，界面渲染使用 state。
   const replaceSelection = (nodeId: string): void => {
     selectedNodeIdRef.current = nodeId
     setSelectedNodeId(nodeId)
   }
 
+  // 模板标识、来源或应用实例变化时重新加载文档，并据此建立初始历史。
+  // active 只约束本次加载的迟到结果；mountedRef 供保存、插入等后续异步操作判断挂载状态。
+  // 调用方以 templateId 作为 key，切换模板时会重新挂载，因此 loading 能保持初始的 true。
   useEffect(() => {
     mountedRef.current = true
     let active = true
@@ -108,6 +117,7 @@ export function useTemplateEditorSession(
         // 模板切换或组件卸载后，忽略本次加载的迟到结果。
         if (!active) return
         if (!document) {
+          // 文档缺失不建立历史：界面按 loading 结束且 document 为 null 的空态呈现。
           setError('模板不存在。')
           return
         }
@@ -132,6 +142,8 @@ export function useTemplateEditorSession(
     }
   }, [application, source, templateId])
 
+  // 编辑先在内存中完成：只有 editTemplateDocument 接受操作才写入历史；
+  // 被拒绝的操作只更新 code: path 形式的错误，当前文档保持不变。
   // 编辑成功后创建新快照并清空重做栈；插入操作优先选中新节点。
   const apply = (operation: TemplateDocumentOperation): boolean => {
     if (source === 'builtin') return false
@@ -167,6 +179,7 @@ export function useTemplateEditorSession(
   }
 
   // 仅更新当前快照的选区，单独选择节点不会新增撤销步骤。
+  // 先校验节点确实存在，避免过期 id 让选区指向已删除的位置。
   const selectNode = (nodeId: string): void => {
     const document = historyRef.current.present?.document
     if (!document || !findNode(document.content.root, nodeId)) return
@@ -181,6 +194,7 @@ export function useTemplateEditorSession(
   }
 
   // 撤销和重做在 past、present、future 之间移动完整快照。
+  // 记录的是快照而非操作，因此回放不会重演副作用，选区也恢复到当时的编辑上下文。
   const undo = (): void => {
     if (source === 'builtin') return
     const current = historyRef.current
@@ -196,6 +210,7 @@ export function useTemplateEditorSession(
     setError(null)
   }
 
+  // 重做按同一上限裁剪 past，使撤销与重做两个方向都满足 HISTORY_LIMIT。
   const redo = (): void => {
     if (source === 'builtin') return
     const current = historyRef.current
@@ -211,6 +226,9 @@ export function useTemplateEditorSession(
     setError(null)
   }
 
+  // 保存成功返回 true；失败（含并发被拒）返回 false 并保留脏状态，由界面提示重试。
+  // 成功后把全部快照的 revision 对齐服务端返回值：历史中的文档共享同一持久化标识，
+  // 只有触发本次保存的快照转为干净，期间继续产生的编辑仍保持未保存。
   const save = async (): Promise<boolean> => {
     if (source === 'builtin') return false
     // 保存固定快照；请求期间继续产生的编辑仍应保留为未保存状态。
@@ -242,6 +260,8 @@ export function useTemplateEditorSession(
   }
 
   // 函数调用由应用服务直接持久化，因此先保存本地修改，再接收新的文档快照。
+  // 前置保存是必需的：应用服务会重新读取已落盘的模板，未保存的编辑会被覆盖；
+  // 保存后再次核对快照已干净，避免在脏文档上继续插入。
   const insertFunctionCall = async (
     locator: FunctionLocator,
     parentId: string,
@@ -268,6 +288,7 @@ export function useTemplateEditorSession(
       if (!mountedRef.current) return false
       const current = historyRef.current
       const id = current.nextId
+      // 服务端返回值已持久化，直接作为干净快照压在栈顶，并选中新插入的调用节点。
       const selectedNodeId = normalizeSelection(result.template, result.callNodeId)
       replaceHistory({
         past: current.present
@@ -289,6 +310,9 @@ export function useTemplateEditorSession(
     }
   }
 
+  // selectedNode 由 selectedNodeId 现算，节点被删除时自然回退为 null。
+  // dirty 比较快照编号而非 revision：未保存快照的 revision 可能相同，编号才能区分保存点。
+  // canUndo 等写能力对内置模板统一关闭，界面据此呈现只读形态。
   const document = history.present?.document ?? null
   return {
     document,
@@ -338,6 +362,7 @@ export function findNode(root: TemplateNode, nodeId: string): TemplateNode | nul
   return null
 }
 
+/** 编辑错误统一为 code: path 形式，便于直接定位被拒绝的节点或字段。 */
 function editErrorMessage(error: DocumentEditError): string {
   return `${error.code}: ${error.path}`
 }

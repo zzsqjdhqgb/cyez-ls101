@@ -30,6 +30,8 @@ export function useTemplatePreview(
   document: TemplateDocument | null,
   active: boolean
 ): TemplatePreviewSession {
+  // 预览需求取自文档声明的 Interface 列表；memo 让同一列表引用下的结果保持稳定，
+  // 供实例查询与绑定构造复用，而不是每次渲染都生成新数组。
   const requirements = useMemo(
     () => document?.content.interfaces ?? [],
     [document?.content.interfaces]
@@ -44,6 +46,9 @@ export function useTemplatePreview(
   const [refreshToken, setRefreshToken] = useState(0)
 
   // 文档变化时重新查询各题型实例；清理标记阻止旧请求覆盖新状态。
+  // 依赖包含整个 document：任一编辑都会让 instancesReady 失效，编译因此被推迟到
+  // 候选实例重新加载、绑定重新推导之后，避免拿上一版文档的绑定去预览。
+  // 加载逻辑放进微任务，可让同步抛错同样落到 catch 分支。
   useEffect(() => {
     if (!active || !document) return
     let current = true
@@ -52,6 +57,7 @@ export function useTemplatePreview(
         if (!current) return []
         setInstancesLoading(true)
         setInstancesReady(false)
+        // 各题型并行查询，任何一次失败都会让整批结果作废并转为错误提示。
         return Promise.all(
           requirements.map(
             async (requirement) =>
@@ -66,6 +72,7 @@ export function useTemplatePreview(
         if (!current) return
         const nextOptions = Object.fromEntries(entries)
         setInstanceOptions(nextOptions)
+        // 按当前需求整体重建选择表：已失效的别名被丢弃，新别名取得默认值。
         setSelections((previous) =>
           Object.fromEntries(
             requirements.map((requirement) => {
@@ -97,6 +104,9 @@ export function useTemplatePreview(
   }, [active, application, document, requirements])
 
   // 所有必需别名都选定实例后，才能构造完整的预览绑定。
+  // missingInstances 是预览的等待条件：任一别名为空时编译 effect 直接跳过，
+  // 下面用 '' 占位的绑定不会真正发给应用层。
+  // selections 变化会生成新的 bindings 引用，作为编译 effect 的重新编译信号。
   const missingInstances = requirements.some((requirement) => !selections[requirement.alias])
   const bindings = useMemo(
     () =>
@@ -110,6 +120,8 @@ export function useTemplatePreview(
 
   useEffect(() => {
     // 等待候选加载完成，避免使用上一次文档的绑定发起预览。
+    // 编译前先清空上一次结果，防止旧文档的预览残留在界面上；refreshToken 让用户可在
+    // 文档与绑定都未变化时手动重编。
     if (!active || !document || !instancesReady || missingInstances) return
     let current = true
     void Promise.resolve()
@@ -126,6 +138,7 @@ export function useTemplatePreview(
       })
       .catch((reason: unknown) => {
         if (!current) return
+        // 依赖读取等异常走 error；文档未通过校验则体现为 result.success === false。
         setResult(null)
         setError(errorMessage(reason))
       })
@@ -137,10 +150,14 @@ export function useTemplatePreview(
     }
   }, [active, application, bindings, document, instancesReady, missingInstances, refreshToken])
 
+  // 只记录选择，不主动触发编译：bindings 引用变化会让编译 effect 自动重跑。
+  // 传入空字符串即清除该别名的绑定，预览回到等待选择的状态。
   const selectInstance = useCallback((alias: string, instanceId: string): void => {
     setSelections((current) => ({ ...current, [alias]: instanceId }))
   }, [])
 
+  // 界面按两类失败分别展示：error 是查询或编译抛出的异常，result.success === false
+  // 才是模板自身的校验错误；compiling 与 instancesLoading 分别驱动按钮与下拉框禁用。
   return {
     compiling,
     error,
@@ -155,6 +172,7 @@ export function useTemplatePreview(
   }
 }
 
+/** 把未预期的拒绝值统一成可直接展示的错误文案。 */
 function errorMessage(reason: unknown): string {
   return reason instanceof Error ? reason.message : String(reason)
 }

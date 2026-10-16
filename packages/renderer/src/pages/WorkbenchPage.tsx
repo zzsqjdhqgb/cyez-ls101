@@ -1,3 +1,11 @@
+/**
+ * 工作台首页：只读汇总各业务库状态，提供常用入口与最近工作跳转。
+ *
+ * 数据来自渲染进程经 window.fileStore IPC 桥访问主进程文件存储的各库单例
+ * （试卷库、作答库、题型库、模板库、评分单元库），本页不写入任何业务数据。
+ * 首屏并行拉取全部统计值，任一请求失败即整体退化为「状态不可用」，
+ * 不展示半份统计，以免维护者误判数据完整性。
+ */
 import { useEffect, useMemo, useState, type JSX } from 'react'
 import {
   ArrowRight,
@@ -17,7 +25,12 @@ import { useSubmissionLibrary } from '../features/submissions/SubmissionLibraryC
 import { useTemplateApplication } from '../features/templates/TemplateApplicationContext'
 import styles from './WorkbenchPage.module.css'
 
-/** 不同业务记录统一为工作台可展示、可跳转的最近工作条目。 */
+/**
+ * 不同业务记录统一为工作台可展示、可跳转的最近工作条目。
+ *
+ * id 需跨库唯一（各库拼接时会自带前缀），path 必须是应用内路由路径，
+ * 因为列表项会直接交给 react-router 的 navigate 处理。
+ */
 interface RecentWorkItem {
   id: string
   title: string
@@ -27,7 +40,12 @@ interface RecentWorkItem {
   icon: typeof Play
 }
 
-/** 一次汇总加载得到的统计值与最近工作列表。 */
+/**
+ * 一次汇总加载得到的统计值与最近工作列表。
+ *
+ * 字段与 EMPTY_SNAPSHOT 完全对应：加载结束前保持全零，
+ * 这些数字是否可信由 loading 标志决定。
+ */
 interface WorkbenchSnapshot {
   exams: number
   pendingSubmissions: number
@@ -39,6 +57,10 @@ interface WorkbenchSnapshot {
   recent: RecentWorkItem[]
 }
 
+/**
+ * 首屏占位快照，保证 snapshot 始终可读，避免在 JSX 中到处判空。
+ * 它与「统计结果确实为零」在数据上无法区分，必须配合 loading 使用。
+ */
 const EMPTY_SNAPSHOT: WorkbenchSnapshot = {
   exams: 0,
   pendingSubmissions: 0,
@@ -50,6 +72,10 @@ const EMPTY_SNAPSHOT: WorkbenchSnapshot = {
   recent: []
 }
 
+/**
+ * 快捷操作卡片配置；primary 只标记主操作，强调样式交给 CSS 决定。
+ * icon 沿用 lucide 图标组件类型（typeof Play），由调用方负责传入组件本身。
+ */
 interface QuickAction {
   title: string
   detail: string
@@ -58,6 +84,9 @@ interface QuickAction {
   primary?: boolean
 }
 
+/**
+ * 首页寄语候选集：纯静态文案，as const 使元素类型收窄为字面量。
+ */
 const WORKBENCH_QUOTES = [
   {
     text: 'Language is the dress of thought.',
@@ -82,30 +111,43 @@ const WORKBENCH_QUOTES = [
 ] as const
 
 // 模块加载时随机选择寄语，避免组件重新渲染时反复切换。
+// 索引访问在严格模式下类型为可能 undefined，故回退到首条寄语。
 const STARTUP_QUOTE =
   WORKBENCH_QUOTES[Math.floor(Math.random() * WORKBENCH_QUOTES.length)] ?? WORKBENCH_QUOTES[0]
 
 /** 汇总各业务库状态，展示常用入口、最近工作与作答评分进度。 */
 export function WorkbenchPage(): JSX.Element {
   const navigate = useNavigate()
+  // 下列业务库都是 Provider 注入的模块级单例（见 features/*/*Runtime.ts），
+  // 引用恒定，因此汇总 effect 的依赖实际上不会变化。
   const exams = useExamLibrary()
   const submissions = useSubmissionLibrary()
   const interfaces = useInterfaceApplication()
   const templates = useTemplateApplication()
   const schemas = useSchemaRepository()
+  // loading 初始为 true：首帧只能显示占位符，不能把初始零值当成真实统计。
+  // unavailable 仅表示汇总失败，页面静态内容与入口按钮仍然照常渲染。
   const [snapshot, setSnapshot] = useState<WorkbenchSnapshot>(EMPTY_SNAPSHOT)
   const [loading, setLoading] = useState(true)
   const [unavailable, setUnavailable] = useState(false)
 
   useEffect(() => {
+    // active 标记本次加载是否仍然有效：卸载或依赖变化后置为 false，
+    // 后续回调据此丢弃结果，避免在已卸载组件上写状态或被旧请求覆盖。
     let active = true
 
     // 各库独立读取并行进行；任一请求失败时统一显示状态不可用提示。
+    // 六个读取互不依赖，故全部并行发起；Promise.all 为快速失败语义，
+    // 任一失败都会跳过 then 直接进入 catch，成功部分不单独展示。
     void Promise.all([
+      // 试卷记录：用于统计总数，并取页面数/资源数生成简介。
       exams.listRecords(),
+      // 作答条目：已附带评分与结算摘要，用于区分待评分与已完成。
       submissions.listEntries(),
+      // 题型库区分已发布与草稿：状态栏只统计已发布，草稿单独计数。
       interfaces.browser.listPublished(),
       interfaces.browser.listDrafts(),
+      // 模板与评分单元本页只取数量，不展开具体内容。
       templates.browser.listTemplates(),
       schemas.listSchemaIds()
     ])
@@ -122,6 +164,8 @@ export function WorkbenchPage(): JSX.Element {
           if (!active) return
 
           // 按各库返回顺序截取条目，再按试卷、作答、模板的顺序组合。
+          // 各库列表本身已按时间倒序返回（见 File*Repository.listRecords/listEntries），
+          // 因此直接截取前几条即为「最近」，本页无需再次排序。
           const recentExams: RecentWorkItem[] = examRecords.slice(0, 2).map((record) => ({
             id: `exam:${record.packageId}`,
             title: record.title,
@@ -155,6 +199,8 @@ export function WorkbenchPage(): JSX.Element {
             icon: LayoutTemplate
           }))
 
+          // 统计值取各库完整条数；最近工作只保留合并后的前 4 条，
+          // 使列表长度稳定，不随数据量增长撑破面板。
           setSnapshot({
             exams: examRecords.length,
             // 已结算才计为完成，评分就绪但尚未结算的作答仍属于待处理。
@@ -168,19 +214,25 @@ export function WorkbenchPage(): JSX.Element {
           })
         }
       )
+      // 失败时保留 EMPTY_SNAPSHOT，只切换提示文案，不展示半份统计。
       .catch(() => {
         if (active) setUnavailable(true)
       })
+      // 无论成功或失败都要结束加载态，否则占位符会一直停留。
       .finally(() => {
         if (active) setLoading(false)
       })
 
     return () => {
+      // 只翻转标记，不尝试取消底层 IPC 读取（已发出的文件请求无法中断）。
       active = false
     }
+    // 依赖数组列出全部库对象：既满足 exhaustive-deps 约定，
+    // 也便于测试或 Provider 替换实现后自动重新汇总。
   }, [exams, interfaces, schemas, submissions, templates])
 
   // 只有试卷数与待评分数会改变快捷操作说明，目标路径保持固定。
+  // 依赖因此只列出这两个字段，避免 snapshot 中无关字段变化引起数组重建。
   const quickActions = useMemo<QuickAction[]>(
     () => [
       {
@@ -207,11 +259,16 @@ export function WorkbenchPage(): JSX.Element {
   )
 
   // 无作答记录时进度为零，避免除零产生无效百分比。
+  // 完成口径以结算（settlement）为准，与状态栏「待评分」保持一致。
   const totalSubmissions = snapshot.pendingSubmissions + snapshot.completedSubmissions
   const completion = totalSubmissions
     ? Math.round((snapshot.completedSubmissions / totalSubmissions) * 100)
     : 0
 
+  // 渲染顺序：介绍区（含纯装饰波形）→ 快捷操作 → 状态栏 → 最近工作/待处理双栏。
+  // 「最近工作」面板用 loading、空列表、列表三个互斥分支表达状态，
+  // 分支之间没有 else，条件必须互补才能保证同时只命中一个。
+  // data-workbench 是给 AppShell.module.css 的选择器用的，用于跳过路由进入动画。
   return (
     <div className={styles.page} data-workbench>
       <div className={styles.inner}>
@@ -247,7 +304,9 @@ export function WorkbenchPage(): JSX.Element {
 
         <section className={styles.quickActions} aria-label="快捷操作">
           {quickActions.map((action) => {
+            // lucide 图标以组件形式存放，需先取出为局部变量才能当 JSX 标签使用。
             const Icon = action.icon
+            // key 用 path：三个入口路径固定且互不相同，可兼作稳定标识。
             return (
               <button
                 className={styles.quickAction}
@@ -315,7 +374,9 @@ export function WorkbenchPage(): JSX.Element {
             {!loading && snapshot.recent.length > 0 ? (
               <div className={styles.recentList}>
                 {snapshot.recent.map((item) => {
+                  // 与快捷操作同理：图标组件必须先解构为局部变量。
                   const Icon = item.icon
+                  // key 用跨库唯一的 id，保证同一次加载内不会重复。
                   return (
                     <button key={item.id} type="button" onClick={() => navigate(item.path)}>
                       <span className={styles.recentIcon}>
@@ -375,7 +436,12 @@ export function WorkbenchPage(): JSX.Element {
   )
 }
 
-/** 加载期间用占位符替代数字，避免把初始零值误读为真实统计。 */
+/**
+ * 加载期间用占位符替代数字，避免把初始零值误读为真实统计。
+ *
+ * 纯展示组件，自身不持有状态；loading 由父组件统一下发，
+ * 保证状态栏五个数字的加载表现完全一致。
+ */
 function StatusItem({
   icon: Icon,
   label,
@@ -388,6 +454,7 @@ function StatusItem({
   loading: boolean
 }): JSX.Element {
   return (
+    // Icon 来自参数解构时的重命名，首字母大写才能作为组件标签参与渲染。
     <div className={styles.statusItem}>
       <Icon aria-hidden="true" />
       <div>
@@ -398,8 +465,15 @@ function StatusItem({
   )
 }
 
-/** 为最近工作和待处理区域生成与 aria-labelledby 对应的标题。 */
+/**
+ * 为最近工作和待处理区域生成与 aria-labelledby 对应的标题。
+ *
+ * 标题 id 由 title 文案推导，是与父级 section 的隐式契约：父级写死了
+ * recent-heading / pending-heading，改动标题文案时必须同步修改，
+ * 否则会破坏无障碍标签关联。
+ */
 function SectionHeading({ title, detail }: { title: string; detail: string }): JSX.Element {
+  // 以文案区分两个面板，避免为纯展示组件额外引入一个 id prop。
   return (
     <header className={styles.sectionHeading}>
       <div>

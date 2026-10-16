@@ -1,3 +1,5 @@
+// 主进程业务服务装配：在数据目录就绪、启动窗口显示后，为渲染进程集中注册 IPC 处理器；
+// 各服务的数据目录与后台工作线程地址都由 index.ts 在调用时传入，这里不解析路径。
 import { registerAIRouter } from '@ls101/airouter/main'
 import { registerClipboard } from '@ls101/clipboard/main'
 import { registerConfigStore } from '@ls101/config-store/main'
@@ -35,6 +37,7 @@ export function registerApplicationServices(options: ApplicationServiceOptions):
     workerUrls
   } = options
   // 旧数据服务与目录切换共用清理状态，归档未完成时阻止更换数据位置。
+  // 归档的哈希校验与文件搬运交给工作线程，避免长时间占用主进程事件循环。
   const legacyDataService = new LegacyDataService(
     userDataDirectory,
     dataDirectory,
@@ -53,11 +56,13 @@ export function registerApplicationServices(options: ApplicationServiceOptions):
       speechRecognition: workerUrls.speechRecognition
     }
   })
+  // 以下服务不依赖数据目录，注册时无需传入路径。
   registerClipboard()
   registerFileDialog()
   registerReportExportHandlers()
   registerAppInfoHandlers()
   registerLicenseHandlers(createLicenseOptions(userDataDirectory, isLocalIntegrationTest))
+  // 目录切换在此只登记迁移计划并重启应用，实际的复制与校验在下次启动执行。
   registerDataDirectoryHandlers(userDataDirectory, dataDirectory, {
     isLegacyCleanupPending: () => legacyDataService.hasPendingCleanup()
   })
@@ -75,6 +80,7 @@ function createLicenseOptions(
   }
   if (!isLocalIntegrationTest) return options
 
+  // 测试可注入验证码哈希；未注入时沿用 license-service 内置的哈希。
   const expectedCodeHash = process.env['LS101_LICENSE_TEST_CODE_HASH']
   if (expectedCodeHash) options.expectedCodeHash = expectedCodeHash
 
