@@ -41,7 +41,7 @@ export function registerApplicationServices(options: ApplicationServiceOptions):
     createWorkerLegacyArchiveOperations(workerUrls.legacyData)
   )
 
-  // 用户数据与内置资源使用各自的目录，配置和 AI 服务使用用户数据目录。
+  // 业务数据与内置资源各用一个目录；配置与 AI 服务跟随业务数据目录。
   registerFileStoreHandlers({ baseDir: dataDirectory })
   registerBuiltinFileStoreHandlers({ baseDir: builtinDataDirectory })
   registerConfigStore({ baseDir: dataDirectory })

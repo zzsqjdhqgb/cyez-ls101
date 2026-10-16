@@ -66,7 +66,7 @@ export function useTemplateEditorSession(
   source: TemplateEditorSource = 'local'
 ): TemplateEditorSession {
   const [history, setHistory] = useState<EditorHistory>(EMPTY_HISTORY)
-  // 同步引用让连续操作和异步保存读取最新状态，不必等待 React 重新渲染。
+  // 同步引用让连续操作立即读到最新历史，不必等待 React 重新渲染。
   const historyRef = useRef(history)
   const [selectedNodeId, setSelectedNodeId] = useState('root')
   const selectedNodeIdRef = useRef(selectedNodeId)

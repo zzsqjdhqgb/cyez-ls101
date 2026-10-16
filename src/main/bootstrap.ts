@@ -115,7 +115,7 @@ function startApplication(): void {
     resolveWindowShown = resolve
     rejectWindowShown = reject
   })
-  // 先挂接拒绝处理，避免业务模块尚未开始等待窗口时出现未处理的拒绝。
+  // 先消化可能的拒绝，避免业务模块尚未开始等待窗口时出现未处理拒绝告警。
   void windowShown.catch(() => undefined)
 
   // 协议可先注册；实际资源请求会等待初始化完成后取得最终目录。

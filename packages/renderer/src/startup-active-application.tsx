@@ -11,7 +11,7 @@ import { markRendererStartupMilestone } from './startup-timing'
 import './app/register-settings'
 import './app/register-placeholder-routes'
 
-/** 激活后依次写入安装标记、准备内置内容，并领取更新说明展示资格。 */
+/** 激活后依次确保安装标记存在、准备内置内容，并领取更新说明展示资格。 */
 export async function initializeActiveApplication(): Promise<boolean> {
   await runStartupPhase('installation-marker', ensureInstallationMarker)
   await initializeApplicationContent()
