@@ -1,5 +1,5 @@
 // 设置总览页：设置注册表的只读视图，把各业务模块登记的设置项按分组元数据归并，
-// 渲染为分组入口并导航到 /settings/:settingsPageId 详情；页面本身不持有设置状态。
+// 渲染为分组入口并导航到 /settings/:settingsPageId/* 详情；页面本身不持有设置状态。
 import type { JSX } from 'react'
 import { ArrowRight, SlidersHorizontal } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'

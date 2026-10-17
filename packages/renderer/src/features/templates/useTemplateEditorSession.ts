@@ -94,7 +94,9 @@ export function useTemplateEditorSession(
 
   // 模板标识、来源或应用实例变化时重新加载文档，并据此建立初始历史。
   // active 只约束本次加载的迟到结果；mountedRef 供保存、插入等后续异步操作判断挂载状态。
-  // 调用方以 templateId 作为 key，切换模板时会重新挂载，因此 loading 能保持初始的 true。
+  // 本 effect 不会把 loading 重置为 true：调用方以 templateId 作为 key，切换模板时整页
+  // 重新挂载才能保持 loading 的初始 true。若仅 application 或 source 变化而未重挂载，
+  // 旧文档会一直显示到新文档加载完成。
   useEffect(() => {
     mountedRef.current = true
     let active = true

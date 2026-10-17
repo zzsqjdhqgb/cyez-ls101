@@ -118,8 +118,9 @@ const STARTUP_QUOTE =
 /** 汇总各业务库状态，展示常用入口、最近工作与作答评分进度。 */
 export function WorkbenchPage(): JSX.Element {
   const navigate = useNavigate()
-  // 下列业务库都是 Provider 注入的模块级单例（见 features/*/*Runtime.ts），
-  // 引用恒定，因此汇总 effect 的依赖实际上不会变化。
+  // 下列业务库是模块级单例（见 features/*/*Runtime.ts），由各 *Context.tsx 作为
+  // createContext 默认值提供；App.tsx 中的 Provider 不传 props，因此这里拿到的始终是
+  // 同一引用，汇总 effect 的依赖实际上不会变化。
   const exams = useExamLibrary()
   const submissions = useSubmissionLibrary()
   const interfaces = useInterfaceApplication()
@@ -227,8 +228,8 @@ export function WorkbenchPage(): JSX.Element {
       // 只翻转标记，不尝试取消底层 IPC 读取（已发出的文件请求无法中断）。
       active = false
     }
-    // 依赖数组列出全部库对象：既满足 exhaustive-deps 约定，
-    // 也便于测试或 Provider 替换实现后自动重新汇总。
+    // 依赖数组列出全部库对象以满足 exhaustive-deps 约定。这些引用恒定，
+    // 因此实际只在卸载重挂后重新汇总；本页没有可触发重新汇总的入口。
   }, [exams, interfaces, schemas, submissions, templates])
 
   // 只有试卷数与待评分数会改变快捷操作说明，目标路径保持固定。

@@ -591,7 +591,8 @@ async function removeExistingOwnedStaging(
   bootstrap: PendingCleanup,
   stagingStats: Awaited<ReturnType<typeof lstat>>
 ): Promise<void> {
-  // 所有权判定优先级：先看是否挂载点，再比对记录的身份，最后才用迁移标记兜底。
+  // 所有权判定优先级：先排除链接与非目录，再看是否挂载点，然后比对记录的身份，
+  // 最后才用迁移标记兜底。
   if (!stagingStats.isDirectory() || stagingStats.isSymbolicLink()) {
     throw new Error('迁移暂存路径已被其他文件占用，未执行清理')
   }
@@ -718,9 +719,10 @@ async function tryRemovePendingCleanup(cleanup: PendingCleanup): Promise<boolean
   // 清理失败只记警告并返回 false，让调用方保留记录、下次启动继续重试。
   try {
     assertStoredMigrationPaths(cleanup)
-    // 目标已不存在等同于清理完成，无需再触碰磁盘。
+    // 父目录身份不可信（卸载重挂或被替换）时放弃本次清理，保留记录待下次启动重试。
     if (!(await hasExpectedCleanupParentIdentity(cleanup))) return false
     const stagingStats = await lstatIfExists(cleanup.staging)
+    // 目标已不存在等同于清理完成，无需再触碰磁盘。
     if (!stagingStats) return true
     await removeExistingOwnedStaging(cleanup, stagingStats)
     return true
@@ -1309,7 +1311,12 @@ async function writeBootstrap(userDataDir: string, value: Bootstrap): Promise<vo
   await atomicWriteJson(path.join(userDataDir, BOOTSTRAP_FILENAME), value)
 }
 
-/** 为受管目录写入稳定目录标识，并可附带本次已完成的迁移标识。 */
+/**
+ * 为受管目录写入目录标识，并可附带本次已完成的迁移标识。
+ *
+ * directoryId 缺省时取新的随机值；需要标识在重写后保持稳定时，调用方必须显式传入
+ * 已有标识（见 ensureDirectoryId）。
+ */
 async function writeMarker(
   directory: string,
   migrationId?: string,
