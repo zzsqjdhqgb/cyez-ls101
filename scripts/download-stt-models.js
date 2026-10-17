@@ -32,6 +32,7 @@ const STT_DIR = join(ROOT_DIR, 'externals', 'ai', 'stt', 'model')
 const DOWNLOAD_DIR = join(ROOT_DIR, 'externals', 'ai', 'stt', 'downloads')
 const STATE_DIRECTORY = join(ROOT_DIR, 'externals', 'ai', '.setup-verification')
 const RELEASE_BASE_URL = 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models'
+const DEFAULT_HF_ENDPOINT = 'https://huggingface.co'
 const MODEL_DIRECTORY = 'sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25'
 const MANIFEST_PATH = join(__dirname, 'stt-model-assets.json')
 const PINNED_MANIFEST = readManifest()
@@ -56,6 +57,12 @@ function validateManifest(manifest) {
   if (!isHttpUrl(manifest.sources?.githubReleaseApi)) throw new Error('GitHub API 地址无效')
   if (!isHttpUrl(manifest.sources?.huggingFaceModelApi))
     throw new Error('Hugging Face API 地址无效')
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(manifest.huggingFaceModelId || '')) {
+    throw new Error('Hugging Face 模型标识无效')
+  }
+  if (!/^[a-f0-9]{40}$/.test(manifest.huggingFaceRevision || '')) {
+    throw new Error('Hugging Face 模型 revision 无效')
+  }
   for (const key of ['vad', 'qwen3Archive']) validateFileMetadata(manifest.assets?.[key], key)
   if (!Array.isArray(manifest.modelFiles) || manifest.modelFiles.length === 0) {
     throw new Error('STT 模型文件清单为空')
@@ -79,13 +86,29 @@ function isHttpUrl(value) {
   return typeof value === 'string' && /^https:\/\//.test(value)
 }
 
-async function fetchOfficialMetadata() {
+function resolveHfEndpoint(explicit = process.env.LS101_HF_ENDPOINT) {
+  return String(explicit || DEFAULT_HF_ENDPOINT).replace(/\/+$/, '')
+}
+
+function withHfEndpoint(url, endpoint = resolveHfEndpoint()) {
+  return endpoint === DEFAULT_HF_ENDPOINT ? url : url.replace(DEFAULT_HF_ENDPOINT, endpoint)
+}
+
+function hfModelFileUrl(file, endpoint = resolveHfEndpoint()) {
+  const remote = file.path.split('/').map(encodeURIComponent).join('/')
+  return `${endpoint}/${PINNED_MANIFEST.huggingFaceModelId}/resolve/${PINNED_MANIFEST.huggingFaceRevision}/${remote}`
+}
+
+async function fetchOfficialMetadata(endpoint = resolveHfEndpoint()) {
   const [githubRelease, huggingFaceModel] = await Promise.all([
     fetchJson(PINNED_MANIFEST.sources.githubReleaseApi, 'GitHub Release API', {
       Accept: 'application/vnd.github+json',
       'User-Agent': 'cyez-ls101-stt-model-verifier'
     }),
-    fetchJson(PINNED_MANIFEST.sources.huggingFaceModelApi, 'Hugging Face API')
+    fetchJson(
+      withHfEndpoint(PINNED_MANIFEST.sources.huggingFaceModelApi, endpoint),
+      'Hugging Face API'
+    )
   ])
   return officialMetadataFromResponses(githubRelease, huggingFaceModel)
 }
@@ -133,6 +156,8 @@ function officialMetadataFromResponses(githubRelease, huggingFaceModel) {
     schemaVersion: 1,
     generatedAt: new Date().toISOString(),
     sources: { ...PINNED_MANIFEST.sources },
+    huggingFaceModelId: PINNED_MANIFEST.huggingFaceModelId,
+    huggingFaceRevision: huggingFaceModel.sha,
     assets,
     modelFiles
   }
@@ -142,6 +167,11 @@ function officialMetadataFromResponses(githubRelease, huggingFaceModel) {
 
 function assertMetadataMatches(pinned, official) {
   const differences = []
+  if (pinned.huggingFaceRevision !== official.huggingFaceRevision) {
+    differences.push(
+      `huggingFaceRevision: ${pinned.huggingFaceRevision} -> ${official.huggingFaceRevision}`
+    )
+  }
   for (const key of Object.keys(pinned.assets)) {
     compareFileMetadata(`assets.${key}`, pinned.assets[key], official.assets[key], differences)
   }
@@ -313,25 +343,17 @@ async function main(argv = process.argv.slice(2)) {
     console.log('[stt] official API metadata matches the pinned manifest')
   }
 
-  const downloadableAssets = [
-    {
-      ...ASSETS.vad,
-      path: `model/${ASSETS.vad.filename}`,
-      url: `${RELEASE_BASE_URL}/${ASSETS.vad.filename}`,
-      label: '[stt] silero_vad'
-    },
-    {
-      ...ASSETS.qwen3Archive,
-      path: `downloads/${ASSETS.qwen3Archive.filename}`,
-      url: `${RELEASE_BASE_URL}/${ASSETS.qwen3Archive.filename}`,
-      label: '[stt] qwen3-asr-0.6B archive'
-    }
-  ]
-  const downloads = await ensureAssetSet({
+  const vadAsset = {
+    ...ASSETS.vad,
+    path: `model/${ASSETS.vad.filename}`,
+    url: `${RELEASE_BASE_URL}/${ASSETS.vad.filename}`,
+    label: '[stt] silero_vad'
+  }
+  const vadDownload = await ensureAssetSet({
     boundary: ROOT_DIR,
     root: STT_ROOT,
-    statePath: join(STATE_DIRECTORY, 'qwen3-asr-downloads.json'),
-    assets: downloadableAssets,
+    statePath: join(STATE_DIRECTORY, 'qwen3-asr-vad.json'),
+    assets: [vadAsset],
     exact: false,
     forceHash: options.verify,
     repair: (asset, destination) => downloadVerifiedAsset(asset, destination, asset.label)
@@ -339,29 +361,76 @@ async function main(argv = process.argv.slice(2)) {
 
   const modelDir = join(STT_DIR, MODEL_DIRECTORY)
   const modelStatePath = join(STATE_DIRECTORY, 'qwen3-asr-model.json')
-  const installed = await verifyInstalledModel(modelDir, {
-    forceHash: options.verify,
-    statePath: modelStatePath
-  })
-  if (installed.valid) {
-    console.log(
-      `[stt] Qwen3 ASR model ${installed.method === 'fast' ? 'quickly' : 'fully'} verified`
-    )
+  if (resolveHfEndpoint() !== DEFAULT_HF_ENDPOINT) {
+    const modelDownloads = await ensureAssetSet({
+      boundary: ROOT_DIR,
+      root: modelDir,
+      statePath: modelStatePath,
+      assets: REQUIRED_MODEL_FILES.map((file) => ({
+        ...file,
+        url: hfModelFileUrl(file),
+        label: `[stt] ${file.path}`
+      })),
+      exact: true,
+      forceHash: options.verify,
+      repair: (asset, destination) => downloadVerifiedAsset(asset, destination, asset.label)
+    })
+    if (modelDownloads.method === 'fast') {
+      console.log('[stt] Qwen3 ASR model quickly verified')
+    } else if (modelDownloads.repaired > 0) {
+      console.log(
+        `[stt] ${modelDownloads.repaired} Qwen3 ASR model file${
+          modelDownloads.repaired === 1 ? '' : 's'
+        } restored from Hugging Face mirror`
+      )
+    } else {
+      console.log('[stt] Qwen3 ASR model fully verified from Hugging Face mirror')
+    }
   } else {
-    await extractVerifiedModel(
-      join(DOWNLOAD_DIR, ASSETS.qwen3Archive.filename),
-      modelDir,
-      modelStatePath
-    )
-    console.log('[stt] Qwen3 ASR model restored from the verified archive')
+    const archiveDownload = await ensureAssetSet({
+      boundary: ROOT_DIR,
+      root: STT_ROOT,
+      statePath: join(STATE_DIRECTORY, 'qwen3-asr-archive.json'),
+      assets: [
+        {
+          ...ASSETS.qwen3Archive,
+          path: `downloads/${ASSETS.qwen3Archive.filename}`,
+          url: `${RELEASE_BASE_URL}/${ASSETS.qwen3Archive.filename}`,
+          label: '[stt] qwen3-asr-0.6B archive'
+        }
+      ],
+      exact: false,
+      forceHash: options.verify,
+      repair: (asset, destination) => downloadVerifiedAsset(asset, destination, asset.label)
+    })
+    const installed = await verifyInstalledModel(modelDir, {
+      forceHash: options.verify,
+      statePath: modelStatePath
+    })
+    if (installed.valid) {
+      console.log(
+        `[stt] Qwen3 ASR model ${installed.method === 'fast' ? 'quickly' : 'fully'} verified`
+      )
+    } else {
+      await extractVerifiedModel(
+        join(DOWNLOAD_DIR, ASSETS.qwen3Archive.filename),
+        modelDir,
+        modelStatePath
+      )
+      console.log('[stt] Qwen3 ASR model restored from the verified archive')
+    }
+    if (archiveDownload.method === 'fast') {
+      console.log('[stt] Qwen3 ASR archive quickly verified')
+    } else if (archiveDownload.repaired > 0) {
+      console.log('[stt] Qwen3 ASR archive restored')
+    } else {
+      console.log('[stt] Qwen3 ASR archive fully verified')
+    }
   }
 
-  if (downloads.method === 'fast') console.log('[stt] VAD and archive quickly verified')
-  else if (downloads.repaired > 0) {
-    console.log(
-      `[stt] ${downloads.repaired} source asset${downloads.repaired === 1 ? '' : 's'} restored`
-    )
-  } else console.log('[stt] VAD and archive fully verified')
+  if (vadDownload.method === 'fast') console.log('[stt] silero_vad quickly verified')
+  else if (vadDownload.repaired > 0) console.log('[stt] silero_vad restored')
+  else console.log('[stt] silero_vad fully verified')
 }
 
 if (require.main === module) {
@@ -378,9 +447,11 @@ module.exports = {
   assertMetadataMatches,
   downloadVerifiedAsset,
   fetchOfficialMetadata,
+  hfModelFileUrl,
   modelIsValid,
   officialMetadataFromResponses,
   parseOptions,
+  resolveHfEndpoint,
   sha256File,
   validateContentRange,
   verifyFile

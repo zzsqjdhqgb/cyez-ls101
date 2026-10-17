@@ -125,5 +125,16 @@ export function integrationExecutablePath(platform = process.platform): string {
   if (platform === 'linux') {
     return path.join(projectRoot, 'dist', 'linux-unpacked', 'cyez-ls101')
   }
+  if (platform === 'darwin') {
+    return path.join(
+      projectRoot,
+      'dist',
+      'mac-arm64',
+      '曹二听说101.app',
+      'Contents',
+      'MacOS',
+      '曹二听说101'
+    )
+  }
   throw new Error(`Packaged integration tests do not support platform: ${platform}`)
 }

@@ -4,10 +4,11 @@
  */
 
 const assert = require('node:assert/strict')
-const { mkdtemp, mkdir, readdir, rm, writeFile } = require('node:fs/promises')
+const { mkdtemp, mkdir, readFile, readdir, rm, writeFile } = require('node:fs/promises')
 const { tmpdir } = require('node:os')
 const path = require('node:path')
 const { afterEach, test } = require('node:test')
+const { PNG } = require('pngjs')
 const { EXTENSIONS, main } = require('../generate-icons.js')
 
 const temporaryDirectories = []
@@ -26,23 +27,36 @@ test('rebuilds an invalid generated icon directory and removes unrelated outputs
   const pngDirectory = path.join(boundary, 'resources', 'file-icons')
   const icoDirectory = path.join(boundary, 'assets', 'file-icons')
   await mkdir(pngDirectory, { recursive: true })
+  const size = 32
+  const sourcePng = PNG.sync.write({
+    width: size,
+    height: size,
+    data: Buffer.alloc(size * size * 4, 255)
+  })
   await Promise.all(
-    EXTENSIONS.map((extension) => writeFile(path.join(pngDirectory, `${extension}.png`), extension))
+    EXTENSIONS.map((extension) =>
+      writeFile(path.join(pngDirectory, `${extension}.png`), sourcePng)
+    )
   )
   await mkdir(path.dirname(icoDirectory), { recursive: true })
   await writeFile(icoDirectory, 'wrong directory')
 
   assert.deepEqual(main({ boundary, icoDirectory, pngDirectory }), {
     cached: 0,
-    generated: EXTENSIONS.length
+    generated: EXTENSIONS.length * 2
   })
   await writeFile(path.join(icoDirectory, 'unrelated.ico'), 'wrong')
   assert.deepEqual(main({ boundary, icoDirectory, pngDirectory }), {
-    cached: EXTENSIONS.length,
+    cached: EXTENSIONS.length * 2,
     generated: 0
   })
   assert.deepEqual(
     (await readdir(icoDirectory)).sort(),
-    EXTENSIONS.map((extension) => `${extension}.ico`).sort()
+    EXTENSIONS.flatMap((extension) => [`${extension}.ico`, `${extension}.icns`]).sort()
   )
+  for (const extension of EXTENSIONS) {
+    const icns = await readFile(path.join(icoDirectory, `${extension}.icns`))
+    assert.equal(icns.toString('ascii', 0, 4), 'icns')
+    assert.equal(icns.readUInt32BE(4), icns.length)
+  }
 })

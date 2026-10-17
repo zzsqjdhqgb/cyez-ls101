@@ -5,6 +5,8 @@
     "githubReleaseApi": "https://api.github.com/repos/k2-fsa/sherpa-onnx/releases/tags/asr-models",
     "huggingFaceModelApi": "https://huggingface.co/api/models/csukuangfj2/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25?blobs=true"
   },
+  "huggingFaceModelId": "csukuangfj2/sherpa-onnx-qwen3-asr-0.6B-int8-2026-03-25",
+  "huggingFaceRevision": "68818b2313fe77bd06f6a7c5068ff3ef59d02b8a",
   "assets": {
     "vad": {
       "filename": "silero_vad.onnx",

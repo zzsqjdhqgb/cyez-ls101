@@ -6,6 +6,7 @@
 /* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/explicit-function-return-type */
 const fs = require('node:fs')
 const path = require('node:path')
+const { createIcnsBuffer } = require('./icon-toolset/icon-tool.js')
 
 const PNG_DIR = path.join(__dirname, '..', 'resources', 'file-icons')
 const ICO_DIR = path.join(__dirname, '..', 'assets', 'file-icons')
@@ -67,27 +68,37 @@ function main(options = {}) {
   for (const ext of EXTENSIONS) {
     const pngPath = path.join(pngDirectory, `${ext}.png`)
     const icoPath = path.join(icoDirectory, `${ext}.ico`)
+    const icnsPath = path.join(icoDirectory, `${ext}.icns`)
     expectedOutputs.add(`${ext}.ico`)
+    expectedOutputs.add(`${ext}.icns`)
 
     const png = fs.existsSync(pngPath) ? fs.lstatSync(pngPath) : null
     if (!png?.isFile() || png.isSymbolicLink()) {
       throw new Error(`${prefix} source PNG is invalid: ${pngPath}`)
     }
-    const ico = createIco(pngPath)
-    const existing = fs.existsSync(icoPath) ? fs.lstatSync(icoPath) : null
-    if (existing?.isFile() && !existing.isSymbolicLink() && fs.readFileSync(icoPath).equals(ico)) {
-      cached++
-      continue
+    for (const [outputPath, contents] of [
+      [icoPath, createIco(pngPath)],
+      [icnsPath, createIcnsBuffer(pngPath)]
+    ]) {
+      const existing = fs.existsSync(outputPath) ? fs.lstatSync(outputPath) : null
+      if (
+        existing?.isFile() &&
+        !existing.isSymbolicLink() &&
+        fs.readFileSync(outputPath).equals(contents)
+      ) {
+        cached++
+        continue
+      }
+      if (existing) fs.rmSync(outputPath, { recursive: true, force: true })
+      const temporary = `${outputPath}.${process.pid}.tmp`
+      try {
+        fs.writeFileSync(temporary, contents, { flag: 'wx' })
+        fs.renameSync(temporary, outputPath)
+      } finally {
+        fs.rmSync(temporary, { force: true })
+      }
+      generated++
     }
-    if (existing) fs.rmSync(icoPath, { recursive: true, force: true })
-    const temporary = `${icoPath}.${process.pid}.tmp`
-    try {
-      fs.writeFileSync(temporary, ico, { flag: 'wx' })
-      fs.renameSync(temporary, icoPath)
-    } finally {
-      fs.rmSync(temporary, { force: true })
-    }
-    generated++
   }
 
   for (const entry of fs.readdirSync(icoDirectory, { withFileTypes: true })) {

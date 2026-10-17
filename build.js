@@ -11,7 +11,7 @@ const builder = require('electron-builder')
 const { assertNoGplSherpaPackages } = require('./scripts/sherpa-no-tts.js')
 
 const BUILD_MODES = new Set(['local', 'dev', 'nightly', 'release'])
-const BUILD_PLATFORMS = new Set(['win', 'linux'])
+const BUILD_PLATFORMS = new Set(['win', 'linux', 'mac'])
 
 function safeRun(command, fallback = '') {
   try {
@@ -82,12 +82,13 @@ function parseArguments(args) {
     else if (argument === '--help' || argument === '-h') help = true
     else if (argument === '--win') selectPlatform('win')
     else if (argument === '--linux') selectPlatform('linux')
+    else if (argument === '--mac') selectPlatform('mac')
     else if (argument === '--current-platform') selectPlatform(currentBuildPlatform())
     else if (argument.startsWith('--platform=')) {
       selectPlatform(normalizePlatform(argument.slice('--platform='.length)))
     } else if (argument === '--platform') {
       const value = args[++index]
-      if (!value) throw new Error('--platform 需要 win、linux 或 current 参数')
+      if (!value) throw new Error('--platform 需要 win、linux、mac 或 current 参数')
       selectPlatform(normalizePlatform(value))
     } else if (argument.startsWith('--') && BUILD_MODES.has(argument.slice(2))) {
       selectMode(argument.slice(2))
@@ -108,17 +109,24 @@ function parseArguments(args) {
 function normalizePlatform(value) {
   if (value === 'current') return currentBuildPlatform()
   if (value === 'windows' || value === 'win32') return 'win'
+  if (value === 'darwin' || value === 'macos') return 'mac'
   return value
 }
 
 function currentBuildPlatform() {
   if (process.platform === 'win32') return 'win'
   if (process.platform === 'linux') return 'linux'
+  if (process.platform === 'darwin' && process.arch === 'arm64') return 'mac'
+  if (process.platform === 'darwin') {
+    throw new Error(`macOS 构建当前仅支持 arm64，当前架构为 ${process.arch}`)
+  }
   throw new Error(`当前操作系统不支持目录构建测试：${process.platform}`)
 }
 
 function electronBuilderPlatform(platform) {
-  return platform === 'linux' ? builder.Platform.LINUX : builder.Platform.WINDOWS
+  if (platform === 'linux') return builder.Platform.LINUX
+  if (platform === 'mac') return builder.Platform.MAC
+  return builder.Platform.WINDOWS
 }
 
 function runApplicationBuild(root) {
@@ -143,8 +151,9 @@ Build mode (default: --local):
 Platform (default: --win):
   --win
   --linux
+  --mac
   --current-platform
-  --platform <win|linux|current>
+  --platform <win|linux|mac|current>
 
 Output:
   --dir                 Build an unpacked application directory
