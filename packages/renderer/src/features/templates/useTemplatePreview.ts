@@ -158,8 +158,8 @@ export function useTemplatePreview(
 
   // 界面按两类失败分别展示：error 是直接抛出的异常（实例查询、依赖读取失败，
   // 或编译流程未按约定返回的意外错误），result.success === false 是编译流程返回的
-  // 失败（模板校验、绑定或实例化失败）；compiling 与 instancesLoading 分别驱动
-  // 按钮与下拉框禁用。
+  // 失败（模板校验、绑定或实例化失败）；TemplatePreview 的刷新按钮由 compiling、
+  // instancesLoading、missingInstances 共同禁用，实例下拉框只由 instancesLoading 禁用。
   return {
     compiling,
     error,

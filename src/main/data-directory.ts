@@ -185,8 +185,8 @@ export function registerDataDirectoryHandlers(
   currentPath: string,
   options: DataDirectoryHandlerOptions = {}
 ): void {
-  // 目录管理渠道：读取状态、选择候选目录（选择/默认/重置）以及切换、接管、删除旧目录。
-  // 选择类渠道只返回候选信息，真正的切换要等渲染进程确认后再提交，避免误触迁移。
+  // 目录管理渠道：读取状态、选择候选目录（选择/默认）以及切换、接管、删除旧目录；
+  // 其中 choose/chooseDefault 只返回候选，resetDefault、migrate 与 useExisting 在确认后直接登记迁移。
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.getInfo, async (): Promise<DataDirectoryInfo> => {
     // 只读查询：目录大小按需递归统计，不缓存，保证设置页看到的是当前磁盘状态。
     const bootstrap = await readReadyBootstrap(userDataDir)
@@ -250,7 +250,7 @@ export function registerDataDirectoryHandlers(
     relaunchAfterReply()
   })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.migrate, async (_event, target: string) => {
-    // 迁移到用户指定的空目录；受管目录走 useExisting，避免覆盖已有数据。
+    // 迁移到用户指定的空目录；非空目录一律拒绝，受管目录由独立的 useExisting 渠道接管。
     assertNoPendingLegacyCleanup(options)
     await assertNoOldDataDirectory(userDataDir)
     const candidate = await inspectCandidate(userDataDir, target, currentPath)
@@ -298,7 +298,7 @@ function assertNoPendingLegacyCleanup(options: DataDirectoryHandlerOptions): voi
 export async function recoverDataDirectory(userDataDir: string, error: unknown): Promise<never> {
   let message = errorMessage(error)
   while (true) {
-    // 按钮索引与上方 buttons 一一对应：0 重试、1 改选目录、2 退出。
+    // 按钮索引与下方 buttons 一一对应：0 重试、1 改选目录、2 退出。
     const result = await dialog.showMessageBox({
       type: 'error',
       title: '数据目录不可用',
@@ -387,15 +387,16 @@ async function inspectCandidate(
   return { path: normalizedTarget, kind: 'empty', sizeBytes: 0 }
 }
 
-/** 恢复已持久化的迁移计划；目标已有本事务标记时直接完成收尾。 */
+/** 恢复已持久化的迁移计划：复制类事务重放两阶段提交，use-existing 确认目标后直接写回。 */
 async function finishPendingMigration(
   userDataDir: string,
   bootstrap: MigratingBootstrap
 ): Promise<string> {
   const target = await normalizePotentialDirectory(bootstrap.target)
-  // 恢复已持久化的迁移计划，相当于重放一次两阶段提交：
+  // 复制类事务相当于重放一次两阶段提交：
   // 1. 目标已带本次迁移标记 → 上次已完成改名但未更新配置，直接收尾；
   // 2. 否则重建或复用暂存目录，校验通过后改名提交。
+  // use-existing 不复制也不改名，确认目标仍是受管目录后直接写回 ready 状态。
   if (bootstrap.mode === 'use-existing') {
     const existingTarget = await normalizeDirectory(target)
     await assertManagedDirectory(existingTarget)
@@ -1585,7 +1586,7 @@ async function lstatIfExists(filename: string): Promise<Awaited<ReturnType<typeo
 }
 
 function isDirectoryNotEmpty(error: unknown): boolean {
-  // 不同平台对「目录非空」报错不同：Windows 报 EEXIST，POSIX 报 ENOTEMPTY。
+  // rmdir 对非空目录在 Windows/POSIX 都报 ENOTEMPTY；EEXIST 仅作防御性兼容。
   const code = (error as NodeJS.ErrnoException).code
   return code === 'ENOTEMPTY' || code === 'EEXIST'
 }
@@ -1625,7 +1626,7 @@ function relaunchAfterReply(): void {
   }, 100)
 }
 
-/** 在独立进度窗口中执行迁移，无论成功或失败都确保关闭窗口。 */
+/** 在独立进度窗口中执行迁移；进度页加载完成后，无论操作成功或失败都会关闭窗口。 */
 async function withMigrationWindow<T>(
   title: string,
   detail: string,

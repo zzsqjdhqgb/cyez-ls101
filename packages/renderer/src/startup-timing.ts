@@ -18,7 +18,7 @@ const MARK_PREFIX = 'ls101-startup:'
 const pendingMilestones: Array<{ milestone: RendererStartupMilestone; elapsedMs: number }> = []
 let loggingEnabled = false
 
-/** 同时写入 Performance 标记和日志条目，时间相对于当前文档的性能计时起点。 */
+/** 写入 Performance 标记并生成日志条目（日志未启用时先入队），时间相对于当前文档的性能计时起点。 */
 export function markRendererStartupMilestone(milestone: RendererStartupMilestone): void {
   const elapsedMs = roundedMilliseconds(performance.now())
   performance.mark(`${MARK_PREFIX}${milestone}`)

@@ -32,7 +32,7 @@ function groupSettingsPages(pages: readonly SettingsPageRegistration[]): Setting
   })
 
   // 先排列分组，再在各组内按设置项顺序排序。
-  // 设置项缺少 order 时按 0 处理，排在显式声明的顺序之前。
+  // 设置项缺少 order 时按 0 处理，与显式 order: 0 的项并列排序；正数 order 排在其后。
   return [...groups.values()]
     .sort((left, right) => left.order - right.order)
     .map((group) => ({

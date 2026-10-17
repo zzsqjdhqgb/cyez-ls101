@@ -3,8 +3,8 @@
  *
  * 数据来自渲染进程经 window.fileStore IPC 桥访问主进程文件存储的各库单例
  * （试卷库、作答库、题型库、模板库、评分单元库），本页不写入任何业务数据。
- * 首屏并行拉取全部统计值，任一请求失败即整体退化为「状态不可用」，
- * 不展示半份统计，以免维护者误判数据完整性。
+ * 首屏并行拉取全部统计值，任一请求失败时保留空快照，只把提示切为
+ * 「部分状态暂不可用」，不展示半份统计，以免维护者误判数据完整性。
  */
 import { useEffect, useMemo, useState, type JSX } from 'react'
 import {
@@ -111,7 +111,7 @@ const WORKBENCH_QUOTES = [
 ] as const
 
 // 模块加载时随机选择寄语，避免组件重新渲染时反复切换。
-// 索引访问在严格模式下类型为可能 undefined，故回退到首条寄语。
+// 索引访问用 ?? 作防御性回退；当前 tsconfig 未启用 noUncheckedIndexedAccess。
 const STARTUP_QUOTE =
   WORKBENCH_QUOTES[Math.floor(Math.random() * WORKBENCH_QUOTES.length)] ?? WORKBENCH_QUOTES[0]
 
@@ -148,7 +148,7 @@ export function WorkbenchPage(): JSX.Element {
       // 题型库区分已发布与草稿：状态栏只统计已发布，草稿单独计数。
       interfaces.browser.listPublished(),
       interfaces.browser.listDrafts(),
-      // 模板与评分单元本页只取数量，不展开具体内容。
+      // 评分单元只取数量；模板列表还会用于生成最近工作条目。
       templates.browser.listTemplates(),
       schemas.listSchemaIds()
     ])
@@ -165,8 +165,8 @@ export function WorkbenchPage(): JSX.Element {
           if (!active) return
 
           // 按各库返回顺序截取条目，再按试卷、作答、模板的顺序组合。
-          // 各库列表本身已按时间倒序返回（见 File*Repository.listRecords/listEntries），
-          // 因此直接截取前几条即为「最近」，本页无需再次排序。
+          // 试卷与作答列表按时间倒序返回（见 File*Repository.listRecords/listEntries），
+          // 可直接截取前几条；模板列表按 UUID 排序，截取结果并不代表「最近」。
           const recentExams: RecentWorkItem[] = examRecords.slice(0, 2).map((record) => ({
             id: `exam:${record.packageId}`,
             title: record.title,

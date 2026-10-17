@@ -56,7 +56,7 @@ export function registerApplicationServices(options: ApplicationServiceOptions):
       speechRecognition: workerUrls.speechRecognition
     }
   })
-  // 以下服务不依赖数据目录，注册时无需传入路径。
+  // 剪贴板、文件对话框、报告导出与应用信息不依赖数据目录，注册时无需传入路径。
   registerClipboard()
   registerFileDialog()
   registerReportExportHandlers()
