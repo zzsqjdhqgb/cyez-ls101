@@ -1314,8 +1314,8 @@ async function writeBootstrap(userDataDir: string, value: Bootstrap): Promise<vo
 /**
  * 为受管目录写入目录标识，并可附带本次已完成的迁移标识。
  *
- * directoryId 缺省时取新的随机值；需要标识在重写后保持稳定时，调用方必须显式传入
- * 已有标识（见 ensureDirectoryId）。
+ * directoryId 缺省时每次生成新的随机值；若需要把调用方指定的标识写入标记
+ * （例如 ensureDirectoryId 需要返回值与落盘值一致），必须显式传入该标识。
  */
 async function writeMarker(
   directory: string,
