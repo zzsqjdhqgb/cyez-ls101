@@ -533,7 +533,8 @@ function assertProviderConfigInput(
     candidate.type !== 'openai-compatible' &&
     candidate.type !== 'elevenlabs' &&
     candidate.type !== 'pocket-tts' &&
-    candidate.type !== 'qwen-tts'
+    candidate.type !== 'qwen-tts' &&
+    candidate.type !== 'index-tts'
   ) {
     throw new Error('语音 Provider 类型无效')
   }
@@ -580,7 +581,8 @@ function isProviderConfig(value: unknown): value is AIRouterSpeechProviderConfig
     (candidate.type === 'openai-compatible' ||
       candidate.type === 'elevenlabs' ||
       candidate.type === 'pocket-tts' ||
-      candidate.type === 'qwen-tts') &&
+      candidate.type === 'qwen-tts' ||
+      candidate.type === 'index-tts') &&
     typeof candidate.baseUrl === 'string' &&
     typeof candidate.modelPackageId === 'string' &&
     typeof candidate.modelPackageVersion === 'string' &&

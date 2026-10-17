@@ -5,13 +5,14 @@ export type AIRouterSpeechProviderType =
   | 'elevenlabs'
   | 'pocket-tts'
   | 'qwen-tts'
+  | 'index-tts'
 export type AIRouterOnlineSpeechProviderType = Extract<
   AIRouterSpeechProviderType,
   'openai-compatible' | 'elevenlabs'
 >
 export type AIRouterLocalSpeechProviderType = Extract<
   AIRouterSpeechProviderType,
-  'pocket-tts' | 'qwen-tts'
+  'pocket-tts' | 'qwen-tts' | 'index-tts'
 >
 export type AIRouterSpeechProviderKind = 'online' | 'local'
 export type AIRouterQwenTtsBackend = 'cpu' | 'cuda'

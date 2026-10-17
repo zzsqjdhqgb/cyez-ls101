@@ -832,6 +832,12 @@
   line-height: 1.45;
 }
 
+.parameterValue {
+  color: var(--color-text);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
 .packageEmpty,
 .localPackagePrompt {
   display: flex;

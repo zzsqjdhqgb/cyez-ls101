@@ -73,14 +73,16 @@ const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   elevenlabs: 'ElevenLabs',
   'pocket-tts': 'Pocket TTS (WASM)',
-  'qwen-tts': 'Qwen3-TTS 0.6B'
+  'qwen-tts': 'Qwen3-TTS 0.6B',
+  'index-tts': 'IndexTTS 2.5'
 }
 
 const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   elevenlabs: 'ElevenLabs',
   'pocket-tts': 'Pocket TTS',
-  'qwen-tts': 'Qwen3-TTS 0.6B'
+  'qwen-tts': 'Qwen3-TTS 0.6B',
+  'index-tts': 'IndexTTS 2.5'
 }
 
 function defaultOnlineBaseUrl(type: AIRouterSpeechProviderType): string {
@@ -306,7 +308,9 @@ export function AIRouterSpeechSettingsPage({
                   <span className={styles.providerMeta}>
                     <span>{providerLabels[config.type]}</span>
                     <span>{config.kind === 'local' ? '本地' : '在线'}</span>
-                    {config.type === 'qwen-tts' ? <span>CPU</span> : null}
+                    {config.type === 'qwen-tts' || config.type === 'index-tts' ? (
+                      <span>CPU</span>
+                    ) : null}
                     <span>{config.models.filter((model) => model.enabled).length} 个模型</span>
                     <span>{config.voices.filter((voice) => voice.enabled).length} 个音色</span>
                   </span>
@@ -501,6 +505,7 @@ export function AIRouterSpeechSettingsPage({
                       <>
                         <option value="pocket-tts">Pocket TTS (WASM)</option>
                         <option value="qwen-tts">Qwen3-TTS 0.6B</option>
+                        <option value="index-tts">IndexTTS 2.5</option>
                       </>
                     )}
                   </select>
@@ -1038,6 +1043,9 @@ function ModelVoiceSections({
           onChange={(models) => setDraft({ ...draft, models })}
         />
       </SettingsSection>
+      {draft.type === 'index-tts' ? (
+        <IndexTtsParametersSection modelPackage={modelPackage} />
+      ) : null}
       <SettingsSection title="启用音色" description="模型包中的音色适用于包内全部模型。">
         <ToggleList
           empty="模型包中没有音色。"
@@ -1048,6 +1056,71 @@ function ModelVoiceSections({
       </SettingsSection>
     </>
   )
+}
+
+// IndexTTS has no per-Provider runtime settings: threads, language, maxTokens
+// and seed are carried by the model package manifest, so the editor shows the
+// values the installed package will run with (the CLI-side knobs are the
+// package builder's).
+function IndexTtsParametersSection({
+  modelPackage
+}: {
+  modelPackage: AIRouterSpeechModelPackageSummary
+}): JSX.Element {
+  const parameters = modelPackage.models[0]?.parameters as
+    | {
+        load?: { threads?: unknown; device?: unknown; lowMemory?: unknown }
+        synthesis?: { language?: unknown; maxTokens?: unknown; seed?: unknown }
+      }
+    | undefined
+  const load = parameters?.load ?? {}
+  const synthesis = parameters?.synthesis ?? {}
+  const seed =
+    typeof synthesis.seed === 'number' && Number.isSafeInteger(synthesis.seed)
+      ? String(synthesis.seed)
+      : '随机'
+  return (
+    <SettingsSection
+      title="IndexTTS 运行参数"
+      description="参数随模型包提供；重新打包可在 yarn index-tts:build-package 时调整。"
+    >
+      <SettingsRow label="推理线程">
+        <span className={styles.parameterValue}>{formatParameterNumber(load.threads, 4)}</span>
+      </SettingsRow>
+      <SettingsRow label="合成语言">
+        <span className={styles.parameterValue}>
+          {typeof synthesis.language === 'string' && synthesis.language
+            ? languageLabel(synthesis.language)
+            : '自动'}
+        </span>
+      </SettingsRow>
+      <SettingsRow label="最大音频 Token">
+        <span className={styles.parameterValue}>
+          {formatParameterNumber(synthesis.maxTokens, 1500)}
+        </span>
+      </SettingsRow>
+      <SettingsRow label="随机种子">
+        <span className={styles.parameterValue}>{seed}</span>
+      </SettingsRow>
+    </SettingsSection>
+  )
+}
+
+const indexTtsLanguageLabels: Record<string, string> = {
+  auto: '自动',
+  zh: '中文',
+  en: '英语',
+  ja: '日语',
+  es: '西班牙语',
+  ar: '阿拉伯语'
+}
+
+function languageLabel(language: string): string {
+  return indexTtsLanguageLabels[language] ?? language
+}
+
+function formatParameterNumber(value: unknown, fallback: number): string {
+  return typeof value === 'number' && Number.isSafeInteger(value) ? String(value) : String(fallback)
 }
 
 function ManualEntry({
