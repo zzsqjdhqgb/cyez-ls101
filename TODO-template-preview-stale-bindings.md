@@ -4,35 +4,45 @@ Status: open.
 
 ## Problem
 
-`useTemplatePreview` reloads Interface instance candidates whenever the document changes, but the
-compile effect can still run once with the previous render's `instancesReady === true` during the
-same React commit. It therefore calls `application.templates.preview(document, bindings)` before the
-new instance query resolves, combining the new document with `interfaceId`/`instanceId` selections
-taken from the old document.
+`useTemplatePreview` reloads Interface instance candidates whenever the document changes, but after a
+completed load the compile effect for that render still sees `instancesReady === true` while the
+preview is active: the loading effect defers `setInstancesReady(false)` to a microtask. It therefore
+calls `application.templates.preview(document, bindings)` before the new instance query resolves,
+provided every current alias still has a previous selection (otherwise `missingInstances` already
+blocks the compile). Each binding's `interfaceId` already comes from the new document, but its
+`instanceId` is still the previous instance selection, so the premature compile can pair an
+interface with an instance that belongs to another interface or no longer exists.
 
-The premature compile is invalidated shortly afterwards when the loading microtask commits
-`instancesReady = false`. However, it still performs a full preview compilation, and it can briefly
-publish a stale result or a transient compile error if it settles before the invalidation.
+The premature compile is invalidated when the re-render caused by `setInstancesReady(false)` commits
+and the compile effect cleanup runs. It still performs a full preview compilation. If its handlers
+complete before that cleanup, its result or error is published. The invalidation does not clear
+either, and a published result remains set until a later compilation starts (or indefinitely if
+the reload fails). If the cleanup runs first, the handlers are discarded, but `compiling` stays true
+until a later compilation finishes; a failed reload therefore leaves the preview refresh button
+disabled.
 
 ## Root Cause
 
 - File: `packages/renderer/src/features/templates/useTemplatePreview.ts`.
 - The instance-loading effect schedules `setInstancesLoading(true)` and `setInstancesReady(false)`
   inside `Promise.resolve().then(...)`.
-- The compile effect is declared after the loading effect. React runs both effects in declaration
-  order during the same commit, but the compile effect's closure still reads `instancesReady` from
-  the previous render (`true`).
+- The compile effect's closure was created by the render in which `instancesReady` is still `true`.
+  Both effects run in the same effect flush, but declaration order is incidental: the loading effect
+  only schedules the readiness reset in a microtask, so the compile effect reads `true` either way.
 - The loading effect cleanup only flips the local `current` flag; it does not invalidate readiness
   synchronously.
 - `instancesReady` also stays `true` while the preview view is inactive, so returning to the preview
-  view after an edit is the most reliable reproduction.
+  view after an edit is a reliable reproduction.
 
 ## Impact
 
-Preview-only: no persisted data, grading, exam state, or configuration is affected. The costs are
-an unnecessary preview compilation on each preview re-entry and a possible transiently stale or
-incorrect preview. Severity is low to moderate depending on how expensive the template preview
-compilation is.
+Preview-only: no persisted data, grading, exam state, or configuration is affected. Each occurrence
+costs an unnecessary preview compilation: either when the document changes while the preview is
+active or when the preview view is re-entered while `instancesReady` is still `true`, provided the
+previous selections still cover every alias. It can also publish a binding-error result, or, when the
+invalidation wins, leave `compiling` true for the duration of the reload; a failed reload keeps
+`compiling` true and the refresh button disabled. Severity is low to moderate depending on how
+expensive the template preview compilation is.
 
 ## Reproduction
 
@@ -43,8 +53,8 @@ compilation is.
 3. Make `application.browser.listInterfaceInstances` return a deferred promise.
 4. `application.templates.preview` is called with the new document and the old selection before the
    deferred list resolves.
-5. The call is invalidated after the loading state commits, but the extra compilation has already
-   started.
+5. The call is invalidated once the re-render that sets `instancesReady = false` commits, but the
+   extra compilation has already started.
 
 A focused hook test can render `useTemplatePreview`, resolve the first instance load, rerender with
 a new document, and assert that `preview` is not called again until the second instance promise
@@ -69,8 +79,8 @@ resolves. The current behavior fails that assertion.
 - No `application.templates.preview` call starts while the current document's instance list is still
   loading.
 - After the instance list resolves, the preview compiles once with the new bindings.
-- Switching documents or returning to the Preview view never uses stale `interfaceId`/`instanceId`
-  pairs.
+- Switching documents or returning to the Preview view never uses an `instanceId` that is not
+  currently valid for the current document's `interfaceId`.
 - A hook-level regression test covers both a document switch and preview-view re-entry with deferred
   instance promises.
 - Existing preview unit/integration tests, type checking, lint, and the Electron smoke suite keep
