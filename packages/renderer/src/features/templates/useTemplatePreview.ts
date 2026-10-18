@@ -46,8 +46,11 @@ export function useTemplatePreview(
   const [refreshToken, setRefreshToken] = useState(0)
 
   // 文档变化时重新查询各题型实例；清理标记阻止旧请求覆盖新状态。
-  // 依赖包含整个 document：任一编辑都会让 instancesReady 失效，编译因此被推迟到
-  // 候选实例重新加载、绑定重新推导之后，避免拿上一版文档的绑定去预览。
+  // 依赖包含整个 document：任一编辑都会重新加载候选实例并重建绑定。
+  // 注意：instancesReady 在微任务中才失效，而编译 effect 会在同一次提交中紧接着
+  // 执行并读到上一次渲染的 true，因此可能先用上一版绑定发起一次预览；该次编译
+  // 随后会被失效，但仍可能短暂闪现旧结果。修复方向见
+  // TODO-template-preview-stale-bindings.md。
   // 加载逻辑放进微任务，可让同步抛错同样落到 catch 分支。
   useEffect(() => {
     if (!active || !document) return
@@ -119,7 +122,9 @@ export function useTemplatePreview(
   )
 
   useEffect(() => {
-    // 等待候选加载完成，避免使用上一次文档的绑定发起预览。
+    // 这里用 instancesReady 等待候选实例加载完成，避免使用上一次文档的绑定发起预览；
+    // 但该标记在微任务中才失效，文档切换的同一次提交仍可能读到旧值，见
+    // TODO-template-preview-stale-bindings.md。
     // 编译前先清空上一次结果，防止旧文档的预览残留在界面上；refreshToken 让用户可在
     // 文档与绑定都未变化时手动重编。
     if (!active || !document || !instancesReady || missingInstances) return

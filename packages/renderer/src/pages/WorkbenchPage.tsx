@@ -43,8 +43,8 @@ interface RecentWorkItem {
 /**
  * 一次汇总加载得到的统计值与最近工作列表。
  *
- * 字段与 EMPTY_SNAPSHOT 完全对应：加载结束前保持全零，
- * 这些数字是否可信由 loading 标志决定。
+ * 字段与 EMPTY_SNAPSHOT 完全对应：加载结束前保持全零；汇总失败时同样保留空快照，
+ * 因此这些数字是否可信要同时看 loading 与 unavailable。
  */
 interface WorkbenchSnapshot {
   exams: number
@@ -59,7 +59,7 @@ interface WorkbenchSnapshot {
 
 /**
  * 首屏占位快照，保证 snapshot 始终可读，避免在 JSX 中到处判空。
- * 它与「统计结果确实为零」在数据上无法区分，必须配合 loading 使用。
+ * 它与「统计结果确实为零」在数据上无法区分，必须配合 loading 与 unavailable 使用。
  */
 const EMPTY_SNAPSHOT: WorkbenchSnapshot = {
   exams: 0,
