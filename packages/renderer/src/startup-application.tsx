@@ -86,7 +86,7 @@ async function prepareApplication(): Promise<PreparedApplication> {
   const legacyData = window.legacyData
   if (!legacyData) throw new Error('旧数据整理服务不可用')
   const info = await runStartupPhase('legacy-data-status', () => legacyData.getInfo())
-  // none 与 cleaned 都表示无需整理；待归档或失败状态必须先完成整理。
+  // 只有 none 与 cleaned 表示无需整理；archiving、archived、cleaning、error 都先进入整理页。
   if (info.status !== 'none' && info.status !== 'cleaned') return { kind: 'migration', info }
 
   const application = await loadActiveApplication()

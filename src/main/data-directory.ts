@@ -25,7 +25,7 @@ import { LEGACY_MIGRATION_RESIDUE_DIRECTORIES } from './legacy-data'
 // 该模块涉及两个 JSON 文件：
 // - data-location.json（bootstrap）位于用户目录，记录当前业务目录、迁移事务和待清理记录；
 // - .ls101-data.json（marker）位于业务目录内部，随目录一起移动，用于确认目录身份。
-/** 持久化格式版本，只支持该版本的记录，升级时统一在此处处理。 */
+/** 持久化格式版本，只支持该版本；修改格式版本时需要同时处理旧记录。 */
 const FORMAT_VERSION = 1
 /** 用户目录下的数据位置配置文件：记录当前目录与未完成事务。 */
 const BOOTSTRAP_FILENAME = 'data-location.json'
@@ -286,7 +286,7 @@ export function registerDataDirectoryHandlers(
 }
 
 /** 旧版归档清理完成前不允许切换数据位置。 */
-// 旧版数据仍可能参与迁移来源的白名单校验，先归档再切换可避免两份逻辑互相干扰。
+// 旧版归档/清理尚未完成时不允许切换数据位置，避免与初始扫描/清理并发。
 function assertNoPendingLegacyCleanup(options: DataDirectoryHandlerOptions): void {
   if (options.isLegacyCleanupPending?.()) {
     throw new Error('请先完成旧版数据归档清理，再更改数据位置')
@@ -348,15 +348,15 @@ export async function recoverDataDirectory(userDataDir: string, error: unknown):
 }
 
 /** 解析真实路径并排除危险位置，将候选分类为当前、受管或空目录。 */
-// 校验顺序固定：先规范化路径，再排除待清理位置，最后判断目录种类；
-// 任何一步失败都直接抛出，调用方据此提示用户重新选择，不会留下半成品状态。
+// 校验顺序固定：先规范化路径，再排除待清理位置，随后检查根目录/挂载点与目录隔离，
+// 最后判断目录种类；任何一步失败都直接抛出，调用方据此提示用户重新选择，不会留下半成品状态。
 async function inspectCandidate(
   userDataDir: string,
   target: string,
   currentPath: string,
   allowMissing = false
 ): Promise<DataDirectoryCandidate> {
-  // 先规范化路径再比较，确保「当前目录」判断不受相对路径、符号链接和大小写影响。
+  // 先规范化路径再比较，确保「当前目录」判断不受相对路径、符号链接影响；Windows 下也不受大小写影响。
   if (typeof target !== 'string' || !path.isAbsolute(target)) throw new Error('数据目录路径无效')
   const normalizedTarget = allowMissing
     ? await normalizePotentialDirectory(target)
@@ -957,7 +957,7 @@ function sameFileSystemIdentity(left: FileSystemIdentity, right: FileSystemIdent
 function pendingCleanupFromMigration(
   bootstrap: CopyingBootstrap | LegacyCopyingBootstrap
 ): PendingCleanup {
-  // 提交成功后原事务记录会被 ready 记录替换，这里保留清理暂存目录所需的最小信息。
+  // 改选目录并写回 ready 记录时，原迁移事务记录会被替换，这里保留清理暂存目录所需的最小信息。
   return {
     migrationId: bootstrap.migrationId,
     target: bootstrap.target,
@@ -1352,9 +1352,9 @@ async function atomicWriteJson(filename: string, value: object): Promise<void> {
   }
 }
 
-/** 默认使用改名替换；Windows 拒绝覆盖已有文件时再删除旧文件并重试。 */
+/** 默认使用改名替换；Windows 因目标被占用、只读或为目录而拒绝时，再删除旧文件并重试。 */
 async function replaceExistingFile(temporary: string, filename: string): Promise<void> {
-  // 优先用 rename 原子替换；Windows 上目标已存在时会失败，才退化为删除后重试。
+  // 优先用 rename 原子替换；Windows 上目标被占用、只读或为目录时可能以 EPERM/EEXIST/ENOTEMPTY 失败，才退化为删除后重试。
   try {
     await rename(temporary, filename)
     return
@@ -1408,7 +1408,7 @@ async function assertMarker(directory: string): Promise<void> {
   await readMarker(directory)
 }
 
-// 以下工具函数只描述文件系统事实，不持有状态；调用方负责决定如何处置结果。
+// 以下文件系统与路径工具只读取或校验事实、不持有状态，调用方负责决定如何处置结果。
 /** 标记缺失或格式无效表示事务未完成，其他访问错误仍向上抛出。 */
 async function hasMigrationMarker(directory: string, migrationId: string): Promise<boolean> {
   try {
@@ -1617,6 +1617,7 @@ function compareManifestEntries(left: FileManifestEntry, right: FileManifestEntr
   return left.relativePath.localeCompare(right.relativePath)
 }
 
+// 以下为迁移收尾、进度窗口与通用辅助函数，不属于文件系统工具。
 /** 稍后退出以留出 IPC 回复时间，重启后的初始化流程会执行迁移计划。 */
 function relaunchAfterReply(): void {
   // 延迟 100ms 让 IPC 回复先送出；测试可用 LS101_DISABLE_AUTO_RELAUNCH=1 阻止重启。

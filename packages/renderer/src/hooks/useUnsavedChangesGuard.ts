@@ -14,14 +14,15 @@ export interface UnsavedChangesGuard {
   confirmNavigation(): void
 }
 
-/** 同时拦截页面卸载与应用内导航，为未保存内容提供离开确认。 */
+/** 拦截页面卸载与应用内导航；应用内导航会先请求确认，页面卸载仅阻止离开。 */
 export function useUnsavedChangesGuard(active: boolean): UnsavedChangesGuard {
   const { navigator } = useContext(UNSAFE_NavigationContext)
   const bypassRef = useRef(false)
   const removeBeforeUnloadRef = useRef<(() => void) | null>(null)
   const [pendingNavigation, setPendingNavigation] = useState<PendingNavigation | null>(null)
 
-  // 关闭窗口或重新加载由 beforeunload 触发浏览器的离开确认。
+  // 关闭窗口或重新加载会被 beforeunload 静默拦截，Electron 下不会弹出浏览器的离开确认框。
+  // 若产品需要确认框，可由主进程监听 will-prevent-unload 并显式提示。
   useEffect(() => {
     if (!active) return
     const beforeUnload = (event: BeforeUnloadEvent): void => {
@@ -74,7 +75,7 @@ export function useUnsavedChangesGuard(active: boolean): UnsavedChangesGuard {
   return {
     allowNextNavigation: () => {
       bypassRef.current = true
-      // 主动离开时同步解除卸载监听，避免随后又弹出窗口关闭确认。
+      // 主动离开时同步解除卸载监听，避免随后关闭窗口时再次被静默拦截。
       removeBeforeUnloadRef.current?.()
     },
     navigationPending: pendingNavigation !== null,
