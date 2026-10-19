@@ -10,6 +10,19 @@
 // A per-request failure (bad payload, unreadable reference audio, rejected
 // synthesis) answers ERROR and keeps serving. Fatal conditions - a malformed
 // frame, a failing engine, a broken stdout - exit 1 with stderr diagnostics.
+//
+// The JSON payload requires text, voicePath, language and maxTokens, and
+// accepts optional seed, durationFactor, temperature, topP and topK fields
+// that map onto audio.cpp index_tts2 request options.
+//
+// Emotion policy: all emotion conditioning paths are deliberately closed.
+// End-to-end evaluation showed the engine's emotion controls destabilize
+// voice cloning - the Qwen classifier's all-zero fallback on neutral text
+// forces a natural=1 spike vector that drifts the timbre away from the
+// reference, explicit vectors distort the timbre the same way, and emotion
+// reference audio transfers its pace. The helper therefore accepts no
+// emotion fields at all: every request synthesizes with the reference
+// audio's own emotion.
 
 #include "audio.h"
 #include "audiocpp.h"
@@ -57,6 +70,17 @@ struct RequestPayload {
     int max_tokens = 0;
     bool has_seed = false;
     uint64_t seed = 0;
+    // Optional speech-rate / sampling controls. Emotion conditioning is
+    // deliberately absent (see the header comment): requests always
+    // synthesize with the reference audio's own emotion.
+    bool has_duration_factor = false;
+    double duration_factor = 0.0;
+    bool has_temperature = false;
+    double temperature = 0.0;
+    bool has_top_p = false;
+    double top_p = 0.0;
+    bool has_top_k = false;
+    int top_k = 0;
 };
 
 bool is_absolute_path(const std::string & value) {
@@ -261,6 +285,16 @@ bool integer_in_range(const cJSON * item, double min, double max, double & outpu
     return true;
 }
 
+bool double_in_range(const cJSON * item, double min, double max, double & output) {
+    if (!cJSON_IsNumber(item)) return false;
+    const double value = item->valuedouble;
+    if (!std::isfinite(value) || value < min || value > max) {
+        return false;
+    }
+    output = value;
+    return true;
+}
+
 bool parse_payload(const char * payload, size_t length, RequestPayload & out, std::string & error) {
     const cJSON * root = cJSON_ParseWithLength(payload, length);
     if (root == nullptr) {
@@ -312,6 +346,32 @@ bool parse_payload(const char * payload, size_t length, RequestPayload & out, st
             }
             out.has_seed = true;
             out.seed = static_cast<uint64_t>(value);
+        } else if (std::strcmp(key, "durationFactor") == 0) {
+            if (out.has_duration_factor || !double_in_range(node, 0.1, 10.0, out.duration_factor)) {
+                failure = "durationFactor must be a number in [0.1, 10] given once";
+                break;
+            }
+            out.has_duration_factor = true;
+        } else if (std::strcmp(key, "temperature") == 0) {
+            if (out.has_temperature || !double_in_range(node, 0.01, 5.0, out.temperature)) {
+                failure = "temperature must be a number in [0.01, 5] given once";
+                break;
+            }
+            out.has_temperature = true;
+        } else if (std::strcmp(key, "topP") == 0) {
+            if (out.has_top_p || !double_in_range(node, 0.0001, 1.0, out.top_p)) {
+                failure = "topP must be a number in [0.0001, 1] given once";
+                break;
+            }
+            out.has_top_p = true;
+        } else if (std::strcmp(key, "topK") == 0) {
+            double value = 0.0;
+            if (out.has_top_k || !integer_in_range(node, 1, 1000, value)) {
+                failure = "topK must be an integer between 1 and 1000 given once";
+                break;
+            }
+            out.has_top_k = true;
+            out.top_k = static_cast<int>(value);
         } else {
             failure = std::string("unknown payload field: ") + key;
             break;
@@ -581,6 +641,22 @@ int main(int argc, char ** argv) {
         if (status == AUDIOCPP_OK && request.has_seed) {
             std::snprintf(number, sizeof(number), "%llu", static_cast<unsigned long long>(request.seed));
             status = audiocpp_request_set_option(audiocpp_request, "seed", number);
+        }
+        if (status == AUDIOCPP_OK && request.has_duration_factor) {
+            std::snprintf(number, sizeof(number), "%.10g", request.duration_factor);
+            status = audiocpp_request_set_option(audiocpp_request, "duration_factor", number);
+        }
+        if (status == AUDIOCPP_OK && request.has_temperature) {
+            std::snprintf(number, sizeof(number), "%.10g", request.temperature);
+            status = audiocpp_request_set_option(audiocpp_request, "temperature", number);
+        }
+        if (status == AUDIOCPP_OK && request.has_top_p) {
+            std::snprintf(number, sizeof(number), "%.10g", request.top_p);
+            status = audiocpp_request_set_option(audiocpp_request, "top_p", number);
+        }
+        if (status == AUDIOCPP_OK && request.has_top_k) {
+            std::snprintf(number, sizeof(number), "%d", request.top_k);
+            status = audiocpp_request_set_option(audiocpp_request, "top_k", number);
         }
         if (status != AUDIOCPP_OK) {
             audiocpp_request_free(audiocpp_request);
