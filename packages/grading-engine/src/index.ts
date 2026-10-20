@@ -171,6 +171,23 @@ export async function executeAIGrading(
     if (typeof transcript !== 'string') {
       throw new AIGradingError('INVALID_SPEECH_RESULT', '语音识别和语音纠错必须返回字符串')
     }
+    // 静音或 VAD 未检出语音时 ASR 返回空字符串。空转写没有任何可对齐的单词，
+    // 发音评测会因「参考文本不能为空」失败；这里按既有的「没有可评测的英文单词」
+    // 降级路径处理，让该评分单元以 0 分完成而不是报错。
+    if (!transcript.trim()) {
+      answers.push({
+        answerId: answer.answerId,
+        description: answer.description,
+        transcript,
+        correction: formatNoSpeechCorrection(),
+        correctionTrace: {},
+        uncoveredWords: [],
+        allWordsOutsideDictionary: true,
+        ...(answer.type === 'fixed-speech' ? { referenceText: answer.text } : {})
+      })
+      await options.onProgress?.({ answers: structuredClone(answers) })
+      continue
+    }
     const assessment = await assessPronunciation(dependencies, answer, transcript, options.signal)
     if (assessment.allWordsOutsideDictionary) {
       answers.push({
@@ -268,6 +285,10 @@ function formatNoDictionaryCoverageCorrection(words: readonly string[]): string 
   return `该答案转写中的所有单词（${words.join('、')}）均不在标准发音词典中，无法生成基于音素对齐的发音评测证据，也未调用文本模型。`
 }
 
+function formatNoSpeechCorrection(): string {
+  return '该答案的录音中没有检测到有效语音（ASR 转写为空），无法生成基于音素对齐的发音评测证据，也未调用文本模型。'
+}
+
 export function buildAIGradingPrompt(
   input: GradingInput,
   answers: readonly ProcessedGradingAnswer[]
@@ -308,8 +329,8 @@ export function buildAIGradingPrompt(
             .map((answer) => `「${answer.description}」`)
             .join(
               '、'
-            )} 的所有单词都不在标准发音词典中（或没有可评测的英文单词），发音完全无法评测。`,
-          '本题 score 必须为 0。comment 必须明确说明该答案无法进行发音评测的原因，并单独给出「如果仅根据内容评分」本题可达的参考分数（例如：本题所有单词都不在标准词典中。如果只根据内容评分，此题可得 x 分）。'
+            )} 没有可评测的英文单词（所有单词都不在标准发音词典中，或转写为空），发音完全无法评测。`,
+          '本题 score 必须为 0。comment 必须明确说明该答案无法进行发音评测的原因，并单独给出「如果仅根据内容评分」本题可达的参考分数（例如：本题没有可评测的英文单词。如果只根据内容评分，此题可得 x 分）。'
         ]),
     '',
     '评分材料 JSON：',

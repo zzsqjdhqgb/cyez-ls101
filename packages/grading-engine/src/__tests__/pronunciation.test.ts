@@ -48,6 +48,17 @@ describe('pronunciation GOP assessment', () => {
     expect(references[0].ipaPhones).toContain('ð')
   })
 
+  it('strips inline usage annotations from CMUdict pronunciations', () => {
+    const references = createPronunciationReferences("That's fine.")
+
+    expect(references[0].words.map((word) => word.text)).toEqual(["That's", 'fine'])
+    expect(references.map((reference) => reference.words[1].phones)).toEqual([
+      ['F', 'AY', 'N'],
+      ['F', 'IH', 'N', 'AH']
+    ])
+    expect(references.every((reference) => !reference.phones.includes('#'))).toBe(true)
+  })
+
   it('derives auditable pronunciations for supported word suffixes', () => {
     const [slushy] = createPronunciationReferences('slushy')
     const [schoolrooms] = createPronunciationReferences('schoolrooms')

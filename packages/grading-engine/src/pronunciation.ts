@@ -451,12 +451,19 @@ function referenceFromWords(
 function rawDictionaryPronunciations(word: string): string[] {
   const values: string[] = []
   const primary = dictionary[word]
-  if (primary) values.push(primary)
+  if (primary) values.push(stripDictionaryAnnotation(primary))
   for (let index = 1; index <= 20; index += 1) {
     const value = dictionary[`${word}(${index})`]
-    if (value) values.push(value)
+    if (value) values.push(stripDictionaryAnnotation(value))
   }
-  return values
+  return values.filter(Boolean)
+}
+
+// cmu-pronouncing-dictionary 的部分条目在原读音后附带以 # 开头的用法注释，
+// 例如 "fine(2)": "F IH1 N AH0 # org, irish"。注释不是音素，必须在拆分前去掉，
+// 否则会被当作音素交给 IPA 映射而抛出「不支持的 CMU 音素：#」。
+function stripDictionaryAnnotation(value: string): string {
+  return value.split('#', 1)[0].trim()
 }
 
 function pluralSuffix(pronunciation: string): string {

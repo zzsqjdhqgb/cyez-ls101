@@ -106,6 +106,35 @@ describe('AI grading engine', () => {
     expect(execution.trace.answers[0].correctionTrace).toEqual({})
   })
 
+  it('degrades to a forced zero score when ASR returns an empty transcript', async () => {
+    const input = gradingInput()
+    const recognize = vi.fn().mockResolvedValueOnce('  ').mockResolvedValueOnce('Free talk.')
+    const assess = vi
+      .fn()
+      .mockImplementation(({ referenceText }: { referenceText: string }) =>
+        Promise.resolve(pronunciationAssessment(referenceText))
+      )
+    const generate = vi
+      .fn()
+      .mockResolvedValueOnce('语音纠错说明')
+      .mockResolvedValueOnce('{"score":3,"comment":"内容尚可"}')
+
+    const execution = await executeAIGrading(input, dependencies({ recognize, assess, generate }))
+
+    // 空转写不调用发音评测和 ①，同题的另一段录音照常处理。
+    expect(assess).toHaveBeenCalledTimes(1)
+    expect(assess.mock.calls[0][0].referenceText).toBe('Free talk.')
+    expect(generate).toHaveBeenCalledTimes(2)
+    const gradingPrompt = generate.mock.calls[1][0]
+    expect(gradingPrompt).toContain('评分政策')
+    expect(gradingPrompt).toContain('本题 score 必须为 0')
+    expect(execution.trace.answers[0].transcript).toBe('  ')
+    expect(execution.trace.answers[0].correction).toContain('没有检测到有效语音')
+    expect(execution.trace.answers[0].allWordsOutsideDictionary).toBe(true)
+    expect(execution.trace.answers[1].allWordsOutsideDictionary).toBeUndefined()
+    expect(execution.result).toEqual({ score: 0, comment: '内容尚可' })
+  })
+
   it('stops the item before text grading when speech processing fails', async () => {
     const generate = vi.fn()
     const recognize = vi.fn().mockRejectedValue(new Error('ASR unavailable'))
