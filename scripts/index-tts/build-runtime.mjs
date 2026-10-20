@@ -5,6 +5,7 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -247,15 +248,35 @@ function assertCudaDependencyFamilies(dependencies) {
 // Mirrors the Qwen TTS Windows DLL staging but generalizes it to both platforms:
 // the closure is discovered from the built binary rather than hardcoded so a
 // CUDA toolkit update cannot silently drop a dependency.
-function stageCudaRuntimeDependencies() {
-  if (backend !== 'cuda') return
-  const redistributable = process.env.INDEX_TTS_CUDA_REDIST_DIR?.trim()
-  if (!redistributable || !existsSync(redistributable)) {
+// Resolved and validated BEFORE the build: a wrong directory fails in a minute
+// instead of after an hour of CUDA compilation.
+function resolveCudaRedistributable() {
+  if (backend !== 'cuda') return null
+  const explicit = process.env.INDEX_TTS_CUDA_REDIST_DIR?.trim()
+  const toolkit = process.env.CUDA_PATH?.trim()
+  const derived = toolkit ? path.join(toolkit, process.platform === 'win32' ? 'bin' : 'lib64') : ''
+  const directory = explicit || derived
+  if (!directory || !existsSync(directory)) {
     throw new Error(
       'INDEX_TTS_CUDA_REDIST_DIR must point to the CUDA 12.8 runtime library directory ' +
-        `for a cuda build (received: ${redistributable || 'unset'})`
+        `for a cuda build (received: ${explicit || 'unset'}` +
+        `${derived ? `, derived from CUDA_PATH: ${derived}` : ''})`
     )
   }
+  const families = new Set(readdirSync(directory).map((name) => cudaFamily(name)))
+  const missing = requiredCudaFamilies.filter((family) => !families.has(family))
+  if (missing.length) {
+    throw new Error(
+      `${directory} does not contain the CUDA runtime families: ${missing.join(', ')}` +
+        '; point INDEX_TTS_CUDA_REDIST_DIR at the toolkit runtime library directory'
+    )
+  }
+  console.log(`[index-tts] CUDA runtime library directory: ${directory}`)
+  return directory
+}
+
+function stageCudaRuntimeDependencies(redistributable) {
+  if (backend !== 'cuda') return
   const helperPath = path.join(outputDir, helperExecutableName())
   const dependencies =
     process.platform === 'win32'
@@ -310,11 +331,12 @@ function windowsCudaDependencies(helperPath) {
 }
 
 function findDumpbin() {
-  const candidates = [
-    process.env.INDEX_TTS_DUMPBIN?.trim(),
-    path.join(process.env.CUDA_PATH ?? '', 'bin', 'dumpbin.exe')
-  ].filter(Boolean)
-  return candidates.find((candidate) => existsSync(candidate)) ?? null
+  const override = process.env.INDEX_TTS_DUMPBIN?.trim()
+  if (override && existsSync(override)) return override
+  // dumpbin ships with the MSVC toolchain and VsDevCmd puts it on PATH; the
+  // CUDA bin directory only holds NVIDIA tools, so it is deliberately not used.
+  if (safeOutput('dumpbin', ['/?'])) return 'dumpbin'
+  return null
 }
 
 function linuxCudaDependencies(helperPath, stagingDirectory) {
@@ -399,12 +421,13 @@ function verifyStagedRuntime() {
 
 requireCommand('git')
 requireCommand('cmake')
+const cudaRedistributable = resolveCudaRedistributable()
 ensurePinnedSource()
 configureAndBuild()
 copyResult()
 stageRuntimeMetadata()
 stageLicenses()
-stageCudaRuntimeDependencies()
+stageCudaRuntimeDependencies(cudaRedistributable)
 smokeTestHelper()
 assertStaticCpuBuild()
 verifyStagedRuntime()
