@@ -119,7 +119,8 @@ export function useTemplateEditorSession(
         // 模板切换或组件卸载后，忽略本次加载的迟到结果。
         if (!active) return
         if (!document) {
-          // 文档缺失不建立历史：界面按 loading 结束且 document 为 null 的空态呈现。
+          // 首次加载时文档缺失不建立历史：界面按 loading 结束、
+          // document 为 null 的空态呈现。
           setError('模板不存在。')
           return
         }
@@ -228,7 +229,8 @@ export function useTemplateEditorSession(
     setError(null)
   }
 
-  // 保存成功返回 true；失败（含并发被拒）返回 false 并保留脏状态，由界面提示重试。
+  // 保存成功返回 true；保存失败返回 false 并保留脏状态，由界面展示错误，用户可再次保存。
+  // 并发保存在请求发出前直接返回 false，不改变状态，也不设置错误。
   // 成功后把全部快照的 revision 对齐服务端返回值：历史中的文档共享同一持久化标识，
   // 只有触发本次保存的快照转为干净，期间继续产生的编辑仍保持未保存。
   const save = async (): Promise<boolean> => {

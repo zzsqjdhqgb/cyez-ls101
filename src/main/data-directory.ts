@@ -114,12 +114,18 @@ interface UseExistingBootstrap {
   pendingCleanups?: PendingCleanup[]
 }
 
-/** 迁移中的三种事务，区别只在复制来源和提交前的准备工作。 */
+/**
+ * 迁移中的三种事务，主要区别在复制来源与提交方式：
+ * 复制类走暂存加改名，use-existing 直接写回。
+ */
 type MigratingBootstrap = CopyingBootstrap | LegacyCopyingBootstrap | UseExistingBootstrap
 /** 配置文件只有「已就绪」和「迁移中」两种状态，其他内容一律视为损坏。 */
 type Bootstrap = ReadyBootstrap | MigratingBootstrap
 
-/** 目录标记用于识别受管目录，迁移标识还用于判断事务是否已提交。 */
+/**
+ * 目录标记用于识别受管目录；迁移标识在暂存目录上表示已就绪，
+ * 在目标目录上表示已提交。
+ */
 interface DataDirectoryMarker {
   formatVersion: typeof FORMAT_VERSION
   kind: 'ls101-data-directory'
@@ -294,7 +300,8 @@ function assertNoPendingLegacyCleanup(options: DataDirectoryHandlerOptions): voi
 }
 
 /** 无法初始化目录时循环提供重试、选择已有目录和退出选项。 */
-// 该函数在应用启动早期调用，此时没有可用的渲染进程，只能用主进程原生对话框交互。
+// 该函数在应用启动早期调用，此时窗口已创建、业务界面尚未渲染，
+// 只能用主进程原生对话框交互。
 export async function recoverDataDirectory(userDataDir: string, error: unknown): Promise<never> {
   let message = errorMessage(error)
   while (true) {
@@ -723,7 +730,7 @@ async function tryRemovePendingCleanup(cleanup: PendingCleanup): Promise<boolean
     // 父目录身份不可信（卸载重挂或被替换）时放弃本次清理，保留记录待下次启动重试。
     if (!(await hasExpectedCleanupParentIdentity(cleanup))) return false
     const stagingStats = await lstatIfExists(cleanup.staging)
-    // 目标已不存在等同于清理完成，无需再触碰磁盘。
+    // 暂存目录已不存在等同于清理完成，无需再触碰磁盘。
     if (!stagingStats) return true
     await removeExistingOwnedStaging(cleanup, stagingStats)
     return true
@@ -1313,7 +1320,8 @@ async function writeBootstrap(userDataDir: string, value: Bootstrap): Promise<vo
 }
 
 /**
- * 为受管目录写入目录标识，并可附带本次已完成的迁移标识。
+ * 为受管目录写入目录标识，并可附带迁移标识
+ * （写入暂存目录时表示复制与校验已完成）。
  *
  * directoryId 缺省时每次生成新的随机值；若需要把调用方指定的标识写入标记
  * （例如 ensureDirectoryId 需要返回值与落盘值一致），必须显式传入该标识。

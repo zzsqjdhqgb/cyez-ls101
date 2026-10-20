@@ -16,7 +16,7 @@ interface SettingsGroup {
   pages: SettingsPageRegistration[]
 }
 
-/** 优先使用显式顺序；分组未配置顺序时采用该分组首次出现的位置。 */
+/** 每个分组优先采用显式 order；未配置时使用该分组首次出现的位置。 */
 function groupSettingsPages(pages: readonly SettingsPageRegistration[]): SettingsGroup[] {
   const groups = new Map<string, SettingsGroup>()
 

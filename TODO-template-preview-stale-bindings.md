@@ -16,10 +16,10 @@ interface with an instance that belongs to another interface or no longer exists
 The premature compile is invalidated when the re-render caused by `setInstancesReady(false)` commits
 and the compile effect cleanup runs. It still performs a full preview compilation. If its handlers
 complete before that cleanup, its result or error is published. The invalidation does not clear
-either, and a published result remains set until a later compilation starts (or indefinitely if
-the reload fails). If the cleanup runs first, the handlers are discarded, but `compiling` stays true
-until a later compilation finishes; a failed reload therefore leaves the preview refresh button
-disabled.
+either, and a published result remains set until a later compilation starts (or indefinitely if no
+later compilation runs). If the cleanup runs first, the handlers are discarded, but `compiling`
+stays true until a later compilation finishes; a failed reload, or a reload after which no
+compilation runs, therefore leaves the preview refresh button disabled.
 
 ## Root Cause
 
@@ -40,9 +40,10 @@ Preview-only: no persisted data, grading, exam state, or configuration is affect
 costs an unnecessary preview compilation: either when the document changes while the preview is
 active or when the preview view is re-entered while `instancesReady` is still `true`, provided the
 previous selections still cover every alias. It can also publish a binding-error result, or, when the
-invalidation wins, leave `compiling` true for the duration of the reload; a failed reload keeps
-`compiling` true and the refresh button disabled. Severity is low to moderate depending on how
-expensive the template preview compilation is.
+invalidation wins, leave `compiling` true through the reload and until a later compilation finishes;
+a failed reload, or a reload after which no compilation runs, keeps `compiling` true and the refresh
+button disabled. Severity is low to moderate depending on how expensive the template preview
+compilation is.
 
 ## Reproduction
 
@@ -67,6 +68,9 @@ resolves. The current behavior fails that assertion.
 - Add a monotonically increasing readiness version state that increments after every successful
   instance load. Include it in the compile effect dependencies so a completed reload reliably
   retriggers compilation even if the new bindings happen to compare equal.
+- Reset `compiling` when the invalidated compilation is discarded or when a finished reload does
+  not start a new compilation (for example, because the reload failed or an alias has no
+  instances), so the refresh button cannot remain disabled.
 - Keep the existing `current` cleanup guard for superseded requests.
 - Decide how to treat the previous preview result while instances reload. Prefer exposing
   `instancesLoading` in `PreviewStatus` instead of clearing `result`, which would flash the empty
@@ -79,6 +83,7 @@ resolves. The current behavior fails that assertion.
 - No `application.templates.preview` call starts while the current document's instance list is still
   loading.
 - After the instance list resolves, the preview compiles once with the new bindings.
+- A finished instance reload never leaves `compiling` true when no compilation is running.
 - Switching documents or returning to the Preview view never uses an `instanceId` that is not
   currently valid for the current document's `interfaceId`.
 - A hook-level regression test covers both a document switch and preview-view re-entry with deferred

@@ -1,5 +1,6 @@
 // 主进程业务服务装配：在数据目录就绪、启动窗口显示后，为渲染进程集中注册 IPC 处理器；
-// 各服务的数据目录与后台工作线程地址都由 index.ts 在调用时传入，这里不解析路径。
+// 各服务的数据目录与后台工作线程地址都由 index.ts 在调用时传入；
+// 这里只拼接许可证文件路径。
 import { registerAIRouter } from '@ls101/airouter/main'
 import { registerClipboard } from '@ls101/clipboard/main'
 import { registerConfigStore } from '@ls101/config-store/main'

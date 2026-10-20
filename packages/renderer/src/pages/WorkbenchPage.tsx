@@ -4,7 +4,7 @@
  * 数据来自渲染进程经 window.fileStore IPC 桥访问主进程文件存储的各库单例
  * （试卷库、作答库、题型库、模板库、评分单元库），本页不写入任何业务数据。
  * 首屏并行拉取全部统计值，任一请求失败时保留空快照，只把提示切为
- * 「部分状态暂不可用」，不展示半份统计，以免维护者误判数据完整性。
+ * 「部分状态暂不可用」，不展示半份统计，以免使用者误判数据完整性。
  */
 import { useEffect, useMemo, useState, type JSX } from 'react'
 import {
@@ -305,7 +305,7 @@ export function WorkbenchPage(): JSX.Element {
 
         <section className={styles.quickActions} aria-label="快捷操作">
           {quickActions.map((action) => {
-            // lucide 图标以组件形式存放，需先取出为局部变量才能当 JSX 标签使用。
+            // lucide 图标以组件形式存放，取出为局部变量便于统一使用 `<Icon />` 形式。
             const Icon = action.icon
             // key 用 path：三个入口路径固定且互不相同，可兼作稳定标识。
             return (
@@ -375,7 +375,7 @@ export function WorkbenchPage(): JSX.Element {
             {!loading && snapshot.recent.length > 0 ? (
               <div className={styles.recentList}>
                 {snapshot.recent.map((item) => {
-                  // 与快捷操作同理：图标组件必须先解构为局部变量。
+                  // 与快捷操作同理：取出为局部变量，便于统一使用 `<Icon />` 形式。
                   const Icon = item.icon
                   // key 用跨库唯一的 id，保证同一次加载内不会重复。
                   return (

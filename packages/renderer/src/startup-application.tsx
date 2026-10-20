@@ -1,5 +1,6 @@
 // 渲染进程启动编排：创建共享 React 根节点，按主进程就绪 → 许可证状态 → 旧数据整理
-// → 完整业务界面的顺序推进；首个交互界面需等启动动画结束，失败统一收敛到错误界面。
+// → 完整业务界面的顺序推进；首个交互界面需等启动动画结束。启动流程中的失败收敛到
+// 错误界面；React 渲染错误与全局异常只记录日志。
 import { StrictMode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { AlertCircle, RefreshCw } from 'lucide-react'
@@ -13,7 +14,10 @@ import './styles/global.css'
 
 type ActiveApplication = typeof import('./startup-active-application')
 
-/** 准备阶段只确定后续入口：许可证激活、旧数据整理或完整业务界面。 */
+/**
+ * 准备阶段决定后续入口；完整业务界面分支会在此加载业务包，
+ * 并完成安装标记、内置内容初始化与更新说明资格领取。
+ */
 type PreparedApplication =
   | { kind: 'license'; status: LicenseStatus }
   | { kind: 'migration'; info: LegacyDataInfo }

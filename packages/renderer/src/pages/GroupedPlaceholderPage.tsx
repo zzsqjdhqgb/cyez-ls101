@@ -10,7 +10,7 @@ import { Page, PageHeader } from '../components/ui/Page'
  *
  * 原先以 `/grouped-example` 注册，并带 `group: '示例分组'`，用于演示侧边栏按
  * `navigation.group` 分组后的主导航；该注册随后被真实业务流程取代。
- * 页面自身只渲染空状态，不读取任何业务 Context。
+ * 页面主体只渲染空状态，不读取任何业务 Context。
  */
 export function GroupedPlaceholderPage(): JSX.Element {
   const navigate = useNavigate()

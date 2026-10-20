@@ -1193,6 +1193,10 @@ function TemplateDocumentEditor({
           ) : (
             <aside className={styles.properties} aria-label="属性">
               <TemplateInspectorSection title="全局属性" headingId="template-properties-heading">
+                {/*
+                  编辑与导出错误只在非预览视图的属性栏展示；
+                  预览视图下保存失败不会在此提示。
+                */}
                 {session.error || exportError ? (
                   <div className={styles.notice} role="alert">
                     {session.error || exportError}
