@@ -5,6 +5,7 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -33,7 +34,13 @@ const commit = assetConfig.runtime.revision
 const ggmlTree = assetConfig.runtime.ggmlRevision
 const cudaArchitectures = '75;86-real;89-real;120a-real'
 const cmakeGenerator = process.env.INDEX_TTS_CMAKE_GENERATOR?.trim()
-const compilerLauncher = process.env.SCCACHE_PATH?.trim()
+// The sccache action exports SCCACHE_PATH without the Windows .exe suffix;
+// append it when that is the file that actually exists.
+const rawCompilerLauncher = process.env.SCCACHE_PATH?.trim()
+const compilerLauncher =
+  rawCompilerLauncher && process.platform === 'win32' && !existsSync(rawCompilerLauncher)
+    ? `${rawCompilerLauncher}.exe`
+    : rawCompilerLauncher
 const patchPath = path.join(root, 'native', 'index-tts', 'content-addressed-gguf.patch')
 const jobs = String(Math.max(1, Math.min(os.availableParallelism?.() ?? os.cpus().length, 16)))
 const minimumHelperBytes = 1_000_000
@@ -138,8 +145,11 @@ function configureAndBuild() {
     ...(compilerLauncher
       ? [
           `-DCMAKE_C_COMPILER_LAUNCHER=${compilerLauncher}`,
-          `-DCMAKE_CXX_COMPILER_LAUNCHER=${compilerLauncher}`,
-          ...(backend === 'cuda' ? [`-DCMAKE_CUDA_COMPILER_LAUNCHER=${compilerLauncher}`] : [])
+          `-DCMAKE_CXX_COMPILER_LAUNCHER=${compilerLauncher}`
+          // No CMAKE_CUDA_COMPILER_LAUNCHER: sccache cannot parse nvcc command
+          // lines that carry quoted -Xcompiler arguments (audio.cpp generates
+          // them), which fails every .cu compilation with "Could not parse
+          // shell line". CUDA compilation runs uncached instead.
         ]
       : []),
     `-DENGINE_ENABLE_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
@@ -244,31 +254,54 @@ function assertCudaDependencyFamilies(dependencies) {
   }
 }
 
-// Mirrors the Qwen TTS Windows DLL staging but generalizes it to both platforms:
-// the closure is discovered from the built binary rather than hardcoded so a
-// CUDA toolkit update cannot silently drop a dependency.
-function stageCudaRuntimeDependencies() {
-  if (backend !== 'cuda') return
-  const redistributable = process.env.INDEX_TTS_CUDA_REDIST_DIR?.trim()
-  if (!redistributable || !existsSync(redistributable)) {
+// CUDA runtime staging. The closure is NOT discovered from the built binary:
+// this build links statically (BUILD_SHARED_LIBS=OFF, GGML_STATIC=ON), so ldd
+// reports no dynamic CUDA dependencies and dumpbin is unnecessary. Instead the
+// redistributable directory is scanned for the five required library families,
+// which is exactly the set the release manifest documents. Validated BEFORE
+// the build so a wrong directory fails in a minute instead of after an hour.
+function resolveCudaRedistributable() {
+  if (backend !== 'cuda') return null
+  const explicit = process.env.INDEX_TTS_CUDA_REDIST_DIR?.trim()
+  const toolkit = process.env.CUDA_PATH?.trim()
+  const derived = toolkit ? path.join(toolkit, process.platform === 'win32' ? 'bin' : 'lib64') : ''
+  const directory = explicit || derived
+  if (!directory || !existsSync(directory)) {
     throw new Error(
       'INDEX_TTS_CUDA_REDIST_DIR must point to the CUDA 12.8 runtime library directory ' +
-        `for a cuda build (received: ${redistributable || 'unset'})`
+        `for a cuda build (received: ${explicit || 'unset'}` +
+        `${derived ? `, derived from CUDA_PATH: ${derived}` : ''})`
     )
   }
-  const helperPath = path.join(outputDir, helperExecutableName())
-  const dependencies =
+  const families = new Set(readdirSync(directory).map((name) => cudaFamily(name)))
+  const missing = requiredCudaFamilies.filter((family) => !families.has(family))
+  if (missing.length) {
+    throw new Error(
+      `${directory} does not contain the CUDA runtime families: ${missing.join(', ')}` +
+        '; point INDEX_TTS_CUDA_REDIST_DIR at the toolkit runtime library directory'
+    )
+  }
+  console.log(`[index-tts] CUDA runtime library directory: ${directory}`)
+  return directory
+}
+
+function stageCudaRuntimeDependencies(redistributable) {
+  if (backend !== 'cuda') return
+  const wanted =
     process.platform === 'win32'
-      ? windowsCudaDependencies(helperPath)
-      : linuxCudaDependencies(helperPath, outputDir)
+      ? /^(cublas|cublasLt|cudart|cufft|nvJitLink)([^/]*)\.dll$/i
+      : /^lib(cublasLt|cublas|cudart|cufft|nvJitLink)(?:[._][0-9][^/]*)?\.so/i
+  const dependencies = readdirSync(redistributable)
+    .filter((name) => wanted.test(name) && statSync(path.join(redistributable, name)).isFile())
+    .sort()
   if (!dependencies.length) {
-    throw new Error('no CUDA runtime dependencies were discovered beside the helper')
+    throw new Error(`no CUDA runtime libraries were found in ${redistributable}`)
   }
   assertCudaDependencyFamilies(dependencies)
+  console.log(`[index-tts] staging CUDA dependencies: ${dependencies.join(', ')}`)
   for (const dependency of dependencies) {
     const source = path.join(redistributable, dependency)
     const stats = statSync(source)
-    if (!stats.isFile()) throw new Error(`CUDA runtime dependency is missing: ${source}`)
     if (stats.size < 1024 * 1024) {
       throw new Error(`CUDA runtime dependency is unexpectedly small: ${source}`)
     }
@@ -292,54 +325,6 @@ function stageCudaRuntimeDependencies() {
     throw new Error(`${license} is unexpectedly small`)
   }
   console.log(`[index-tts] staged ${license}`)
-}
-
-function windowsCudaDependencies(helperPath) {
-  const dumpbin = findDumpbin()
-  if (!dumpbin) {
-    throw new Error('dumpbin is required to discover Windows CUDA dependencies')
-  }
-  const listing = output(dumpbin, ['/DEPENDENTS', helperPath])
-  const wanted = /^(cublas|cublasLt|cudart|cufft|nvJitLink)([^\\/]*)\.dll$/i
-  const dependencies = new Set()
-  for (const line of listing.split(/\r?\n/)) {
-    const match = /\s([A-Za-z0-9_.-]+\.dll)$/.exec(line.trim())
-    if (match && wanted.test(match[1])) dependencies.add(match[1])
-  }
-  return [...dependencies].sort()
-}
-
-function findDumpbin() {
-  const candidates = [
-    process.env.INDEX_TTS_DUMPBIN?.trim(),
-    path.join(process.env.CUDA_PATH ?? '', 'bin', 'dumpbin.exe')
-  ].filter(Boolean)
-  return candidates.find((candidate) => existsSync(candidate)) ?? null
-}
-
-function linuxCudaDependencies(helperPath, stagingDirectory) {
-  const dependencies = new Set()
-  const queue = [helperPath]
-  const visited = new Set()
-  const environment = {
-    ...process.env,
-    LD_LIBRARY_PATH: [stagingDirectory, process.env.LD_LIBRARY_PATH].filter(Boolean).join(':')
-  }
-  while (queue.length) {
-    const current = queue.shift()
-    if (visited.has(current)) continue
-    visited.add(current)
-    const listing = output('ldd', [current], { env: environment })
-    for (const line of listing.split('\n')) {
-      const resolved = /=>\s*(\/\S+\.so\S*)\s*\(/.exec(line)
-      if (!resolved) continue
-      const file = resolved[1]
-      const name = path.basename(file)
-      if (!visited.has(file)) queue.push(file)
-      if (/^lib(cublas|cublasLt|cudart|cufft|nvJitLink)/i.test(name)) dependencies.add(name)
-    }
-  }
-  return [...dependencies].sort()
 }
 
 function smokeTestHelper() {
@@ -399,12 +384,13 @@ function verifyStagedRuntime() {
 
 requireCommand('git')
 requireCommand('cmake')
+const cudaRedistributable = resolveCudaRedistributable()
 ensurePinnedSource()
 configureAndBuild()
 copyResult()
 stageRuntimeMetadata()
 stageLicenses()
-stageCudaRuntimeDependencies()
+stageCudaRuntimeDependencies(cudaRedistributable)
 smokeTestHelper()
 assertStaticCpuBuild()
 verifyStagedRuntime()

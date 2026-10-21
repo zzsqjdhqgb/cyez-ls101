@@ -258,6 +258,7 @@ jobs:
 
       - name: Set up CUDA toolkit
         if: matrix.backend == 'cuda'
+        id: cuda-toolkit
         uses: Jimver/cuda-toolkit@v0.2.36
         with:
           cuda: '12.8.1'
@@ -275,8 +276,11 @@ jobs:
         if: runner.os != 'Windows'
         env:
           SCCACHE_GHA_ENABLED: ${{ matrix.backend == 'cuda' && 'true' || 'false' }}
-          INDEX_TTS_CUDA_REDIST_DIR: ${{ runner.os == 'Linux' && format('{0}/lib64', env.CUDA_PATH) || '' }}
-        run: node scripts/index-tts/build-runtime.mjs --backend ${{ matrix.backend }}
+          # `env.*` does not see GITHUB_ENV values; use the action's output.
+          INDEX_TTS_CUDA_REDIST_DIR: ${{ runner.os == 'Linux' && format('{0}/lib64', steps.cuda-toolkit.outputs.CUDA_PATH) || '' }}
+        run: |
+          echo "CUDA_PATH=${CUDA_PATH:-unset}"
+          node scripts/index-tts/build-runtime.mjs --backend ${{ matrix.backend }}
 
       - name: Build runtime on Windows
         if: runner.os == 'Windows'
@@ -284,9 +288,11 @@ jobs:
         env:
           INDEX_TTS_CMAKE_GENERATOR: Ninja
           SCCACHE_GHA_ENABLED: ${{ matrix.backend == 'cuda' && 'true' || 'false' }}
-          INDEX_TTS_CUDA_REDIST_DIR: ${{ format('{0}\\bin', env.CUDA_PATH) }}
+          # `env.*` does not see GITHUB_ENV values; use the action's output.
+          INDEX_TTS_CUDA_REDIST_DIR: ${{ runner.os == 'Windows' && format('{0}\bin', steps.cuda-toolkit.outputs.CUDA_PATH) || '' }}
         run: |
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64
+          echo CUDA_PATH=%CUDA_PATH%
           node scripts/index-tts/build-runtime.mjs --backend ${{ matrix.backend }}
 
       - name: Smoke-test helper
@@ -474,10 +480,16 @@ jobs:
 
             // Deterministic split: 1 GiB parts in byte order, last part is the
             // remainder. Each part is hashed as the correctness self-check.
+            // assets.json pins name/size/sha256 only, so offsets are computed
+            // from the running total instead of a (nonexistent) part.offset.
             const parts = []
+            let partOffset = 0
             for (const part of config.modelRelease.parts) {
               const partPath = path.join('release-assets', part.name)
-              const input = createReadStream(modelPath, { start: part.offset })
+              const input = createReadStream(modelPath, {
+                start: partOffset,
+                end: partOffset + part.size - 1
+              })
               const output = createWriteStream(partPath, { flags: 'wx' })
               const hash = createHash('sha256')
               let blocked = null
@@ -504,12 +516,19 @@ jobs:
               }
               parts.push({ name: part.name, bytes: part.size })
               console.log(`split ${part.name} (${part.size} bytes, sha256=${partDigest})`)
+              partOffset += part.size
             }
-            const mergedSize = parts.reduce((sum, part) => sum + part.bytes, 0)
-            if (mergedSize >= 2 * 1024 ** 3) {
-              throw new Error(
-                `Model asset exceeds GitHub's 2 GiB asset limit: ${modelPath} (${mergedSize})`
-              )
+            if (partOffset !== expectedSize) {
+              throw new Error(`parts cover ${partOffset} bytes, expected ${expectedSize}`)
+            }
+            // GitHub caps each Release asset at 2 GiB; every part must stay
+            // below it (the merged model is only reassembled by consumers).
+            for (const part of parts) {
+              if (part.bytes >= 2 * 1024 ** 3) {
+                throw new Error(
+                  `Model part exceeds GitHub's 2 GiB asset limit: ${part.name} (${part.bytes})`
+                )
+              }
             }
 
             const info = {
