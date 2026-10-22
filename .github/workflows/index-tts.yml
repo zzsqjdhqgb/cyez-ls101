@@ -401,9 +401,7 @@ jobs:
             .filter((name) => pattern.test(name))
             .sort()
           const families = new Set(dependencies.map(family))
-          const missing = ['cublas', 'cublaslt', 'cudart', 'cufft', 'nvjitlink'].filter(
-            (candidate) => !families.has(candidate)
-          )
+          const missing = ['cublas', 'cublaslt'].filter((candidate) => !families.has(candidate))
           if (missing.length) {
             throw new Error(`Windows CUDA dependency families missing: ${missing.join(', ')}`)
           }
@@ -423,19 +421,17 @@ jobs:
         if: runner.os == 'Linux' && matrix.backend == 'cuda'
         shell: bash
         run: |
-          # build-runtime.mjs discovered the closure with ldd and staged the
-          # shared libraries beside the helper (spec 5.1); the workflow only
-          # collects them (spec 7).
+          # build-runtime.mjs discovered the closure with ldd and staged any
+          # dynamic libraries beside the helper (spec 5.1); the workflow only
+          # collects them (spec 7). The current index_tts2 composite links
+          # the CUDA libraries statically, so an empty closure is expected.
           shopt -s nullglob
           count=0
           for file in externals/ai/index-tts/runtime/linux-x64/lib*.so*; do
             cp "$file" release-assets/
             count=$((count + 1))
           done
-          if [ "$count" -eq 0 ]; then
-            echo "::error::expected the staged CUDA runtime libraries (libcudart.so.12, libcufft.so.11)"
-            exit 1
-          fi
+          echo "collected $count staged CUDA runtime libraries"
           ls -l release-assets/
       - name: Upload runtime artifact
         uses: actions/upload-artifact@v6
@@ -681,15 +677,16 @@ jobs:
             throw new Error(`Unexpected runtime assets: ${runtimeFiles.join(', ')}`)
           }
           // The Windows cuda leg stages the closure discovered by
-          // build-runtime.mjs; every family must be present and every file
-          // must clear its floor (spec 5.1/7). cuDART is a thin loader
-          // (< 1 MiB in CUDA 12.8), so it keeps the 100 KB floor.
+          // build-runtime.mjs: ggml-cuda links cuBLAS dynamically and
+          // cublas64_12.dll imports cublasLt64_12.dll, so both families are
+          // always present. cuDART stays a thin loader (< 1 MiB in CUDA
+          // 12.8), so it keeps the 100 KB floor if it ever appears.
           const windowsCudaLibraries = readdirSync(directory)
             .filter((name) => name.endsWith('.dll'))
             .sort()
           const windowsFamily = (name) => /^[a-z]+/.exec(name.toLowerCase())?.[0] ?? ''
           const windowsFamilies = new Set(windowsCudaLibraries.map(windowsFamily))
-          const missingFamilies = ['cublas', 'cublaslt', 'cudart', 'cufft', 'nvjitlink'].filter(
+          const missingFamilies = ['cublas', 'cublaslt'].filter(
             (family) => !windowsFamilies.has(family)
           )
           if (missingFamilies.length) {
@@ -702,15 +699,21 @@ jobs:
               throw new Error(`Windows CUDA dependency is unexpectedly small: ${name}`)
             }
           }
-          // Linux cuda libraries were discovered and staged by the build
-          // script itself; they ship with the release too (spec 7).
+          // Linux cuda is fully static for the index_tts2 composite (GGML_STATIC
+          // links cuBLAS/cuBLASLt/cuDART; the cuFFT iSTFT belongs to model
+          // families this build does not link), so nothing may appear here.
+          // If a future pin stages shared libraries, the release file list
+          // must gain release-assets/lib*.so* before publishing.
           const linuxCudaLibraries = readdirSync(directory)
             .filter((name) =>
               /^lib(cublasLt|cublas|cudart|cufft|nvJitLink)(?:[._0-9][^/]*)?\.so/i.test(name)
             )
             .sort()
-          if (!linuxCudaLibraries.length) {
-            throw new Error('Linux CUDA dependencies are missing from the runtime artifacts')
+          if (linuxCudaLibraries.length) {
+            throw new Error(
+              `Linux CUDA libraries were staged (${linuxCudaLibraries.join(', ')}); ` +
+                'add release-assets/lib*.so* to the release file list before publishing'
+            )
           }
           const licenseFiles = [
             'LICENSE.NVIDIA-CUDA.html',
@@ -724,9 +727,9 @@ jobs:
             name
           }))
           assets.push(
-            ...[...windowsCudaLibraries, ...linuxCudaLibraries].map((name) => ({
+            ...windowsCudaLibraries.map((name) => ({
               kind: 'native-runtime-dependency',
-              runtimeDirectory: name.startsWith('lib') ? 'linux-x64' : 'win32-x64',
+              runtimeDirectory: 'win32-x64',
               backend: 'cuda',
               name
             }))
@@ -772,16 +775,15 @@ jobs:
             CPU and NVIDIA CUDA native IndexTTS helpers for Linux x64 and Windows x64.
             Both backends are published; the application only uses the CPU helper, and
             CUDA assets are excluded from application packages. The Windows CUDA build
-            bundles the cuBLAS/cuDART/cuFFT/nvJitLink runtime DLLs; the Linux CUDA build
-            statically links cuBLAS/cuBLASLt and bundles the dynamic cuDART/cuFFT
-            libraries beside the helper.
+            bundles the cuBLAS/cuBLASLt runtime DLLs its helper imports; the
+            Linux CUDA build statically links cuBLAS/cuBLASLt/cuDART and needs
+            no extra libraries beside the NVIDIA driver.
 
             Runtime and source revisions are recorded in `index-tts-runtime-manifest.json`.
             This release is immutable; publish a new runtime version for any binary change.
           files: |
             release-assets/ls101-index-tts-helper-*
             release-assets/*.dll
-            release-assets/lib*.so*
             release-assets/LICENSE.NVIDIA-CUDA.html
             release-assets/LICENSE.ggml.txt
             release-assets/LICENSE.audio-cpp.txt

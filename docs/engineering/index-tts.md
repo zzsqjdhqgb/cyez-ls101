@@ -102,13 +102,19 @@ ggml kernels with no escaped defines. The workflow also raises `SCCACHE_MAX_FRAM
 
 The CUDA dependency closure is **discovered from the built helper, not hardcoded**: Linux runs
 `ldd` (with `LD_LIBRARY_PATH` pointed at `INDEX_TTS_CUDA_REDIST_DIR`) and Windows walks
-`dumpbin /DEPENDENTS` transitively (cuBLASLt and nvJitLink enter through cublas64_12.dll).
-Discovered files are staged beside the helper and must cover every family the platform links
-dynamically — all five on Windows; on Linux `GGML_STATIC=ON` static-links cuBLAS/cuBLASLt, so
-only the engine's cuDART/cuFFT can appear, and the staged closure must re-resolve under `ldd`
-with no "not found". cuDART keeps a 100 KB floor (it is a thin loader, < 1 MiB in CUDA 12.8);
-the other families keep qwen's 1 MiB floor. `LICENSE.NVIDIA-CUDA.html` is staged alongside.
-These artifacts are not selected by setup or included in application packages.
+`dumpbin /DEPENDENTS` transitively (cublasLt enters through cublas64_12.dll). Discovery matters
+because the linker dead-strips unreferenced objects: the index_tts2 composite uses the Vocos
+vocoder with the host iSTFT, and the cuFFT-based CUDA iSTFT belongs to model families
+(fsq/miocodec/neutts) this build does not link — so `istft_cuda_runtime.o` is compiled but never
+pulled in, and cuFFT never enters the closure. The verified closure is `cublas64_12.dll` +
+`cublasLt64_12.dll` on Windows (cuBLAS has no static MSVC build; cuDART is statically linked by
+`CUDA_RUNTIME_LIBRARY=Static`) and **empty on Linux** (GGML_STATIC=ON static-links
+cuBLAS/cuBLASLt/cuDART). Discovered files are staged beside the helper with per-family floors
+(cuDART keeps a 100 KB floor — it is a thin loader; the others keep qwen's 1 MiB floor), the
+staged runtime must re-resolve under `ldd` with no "not found", and `LICENSE.NVIDIA-CUDA.html`
+is staged alongside. If a future audio.cpp pin makes something dynamic, discovery picks it up
+automatically and the manifest job fails loudly until the release file list is updated. These
+artifacts are not selected by setup or included in application packages.
 
 Helpers are written per operating system; do not copy a binary between platforms. CUDA compilation
 does not require a GPU, but a development build must be exercised on a machine with a compatible
