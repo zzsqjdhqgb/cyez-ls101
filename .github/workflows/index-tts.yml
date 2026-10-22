@@ -258,7 +258,6 @@ jobs:
 
       - name: Set up CUDA toolkit
         if: matrix.backend == 'cuda'
-        id: cuda-toolkit
         uses: Jimver/cuda-toolkit@v0.2.36
         with:
           cuda: '12.8.1'
@@ -276,8 +275,6 @@ jobs:
         if: runner.os != 'Windows'
         env:
           SCCACHE_GHA_ENABLED: ${{ matrix.backend == 'cuda' && 'true' || 'false' }}
-          # `env.*` does not see GITHUB_ENV values; use the action's output.
-          INDEX_TTS_CUDA_REDIST_DIR: ${{ runner.os == 'Linux' && format('{0}/lib64', steps.cuda-toolkit.outputs.CUDA_PATH) || '' }}
         run: |
           echo "CUDA_PATH=${CUDA_PATH:-unset}"
           node scripts/index-tts/build-runtime.mjs --backend ${{ matrix.backend }}
@@ -288,12 +285,29 @@ jobs:
         env:
           INDEX_TTS_CMAKE_GENERATOR: Ninja
           SCCACHE_GHA_ENABLED: ${{ matrix.backend == 'cuda' && 'true' || 'false' }}
-          # `env.*` does not see GITHUB_ENV values; use the action's output.
-          INDEX_TTS_CUDA_REDIST_DIR: ${{ runner.os == 'Windows' && format('{0}\bin', steps.cuda-toolkit.outputs.CUDA_PATH) || '' }}
         run: |
           call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64
           echo CUDA_PATH=%CUDA_PATH%
           node scripts/index-tts/build-runtime.mjs --backend ${{ matrix.backend }}
+
+      - name: Prepare bundled Windows CUDA DLLs for smoke test
+        if: runner.os == 'Windows' && matrix.backend == 'cuda'
+        shell: pwsh
+        run: |
+          # ggml-cuda links cudart statically but cuBLAS dynamically, and
+          # audio.cpp's engine_runtime dynamically links cudart and cuFFT, so
+          # the helper needs this fixed closure beside it to start:
+          # cublas64_12.dll -> cublasLt64_12.dll -> nvJitLink_120_0.dll plus
+          # cudart64_12.dll and cufft64_11.dll.
+          $sourceDirectory = Join-Path $env:CUDA_PATH 'bin'
+          $destinationDirectory = 'externals/ai/index-tts/runtime/win32-x64'
+          foreach ($name in @('cublas64_12.dll', 'cublasLt64_12.dll', 'cudart64_12.dll', 'cufft64_11.dll', 'nvJitLink_120_0.dll')) {
+            $source = Join-Path $sourceDirectory $name
+            if (!(Test-Path -LiteralPath $source -PathType Leaf)) {
+              throw "CUDA runtime dependency is missing: $source"
+            }
+            Copy-Item -LiteralPath $source -Destination (Join-Path $destinationDirectory $name)
+          }
 
       - name: Smoke-test helper
         shell: bash
@@ -371,27 +385,32 @@ jobs:
           )
           NODE
 
-      - name: Stage Linux CUDA runtime dependencies
-        if: runner.os == 'Linux' && matrix.backend == 'cuda'
-        shell: bash
+      - name: Stage Windows CUDA runtime dependencies
+        if: runner.os == 'Windows' && matrix.backend == 'cuda'
+        shell: pwsh
         run: |
-          # build-runtime.mjs discovered the closure and staged the shared
-          # libraries beside the helper; collect them for the release.
-          shopt -s nullglob
-          count=0
-          for file in externals/ai/index-tts/runtime/linux-x64/libcublas* \
-                      externals/ai/index-tts/runtime/linux-x64/libcublasLt* \
-                      externals/ai/index-tts/runtime/linux-x64/libcudart* \
-                      externals/ai/index-tts/runtime/linux-x64/libcufft* \
-                      externals/ai/index-tts/runtime/linux-x64/libnvJitLink*; do
-            cp "$file" release-assets/
-            count=$((count + 1))
-          done
-          if [ "$count" -lt 5 ]; then
-            echo "::error::expected the CUDA dependency closure to cover cublas, cublasLt, cudart, cufft and nvJitLink"
-            exit 1
-          fi
-          ls -l release-assets/
+          # The same fixed closure prepared for the smoke test; cuDART is a
+          # thin loader (< 1 MB in CUDA 12.8), so it keeps the 100 KB floor
+          # the smoke test uses for the helper instead of the 1 MB floor.
+          $sourceDirectory = Join-Path $env:CUDA_PATH 'bin'
+          $destinationDirectory = 'release-assets'
+          $cudaRuntimeFiles = @(
+            @{ Name = 'cublas64_12.dll'; MinimumBytes = 1MB },
+            @{ Name = 'cublasLt64_12.dll'; MinimumBytes = 1MB },
+            @{ Name = 'cudart64_12.dll'; MinimumBytes = 100KB },
+            @{ Name = 'cufft64_11.dll'; MinimumBytes = 1MB },
+            @{ Name = 'nvJitLink_120_0.dll'; MinimumBytes = 1MB }
+          )
+          foreach ($file in $cudaRuntimeFiles) {
+            $source = Join-Path $sourceDirectory $file.Name
+            if (!(Test-Path -LiteralPath $source -PathType Leaf)) {
+              throw "CUDA runtime dependency is missing: $source"
+            }
+            if ((Get-Item -LiteralPath $source).Length -lt $file.MinimumBytes) {
+              throw "CUDA runtime dependency is unexpectedly small: $source"
+            }
+            Copy-Item -LiteralPath $source -Destination (Join-Path $destinationDirectory $file.Name)
+          }
 
       - name: Upload runtime artifact
         uses: actions/upload-artifact@v6
@@ -636,32 +655,30 @@ jobs:
           if (JSON.stringify(runtimeFiles) !== JSON.stringify(expectedRuntimeFiles)) {
             throw new Error(`Unexpected runtime assets: ${runtimeFiles.join(', ')}`)
           }
-          // The Windows cuda leg stages the DLL closure discovered by
-          // build-runtime.mjs; every file must clear the 1 MiB guard.
-          const windowsCudaLibraries = readdirSync(directory)
+          // The Windows cuda leg stages the fixed DLL closure; mirror the
+          // build list exactly. cuDART is a thin loader (< 1 MB in CUDA 12.8),
+          // so it keeps the 100 KB floor instead of the 1 MB floor.
+          const dependencyFiles = readdirSync(directory)
             .filter((name) => name.endsWith('.dll'))
             .sort()
-          const requiredFamilies = ['cublas', 'cublaslt', 'cudart', 'cufft', 'nvjitlink']
-          const families = new Set(
-            windowsCudaLibraries
-              .map((name) => name.toLowerCase().replace(/\.dll$/, ''))
-              .map((name) => /^[a-z]+/.exec(name)?.[0] ?? '')
-          )
-          const missing = requiredFamilies.filter((family) => !families.has(family))
-          if (missing.length) {
-            throw new Error(`Windows CUDA dependency families missing: ${missing.join(', ')}`)
+          const expectedDependencyFiles = [
+            'cublas64_12.dll',
+            'cublasLt64_12.dll',
+            'cudart64_12.dll',
+            'cufft64_11.dll',
+            'nvJitLink_120_0.dll'
+          ].sort()
+          if (JSON.stringify(dependencyFiles) !== JSON.stringify(expectedDependencyFiles)) {
+            throw new Error(`Unexpected Windows CUDA dependencies: ${dependencyFiles.join(', ')}`)
           }
-          for (const name of windowsCudaLibraries) {
-            if (statSync(path.join(directory, name)).size < 1024 * 1024) {
+          const dependencyMinimumBytes = {
+            'cudart64_12.dll': 100 * 1024
+          }
+          for (const name of dependencyFiles) {
+            const minimumBytes = dependencyMinimumBytes[name] ?? 1024 * 1024
+            if (statSync(path.join(directory, name)).size < minimumBytes) {
               throw new Error(`Windows CUDA dependency is unexpectedly small: ${name}`)
             }
-          }
-          // Linux cuda libraries were staged by the build script itself.
-          const linuxCudaLibraries = readdirSync(directory)
-            .filter((name) => /^lib(cublas|cublasLt|cudart|cufft|nvJitLink).*\.so/.test(name))
-            .sort()
-          if (!linuxCudaLibraries.length) {
-            throw new Error('Linux CUDA dependencies are missing from the runtime artifacts')
           }
           const licenseFiles = [
             'LICENSE.NVIDIA-CUDA.html',
@@ -675,9 +692,9 @@ jobs:
             name
           }))
           assets.push(
-            ...[...windowsCudaLibraries, ...linuxCudaLibraries].map((name) => ({
+            ...dependencyFiles.map((name) => ({
               kind: 'native-runtime-dependency',
-              runtimeDirectory: name.startsWith('lib') ? 'linux-x64' : 'win32-x64',
+              runtimeDirectory: 'win32-x64',
               backend: 'cuda',
               name
             }))
@@ -722,16 +739,16 @@ jobs:
           body: |
             CPU and NVIDIA CUDA native IndexTTS helpers for Linux x64 and Windows x64.
             Both backends are published; the application only uses the CPU helper, and
-            CUDA assets are excluded from application packages. Windows and Linux CUDA
-            builds bundle the cuBLAS/cuDART/cuFFT/nvJitLink runtime libraries required
-            by the CUDA helper.
+            CUDA assets are excluded from application packages. The Windows CUDA build
+            bundles the cuBLAS/cuDART/cuFFT/nvJitLink runtime DLLs the helper needs;
+            the Linux CUDA build statically links cuBLAS/cuBLASLt and requires a CUDA
+            12.8 runtime (libcudart.so.12, libcufft.so.11) on the system.
 
             Runtime and source revisions are recorded in `index-tts-runtime-manifest.json`.
             This release is immutable; publish a new runtime version for any binary change.
           files: |
             release-assets/ls101-index-tts-helper-*
             release-assets/*.dll
-            release-assets/lib*.so*
             release-assets/LICENSE.NVIDIA-CUDA.html
             release-assets/LICENSE.ggml.txt
             release-assets/LICENSE.audio-cpp.txt

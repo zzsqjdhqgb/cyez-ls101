@@ -5,7 +5,6 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -44,7 +43,6 @@ const compilerLauncher =
 const patchPath = path.join(root, 'native', 'index-tts', 'content-addressed-gguf.patch')
 const jobs = String(Math.max(1, Math.min(os.availableParallelism?.() ?? os.cpus().length, 16)))
 const minimumHelperBytes = 1_000_000
-const cudaLicenseUrl = 'https://docs.nvidia.com/cuda/eula/index.html'
 
 function parseBackend(args) {
   if (args.length !== 2 || args[0] !== '--backend' || !['cpu', 'cuda'].includes(args[1])) {
@@ -154,7 +152,16 @@ function configureAndBuild() {
       : []),
     `-DENGINE_ENABLE_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
     `-DGGML_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
-    ...(backend === 'cuda' ? [`-DCMAKE_CUDA_ARCHITECTURES=${cudaArchitectures}`] : []),
+    ...(backend === 'cuda'
+      ? [
+          `-DCMAKE_CUDA_ARCHITECTURES=${cudaArchitectures}`,
+          // Mirror qwen-tts: without NO_VMM ggml-cuda links CUDA::cuda_driver
+          // (libcuda.so.1 / nvcuda.dll), which GPU-less CI runners cannot
+          // resolve, so the no-argument smoke test would fail at load time.
+          '-DGGML_CUDA_NO_VMM=ON',
+          '-DGGML_CUDA_NCCL=OFF'
+        ]
+      : []),
     `-DAUDIOCPP_SOURCE_DIR=${sourceDir}`
   ])
   run('cmake', [
@@ -232,100 +239,11 @@ function safeOutput(command, args) {
   }
 }
 
-const requiredCudaFamilies = ['cublas', 'cublaslt', 'cudart', 'cufft', 'nvjitlink']
-
-function cudaFamily(name) {
-  const normalized = path
-    .basename(name)
-    .toLowerCase()
-    .replace(/^lib/, '')
-    .replace(/\.so.*$/, '')
-    .replace(/\.dll$/, '')
-  return /^[a-z]+/.exec(normalized)?.[0] ?? ''
-}
-
-function assertCudaDependencyFamilies(dependencies) {
-  const present = new Set(dependencies.map((name) => cudaFamily(name)))
-  const missing = requiredCudaFamilies.filter((family) => !present.has(family))
-  if (missing.length) {
-    throw new Error(
-      `CUDA dependency closure is missing families: ${missing.join(', ')}; refusing to publish`
-    )
-  }
-}
-
-// CUDA runtime staging. The closure is NOT discovered from the built binary:
-// this build links statically (BUILD_SHARED_LIBS=OFF, GGML_STATIC=ON), so ldd
-// reports no dynamic CUDA dependencies and dumpbin is unnecessary. Instead the
-// redistributable directory is scanned for the five required library families,
-// which is exactly the set the release manifest documents. Validated BEFORE
-// the build so a wrong directory fails in a minute instead of after an hour.
-function resolveCudaRedistributable() {
-  if (backend !== 'cuda') return null
-  const explicit = process.env.INDEX_TTS_CUDA_REDIST_DIR?.trim()
-  const toolkit = process.env.CUDA_PATH?.trim()
-  const derived = toolkit ? path.join(toolkit, process.platform === 'win32' ? 'bin' : 'lib64') : ''
-  const directory = explicit || derived
-  if (!directory || !existsSync(directory)) {
-    throw new Error(
-      'INDEX_TTS_CUDA_REDIST_DIR must point to the CUDA 12.8 runtime library directory ' +
-        `for a cuda build (received: ${explicit || 'unset'}` +
-        `${derived ? `, derived from CUDA_PATH: ${derived}` : ''})`
-    )
-  }
-  const families = new Set(readdirSync(directory).map((name) => cudaFamily(name)))
-  const missing = requiredCudaFamilies.filter((family) => !families.has(family))
-  if (missing.length) {
-    throw new Error(
-      `${directory} does not contain the CUDA runtime families: ${missing.join(', ')}` +
-        '; point INDEX_TTS_CUDA_REDIST_DIR at the toolkit runtime library directory'
-    )
-  }
-  console.log(`[index-tts] CUDA runtime library directory: ${directory}`)
-  return directory
-}
-
-function stageCudaRuntimeDependencies(redistributable) {
-  if (backend !== 'cuda') return
-  const wanted =
-    process.platform === 'win32'
-      ? /^(cublas|cublasLt|cudart|cufft|nvJitLink)([^/]*)\.dll$/i
-      : /^lib(cublasLt|cublas|cudart|cufft|nvJitLink)(?:[._][0-9][^/]*)?\.so/i
-  const dependencies = readdirSync(redistributable)
-    .filter((name) => wanted.test(name) && statSync(path.join(redistributable, name)).isFile())
-    .sort()
-  if (!dependencies.length) {
-    throw new Error(`no CUDA runtime libraries were found in ${redistributable}`)
-  }
-  assertCudaDependencyFamilies(dependencies)
-  console.log(`[index-tts] staging CUDA dependencies: ${dependencies.join(', ')}`)
-  for (const dependency of dependencies) {
-    const source = path.join(redistributable, dependency)
-    const stats = statSync(source)
-    if (stats.size < 1024 * 1024) {
-      throw new Error(`CUDA runtime dependency is unexpectedly small: ${source}`)
-    }
-    copyFileSync(source, path.join(outputDir, dependency))
-    console.log(`[index-tts] staged CUDA dependency: ${dependency} (${stats.size} bytes)`)
-  }
-  const license = 'LICENSE.NVIDIA-CUDA.html'
-  const previous = path.join(outputDir, license)
-  if (!existsSync(previous)) {
-    run('curl', [
-      '--fail',
-      '--location',
-      '--silent',
-      '--show-error',
-      cudaLicenseUrl,
-      '--output',
-      previous
-    ])
-  }
-  if (statSync(previous).size < 1024) {
-    throw new Error(`${license} is unexpectedly small`)
-  }
-  console.log(`[index-tts] staged ${license}`)
-}
+// CUDA dependency staging deliberately does NOT live here: this build links
+// statically (BUILD_SHARED_LIBS=OFF, GGML_STATIC=ON), so the closure is fixed
+// by the CMake graph (ggml-cuda statically links cuBLAS/cuBLASLt; audio.cpp's
+// engine_runtime dynamically links cudart + cufft) and the workflow stages the
+// known Windows DLL list beside the helper, mirroring qwen-tts.yml.
 
 function smokeTestHelper() {
   const helperPath = path.join(outputDir, helperExecutableName())
@@ -384,13 +302,11 @@ function verifyStagedRuntime() {
 
 requireCommand('git')
 requireCommand('cmake')
-const cudaRedistributable = resolveCudaRedistributable()
 ensurePinnedSource()
 configureAndBuild()
 copyResult()
 stageRuntimeMetadata()
 stageLicenses()
-stageCudaRuntimeDependencies(cudaRedistributable)
 smokeTestHelper()
 assertStaticCpuBuild()
 verifyStagedRuntime()

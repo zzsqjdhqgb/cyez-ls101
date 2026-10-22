@@ -74,7 +74,7 @@ yarn index-tts:build-runtime --backend cpu
 ```
 
 For native runtime development only, a CUDA helper can be built on a machine with the CUDA 12.8
-toolkit (set `INDEX_TTS_CUDA_REDIST_DIR` to the toolkit's runtime library directory):
+toolkit:
 
 ```bash
 yarn index-tts:build-runtime --backend cuda
@@ -91,10 +91,14 @@ are smoke-tested by running the helper with no arguments: it must exit 1 with
 lets GPU-less CI runners validate the CUDA build too.
 
 CUDA compilation uses `CMAKE_CUDA_ARCHITECTURES=75;86-real;89-real;120a-real` (five device images
-per CUDA source instead of GGML's nine) and can share an sccache backend through `SCCACHE_PATH`.
-The CUDA dependency closure (cublas, cublasLt, cudart, cufft, nvJitLink) is discovered from the
-built binary with `ldd`/`dumpbin` rather than hardcoded, then staged beside the helper with the
-NVIDIA CUDA EULA. These artifacts are not selected by setup or included in application packages.
+per CUDA source instead of GGML's nine) and can share an sccache backend through `SCCACHE_PATH`
+(C/C++ only: sccache cannot parse nvcc's quoted `-Xcompiler` arguments). The Windows CUDA DLL
+closure (`cublas64_12.dll`, `cublasLt64_12.dll`, `cudart64_12.dll`, `cufft64_11.dll`,
+`nvJitLink_120_0.dll`) is a fixed list staged by `index-tts.yml` beside the helper and into the
+runtime release, mirroring how `qwen-tts.yml` handles its Windows DLLs; the Linux CUDA build
+statically links cuBLAS/cuBLASLt and expects the CUDA 12.8 runtime (`libcudart.so.12`,
+`libcufft.so.11`) on the system. These artifacts are not selected by setup or included in
+application packages.
 
 Helpers are written per operating system; do not copy a binary between platforms. CUDA compilation
 does not require a GPU, but a development build must be exercised on a machine with a compatible

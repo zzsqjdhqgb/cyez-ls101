@@ -7,7 +7,7 @@
 | 文件 | 说明 |
 | --- | --- |
 | `scripts/index-tts/assets.json` | 唯一事实源（§3 原样照抄；`runtimeRelease.assets` bootstrap 后回填 cpu helper + manifest） |
-| `scripts/index-tts/build-runtime.mjs` | 构建/暂存 helper（含 §4.6 补丁应用、ggml 树哈希校验、CUDA 闭包发现、无参冒烟、cpu 静态校验） |
+| `scripts/index-tts/build-runtime.mjs` | 构建/暂存 helper（含 §4.6 补丁应用、ggml 树哈希校验、无参冒烟、cpu 静态校验；Windows CUDA DLL 闭包由 workflow 硬编码名单暂存，镜像 qwen-tts.yml） |
 | `scripts/index-tts/download-release-assets.mjs` | Release 下载 + 分片合并 + HF bootstrap + CUDA 清理（复用 `downloadVerifiedAsset`/`ensureAssetSet`/`assertAssetFile`/`isSafeAssetPath`） |
 | `scripts/index-tts/build-package.mjs` | ZIP64 流式模型包打包器（manifest + GGUF + 参考音频；不含可执行文件） |
 | `scripts/index-tts/prepare-package.mjs` | 组合根（download → build-package → `dist/`） |
