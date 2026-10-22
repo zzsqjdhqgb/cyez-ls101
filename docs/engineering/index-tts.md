@@ -74,7 +74,9 @@ yarn index-tts:build-runtime --backend cpu
 ```
 
 For native runtime development only, a CUDA helper can be built on a machine with the CUDA 12.8
-toolkit:
+toolkit (set `INDEX_TTS_CUDA_REDIST_DIR` to the toolkit's runtime library directory — `bin` on
+Windows, `lib64` on Linux; on Windows run the build from a Visual Studio developer prompt so
+`dumpbin` is available):
 
 ```bash
 yarn index-tts:build-runtime --backend cuda
@@ -91,14 +93,22 @@ are smoke-tested by running the helper with no arguments: it must exit 1 with
 lets GPU-less CI runners validate the CUDA build too.
 
 CUDA compilation uses `CMAKE_CUDA_ARCHITECTURES=75;86-real;89-real;120a-real` (five device images
-per CUDA source instead of GGML's nine) and can share an sccache backend through `SCCACHE_PATH`
-(C/C++ only: sccache cannot parse nvcc's quoted `-Xcompiler` arguments). The Windows CUDA DLL
-closure (`cublas64_12.dll`, `cublasLt64_12.dll`, `cudart64_12.dll`, `cufft64_11.dll`,
-`nvJitLink_120_0.dll`) is a fixed list staged by `index-tts.yml` beside the helper and into the
-runtime release, mirroring how `qwen-tts.yml` handles its Windows DLLs; the Linux CUDA build
-statically links cuBLAS/cuBLASLt and expects the CUDA 12.8 runtime (`libcudart.so.12`,
-`libcufft.so.11`) on the system. These artifacts are not selected by setup or included in
-application packages.
+per CUDA source instead of GGML's nine) and goes through sccache for C, C++, and CUDA alike
+(mirroring qwen), which requires sccache >= 0.18.0: the two engine `.cu` files carry
+`-DYAML_VERSION_STRING=\"...\"` from the vendored libyaml defines, and 0.17.0 fails them with
+"Could not parse shell line" (sccache#2811). qwen is unaffected because its `.cu` set is pure
+ggml kernels with no escaped defines. The workflow also raises `SCCACHE_MAX_FRAME_LENGTH`
+(mmvf.cu diagnostics exceed the 8 MiB default) and disables the idle timeout.
+
+The CUDA dependency closure is **discovered from the built helper, not hardcoded**: Linux runs
+`ldd` (with `LD_LIBRARY_PATH` pointed at `INDEX_TTS_CUDA_REDIST_DIR`) and Windows walks
+`dumpbin /DEPENDENTS` transitively (cuBLASLt and nvJitLink enter through cublas64_12.dll).
+Discovered files are staged beside the helper and must cover every family the platform links
+dynamically — all five on Windows; on Linux `GGML_STATIC=ON` static-links cuBLAS/cuBLASLt, so
+only the engine's cuDART/cuFFT can appear, and the staged closure must re-resolve under `ldd`
+with no "not found". cuDART keeps a 100 KB floor (it is a thin loader, < 1 MiB in CUDA 12.8);
+the other families keep qwen's 1 MiB floor. `LICENSE.NVIDIA-CUDA.html` is staged alongside.
+These artifacts are not selected by setup or included in application packages.
 
 Helpers are written per operating system; do not copy a binary between platforms. CUDA compilation
 does not require a GPU, but a development build must be exercised on a machine with a compatible

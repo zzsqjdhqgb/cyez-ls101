@@ -143,11 +143,18 @@ function configureAndBuild() {
     ...(compilerLauncher
       ? [
           `-DCMAKE_C_COMPILER_LAUNCHER=${compilerLauncher}`,
-          `-DCMAKE_CXX_COMPILER_LAUNCHER=${compilerLauncher}`
-          // No CMAKE_CUDA_COMPILER_LAUNCHER: sccache cannot parse nvcc command
-          // lines that carry quoted -Xcompiler arguments (audio.cpp generates
-          // them), which fails every .cu compilation with "Could not parse
-          // shell line". CUDA compilation runs uncached instead.
+          `-DCMAKE_CXX_COMPILER_LAUNCHER=${compilerLauncher}`,
+          ...(backend === 'cuda'
+            ? [
+                // qwen parity: CUDA compilation goes through sccache too. This
+                // requires sccache >= 0.18.0 (the workflow pins it): 0.17.0
+                // cannot parse the escaped string defines the two engine .cu
+                // files carry (-DYAML_VERSION_STRING=\"...\") and fails them
+                // with "Could not parse shell line". qwen is unaffected on
+                // 0.17.0 because its .cu set is pure ggml kernels.
+                `-DCMAKE_CUDA_COMPILER_LAUNCHER=${compilerLauncher}`
+              ]
+            : [])
         ]
       : []),
     `-DENGINE_ENABLE_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
@@ -239,15 +246,196 @@ function safeOutput(command, args) {
   }
 }
 
-// CUDA dependency staging deliberately does NOT live here: this build links
-// statically (BUILD_SHARED_LIBS=OFF, GGML_STATIC=ON), so the closure is fixed
-// by the CMake graph (ggml-cuda statically links cuBLAS/cuBLASLt; audio.cpp's
-// engine_runtime dynamically links cudart + cufft) and the workflow stages the
-// known Windows DLL list beside the helper, mirroring qwen-tts.yml.
+// CUDA runtime staging (spec §5.1): the closure is DISCOVERED from the built
+// helper — ldd on Linux, dumpbin /DEPENDENTS on Windows — and copied beside
+// the helper from the toolkit directory named by INDEX_TTS_CUDA_REDIST_DIR.
+// Discovery, never a hardcoded list: the set differs per platform (Linux
+// static-links cuBLAS/cuBLASLt under GGML_STATIC=ON, so only the engine's
+// cuDART/cuFFT are dynamic), and the family assertion refuses to publish an
+// incomplete closure.
+const cudaLicenseUrl = 'https://docs.nvidia.com/cuda/eula/index.html'
+
+function cudaDependencyPattern() {
+  return process.platform === 'win32'
+    ? /^(cublas|cublasLt|cudart|cufft|nvJitLink)[._0-9][^/\\]*\.dll$/i
+    : /^lib(cublasLt|cublas|cudart|cufft|nvJitLink)(?:[._0-9][^/]*)?\.so/i
+}
+
+function cudaFamilyOf(name) {
+  const normalized = path
+    .basename(name)
+    .toLowerCase()
+    .replace(/^lib/, '')
+    .replace(/\.so.*$/, '')
+    .replace(/\.dll$/, '')
+  return /^[a-z]+/.exec(normalized)?.[0] ?? ''
+}
+
+// Windows: every family is dynamic (the toolkit ships no static cuBLAS).
+// Linux: GGML_STATIC=ON links cuBLAS/cuBLASLt into the helper statically, so
+// only the engine's cuDART/cuFFT can appear in ldd output. Deviation from the
+// five-family rule, with evidence, recorded in the delivery notes.
+const requiredCudaFamilies =
+  process.platform === 'win32'
+    ? ['cublas', 'cublaslt', 'cudart', 'cufft', 'nvjitlink']
+    : ['cudart', 'cufft']
+
+// cuDART is a thin loader (< 1 MiB in CUDA 12.8), so it keeps the 100 KB
+// floor the smoke test uses for the helper; the other families carry kernels
+// and stay at qwen's 1 MiB floor.
+const cudaMinimumBytes = {
+  cublas: 1024 * 1024,
+  cublaslt: 1024 * 1024,
+  cudart: 100 * 1024,
+  cufft: 1024 * 1024,
+  nvjitlink: 1024 * 1024
+}
+
+function cudaLoaderEnvironment(...directories) {
+  const existing = process.env.LD_LIBRARY_PATH
+  return {
+    ...process.env,
+    LD_LIBRARY_PATH: [...directories, existing].filter(Boolean).join(path.delimiter)
+  }
+}
+
+function resolveCudaRedistributable() {
+  if (backend !== 'cuda') return null
+  const directory = process.env.INDEX_TTS_CUDA_REDIST_DIR?.trim()
+  if (!directory || !existsSync(directory)) {
+    throw new Error(
+      'INDEX_TTS_CUDA_REDIST_DIR must point to the CUDA 12.8 runtime library ' +
+        `directory for a cuda build (received: ${directory || 'unset'})`
+    )
+  }
+  console.log(`[index-tts] CUDA runtime library directory: ${directory}`)
+  return directory
+}
+
+function assertCudaDependencyFamilies(dependencies) {
+  const present = new Set(dependencies.map((name) => cudaFamilyOf(name)))
+  const missing = requiredCudaFamilies.filter((family) => !present.has(family))
+  if (missing.length) {
+    throw new Error(
+      `CUDA dependency closure is missing families: ${missing.join(', ')}; refusing to publish`
+    )
+  }
+}
+
+function lddOutput(file, environment) {
+  const result = spawnSync('ldd', [file], { encoding: 'utf8', env: environment })
+  const text = `${result.stdout || ''}\n${result.stderr || ''}`
+  const unresolved = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.includes('not found'))
+  if (unresolved.length) {
+    throw new Error(
+      `${file} has dependencies the toolkit directory does not resolve:\n${unresolved.join('\n')}`
+    )
+  }
+  if (result.status !== 0) {
+    throw new Error(`ldd failed for ${file} (status ${result.status}):\n${text.trim()}`)
+  }
+  return result.stdout || ''
+}
+
+function dumpbinDependents(file) {
+  const result = spawnSync('dumpbin', ['/DEPENDENTS', file], { encoding: 'utf8' })
+  if (result.error) {
+    throw new Error(
+      'dumpbin is required to discover the Windows CUDA dependency closure; ' +
+        'run the build from a Visual Studio developer prompt'
+    )
+  }
+  if (result.status !== 0) {
+    throw new Error(`dumpbin /DEPENDENTS failed for ${file}:\n${result.stderr || result.stdout}`)
+  }
+  return [...`${result.stdout}`.matchAll(/^\s+([^\s]+\.dll)\s*$/gim)].map((match) => match[1])
+}
+
+function discoverCudaDependencies(redistributable) {
+  const pattern = cudaDependencyPattern()
+  const helper = path.join(outputDir, helperExecutableName())
+  const closure = new Set()
+  if (process.platform === 'win32') {
+    // dumpbin lists DIRECT imports only; cuBLASLt and nvJitLink enter through
+    // cublas64_12.dll, so the closure must be walked transitively.
+    const pending = [helper]
+    while (pending.length) {
+      for (const name of dumpbinDependents(pending.pop())) {
+        if (closure.has(name) || !pattern.test(name)) continue
+        const source = path.join(redistributable, name)
+        if (!existsSync(source)) {
+          throw new Error(`CUDA runtime dependency is missing from ${redistributable}: ${name}`)
+        }
+        closure.add(name)
+        pending.push(source)
+      }
+    }
+  } else {
+    for (const line of lddOutput(helper, cudaLoaderEnvironment(redistributable)).split('\n')) {
+      const name = /^\s*(\S+) =>/.exec(line)?.[1]
+      if (name && pattern.test(name)) closure.add(name)
+    }
+  }
+  return [...closure].sort()
+}
+
+function stageCudaRuntimeDependencies(redistributable) {
+  if (backend !== 'cuda') return
+  const dependencies = discoverCudaDependencies(redistributable)
+  assertCudaDependencyFamilies(dependencies)
+  console.log(`[index-tts] staging CUDA dependencies: ${dependencies.join(', ')}`)
+  for (const dependency of dependencies) {
+    const source = path.join(redistributable, dependency)
+    const stats = statSync(source)
+    const family = cudaFamilyOf(dependency)
+    const minimumBytes = cudaMinimumBytes[family] ?? 1024 * 1024
+    if (stats.size < minimumBytes) {
+      throw new Error(
+        `CUDA runtime dependency is unexpectedly small: ${source} ` +
+          `(${stats.size} bytes, below the ${minimumBytes}-byte ${family} floor)`
+      )
+    }
+    copyFileSync(source, path.join(outputDir, dependency))
+    console.log(`[index-tts] staged CUDA dependency: ${dependency} (${stats.size} bytes)`)
+  }
+  if (process.platform !== 'win32') {
+    // Spec §5.1: with LD_LIBRARY_PATH pointing at the staged directory, ldd
+    // must not report any "not found" — the staged closure is loadable.
+    const helper = path.join(outputDir, helperExecutableName())
+    lddOutput(helper, cudaLoaderEnvironment(outputDir))
+    console.log('[index-tts] staged CUDA runtime resolves with no missing libraries')
+  }
+  const license = 'LICENSE.NVIDIA-CUDA.html'
+  const target = path.join(outputDir, license)
+  if (!existsSync(target)) {
+    run('curl', [
+      '--fail',
+      '--location',
+      '--silent',
+      '--show-error',
+      cudaLicenseUrl,
+      '--output',
+      target
+    ])
+  }
+  if (statSync(target).size < 1024) {
+    throw new Error(`${license} is unexpectedly small`)
+  }
+  console.log(`[index-tts] staged ${license}`)
+}
 
 function smokeTestHelper() {
   const helperPath = path.join(outputDir, helperExecutableName())
-  const result = spawnSync(helperPath, [], { encoding: 'utf8' })
+  // Linux cuda builds run against the staged shared libraries (the loader has
+  // no $ORIGIN search), so the smoke test exercises exactly what ships.
+  const environment =
+    backend === 'cuda' && process.platform !== 'win32'
+      ? cudaLoaderEnvironment(outputDir)
+      : undefined
+  const result = spawnSync(helperPath, [], { encoding: 'utf8', env: environment })
   if (result.status !== 1 || !result.stderr?.includes('An absolute --model path is required')) {
     const status =
       result.status === null ? 'null' : `${result.status} (0x${(result.status >>> 0).toString(16)})`
@@ -302,11 +490,13 @@ function verifyStagedRuntime() {
 
 requireCommand('git')
 requireCommand('cmake')
+const cudaRedistributable = resolveCudaRedistributable()
 ensurePinnedSource()
 configureAndBuild()
 copyResult()
 stageRuntimeMetadata()
 stageLicenses()
+stageCudaRuntimeDependencies(cudaRedistributable)
 smokeTestHelper()
 assertStaticCpuBuild()
 verifyStagedRuntime()
