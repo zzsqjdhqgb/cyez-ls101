@@ -42,7 +42,7 @@ real zero statistics.
 The workbench is the application's home page, so a transient file/IPC failure can make every library
 look empty. No data is modified and no persisted state is affected, but users may believe their
 exams, submissions, templates or schemas are missing. Severity is moderate for a misleading home
-page; a retry or reload resolves it once the underlying read works.
+page; reloading the workbench resolves it once the underlying read works.
 
 ## Reproduction
 

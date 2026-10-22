@@ -34,10 +34,10 @@ error only appears after the user switches back to the Structure or Page view; t
 ## Impact
 
 Preview-only UX issue: no persisted data, grading, exam state, or configuration is corrupted. A
-failed save leaves the document dirty, and a failed export does not write a file. The main risk is
-that the user believes the action succeeded, leaves the editor, or repeatedly triggers the same
-operation without understanding why nothing happens. Severity is low to moderate depending on how
-often saves and exports fail in normal use.
+failed save leaves the document dirty, and a failed export does not produce a completed export file.
+The main risk is that the user believes the action succeeded, leaves the editor, or repeatedly
+triggers the same operation without understanding why nothing happens. Severity is low to moderate
+depending on how often saves and exports fail in normal use.
 
 ## Reproduction
 
@@ -57,12 +57,12 @@ often saves and exports fail in normal use.
   inspector, but keep the two error channels distinct so preview compilation errors are not confused
   with save failures.
 - Keep the current dirty-state behavior: a failed save must not mark the document clean.
-- Clear the error on a successful save/export and on the next attempt, as the current code does, and
-  avoid showing duplicate alerts when the user returns to a non-preview view.
+- Clear the relevant error on a successful save/export and on the next attempt, as the current code
+  does, and avoid showing duplicate alerts when the user returns to a non-preview view.
 - Remove or update the comment in `TemplateDocumentPage` that documents the current gap once the
   feedback is implemented.
 - Add tests that fail save and export while Preview is active and assert visible feedback, without
-  breaking the existing non-preview error tests.
+  breaking the existing template tests.
 
 ## Acceptance Criteria
 

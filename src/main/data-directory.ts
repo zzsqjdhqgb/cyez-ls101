@@ -265,7 +265,7 @@ export function registerDataDirectoryHandlers(
     relaunchAfterReply()
   })
   ipcMain.handle(DATA_DIRECTORY_CHANNELS.useExisting, async (_event, target: string) => {
-    // 接管已有数据目录：校验标记后只改配置，不做任何复制或删除。
+    // 接管已有数据目录：校验标记后不做任何复制或删除。
     assertNoPendingLegacyCleanup(options)
     await assertNoOldDataDirectory(userDataDir)
     const candidate = await inspectCandidate(userDataDir, target, currentPath)
@@ -457,7 +457,7 @@ async function finishPendingMigration(
   return target
 }
 
-/** 只持久化迁移意图与目录身份，实际复制留待重启后执行。 */
+/** 只持久化迁移意图与目录身份，实际迁移留待重启后执行。 */
 // 先落盘再重启的原因：迁移期间应用仍可能被强杀，只有记录已写入才能在下一次启动恢复。
 async function scheduleMigration(
   userDataDir: string,
@@ -480,7 +480,7 @@ async function scheduleMigration(
     target,
     ...(pendingCleanups.length > 0 ? { pendingCleanups } : {})
   }
-  // 迁移计划先落盘再返回：调度方立即重启，实际复制与提交在下次启动时执行。
+  // 迁移计划先落盘再返回：调度方立即重启，实际迁移与提交在下次启动时执行。
   const migration: MigratingBootstrap =
     mode === 'use-existing'
       ? { ...base, mode, retiredSource: await captureOldDataDirectory(source) }
@@ -1222,7 +1222,7 @@ function parseFileSystemIdentity(value: unknown, message: string): FileSystemIde
   return { device: value.device, inode: value.inode }
 }
 
-/** 解析旧目录记录；迁移来源不允许处于删除中状态。 */
+/** 解析旧目录记录；allowDeleting 为 false 时拒绝删除中的迁移来源。 */
 function parseOldDataDirectory(
   value: unknown,
   allowDeleting: boolean = true

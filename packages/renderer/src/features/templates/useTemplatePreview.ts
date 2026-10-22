@@ -140,7 +140,7 @@ export function useTemplatePreview(
         return application.templates.preview(document, bindings)
       })
       .then((nextResult) => {
-        // 切换文档或绑定后，即使旧编译已完成，也不再采用其结果。
+        // 切换文档或绑定后，旧编译迟到的结果会被丢弃。
         if (current && nextResult) setResult(nextResult)
       })
       .catch((reason: unknown) => {

@@ -3,8 +3,9 @@
  *
  * 数据来自渲染进程经 window.fileStore IPC 桥访问主进程文件存储的各库单例
  * （试卷库、作答库、题型库、模板库、评分单元库），本页不写入任何业务数据。
- * 首屏并行拉取全部统计值，任一请求失败时保留空快照，只把提示切为
- * 「部分状态暂不可用」，不展示半份统计，以免使用者误判数据完整性。
+ * 首屏并行拉取全部统计值；任一请求失败时保留空快照，不展示半份统计。
+ * 失败提示目前只出现在「最近工作」标题，数字仍按空快照的零值渲染，
+ * 见 TODO-workbench-unavailable-statistics.md。
  */
 import { useEffect, useMemo, useState, type JSX } from 'react'
 import {
@@ -43,8 +44,9 @@ interface RecentWorkItem {
 /**
  * 一次汇总加载得到的统计值与最近工作列表。
  *
- * 字段与 EMPTY_SNAPSHOT 完全对应：加载结束前保持全零；汇总失败时同样保留空快照，
- * 因此这些数字是否可信要同时看 loading 与 unavailable。
+ * 字段与 EMPTY_SNAPSHOT 完全对应：加载结束前保持全零；汇总失败时同样保留空快照。
+ * 数字是否可信要同时看 loading 与 unavailable；当前页面尚未按此处理失败状态，
+ * 见 TODO-workbench-unavailable-statistics.md。
  */
 interface WorkbenchSnapshot {
   exams: number
@@ -59,7 +61,8 @@ interface WorkbenchSnapshot {
 
 /**
  * 首屏占位快照，保证 snapshot 始终可读，避免在 JSX 中到处判空。
- * 它与「统计结果确实为零」在数据上无法区分，必须配合 loading 与 unavailable 使用。
+ * 它与「统计结果确实为零」在数据上无法区分，必须配合 loading 与 unavailable 使用；
+ * 当前页面尚未按此处理失败状态，见 TODO-workbench-unavailable-statistics.md。
  */
 const EMPTY_SNAPSHOT: WorkbenchSnapshot = {
   exams: 0,
@@ -137,7 +140,8 @@ export function WorkbenchPage(): JSX.Element {
     // 后续回调据此丢弃结果，避免在已卸载组件上写状态或被旧请求覆盖。
     let active = true
 
-    // 各库独立读取并行进行；任一请求失败时统一显示状态不可用提示。
+    // 各库独立读取并行进行；任一请求失败时记录 unavailable，
+    // 但目前只有「最近工作」标题展示提示，数字仍按零值渲染。
     // 六个读取互不依赖，故全部并行发起；Promise.all 为快速失败语义，
     // 任一失败都会跳过 then 直接进入 catch，成功部分不单独展示。
     void Promise.all([

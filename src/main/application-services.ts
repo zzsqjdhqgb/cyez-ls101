@@ -37,8 +37,8 @@ export function registerApplicationServices(options: ApplicationServiceOptions):
     userDataDirectory,
     workerUrls
   } = options
-  // 旧数据服务与目录切换共用清理状态，归档未完成时阻止更换数据位置。
-  // 归档的哈希校验与文件搬运交给工作线程，避免长时间占用主进程事件循环。
+  // 旧数据服务与目录切换共用清理状态，归档或清理未完成时阻止更换数据位置。
+  // 归档包的创建与哈希校验交给工作线程，避免长时间占用主进程事件循环。
   const legacyDataService = new LegacyDataService(
     userDataDirectory,
     dataDirectory,
@@ -63,7 +63,7 @@ export function registerApplicationServices(options: ApplicationServiceOptions):
   registerReportExportHandlers()
   registerAppInfoHandlers()
   registerLicenseHandlers(createLicenseOptions(userDataDirectory, isLocalIntegrationTest))
-  // 目录切换在此只登记迁移计划并重启应用，实际的复制与校验在下次启动执行。
+  // 目录切换在此只登记迁移计划并重启应用，实际迁移在下次启动执行。
   registerDataDirectoryHandlers(userDataDirectory, dataDirectory, {
     isLegacyCleanupPending: () => legacyDataService.hasPendingCleanup()
   })

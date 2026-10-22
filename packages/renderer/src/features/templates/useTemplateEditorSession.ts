@@ -229,7 +229,7 @@ export function useTemplateEditorSession(
     setError(null)
   }
 
-  // 保存成功返回 true；保存失败返回 false 并保留脏状态，由界面展示错误，用户可再次保存。
+  // 保存成功返回 true；保存失败返回 false 并保留脏状态，同时写入 error 供界面展示，用户可再次保存。
   // 并发保存在请求发出前直接返回 false，不改变状态，也不设置错误；
   // 保存期间组件卸载时同样丢弃结果并返回 false。
   // 成功后把全部快照的 revision 对齐服务端返回值：历史中的文档共享同一持久化标识，
