@@ -123,9 +123,9 @@ export function useTemplatePreview(
   )
 
   useEffect(() => {
-    // 这里用 instancesReady 等待候选实例加载完成，避免把当前文档的 interfaceId 与
-    // 上一次加载的实例选择搭配预览；但该标记在微任务中才失效，切换文档或重新进入
-    // 预览视图的那一轮 effect 执行仍可能读到旧值，见
+    // 这里用 instancesReady 尽量等到候选实例加载完成再编译，避免把当前文档的
+    // interfaceId 与上一次加载的实例选择搭配预览；但该标记在微任务中才失效，切换文档
+    // 或重新进入预览视图的那一轮 effect 执行仍可能读到旧值，见
     // TODO-template-preview-stale-bindings.md。
     // 编译前先清空上一次结果，防止旧文档的预览残留在界面上；refreshToken 让用户可在
     // 文档与绑定都未变化时手动重编。

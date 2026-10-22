@@ -355,8 +355,9 @@ export async function recoverDataDirectory(userDataDir: string, error: unknown):
 }
 
 /** 解析真实路径并排除危险位置，将候选分类为当前、受管或空目录。 */
-// 校验顺序固定：先规范化路径，再排除待清理位置，随后检查根目录/挂载点与目录隔离，
-// 最后判断目录种类；任何一步失败都直接抛出，调用方据此提示用户重新选择，不会留下半成品状态。
+// 校验顺序固定：先规范化路径，再排除待清理位置；当前目录在此直接返回，随后检查
+// 根目录/挂载点与目录隔离，最后区分受管目录与空目录。任何一步失败都直接抛出，
+// 调用方据此提示用户重新选择，不会留下半成品状态。
 async function inspectCandidate(
   userDataDir: string,
   target: string,
@@ -625,7 +626,11 @@ async function removeExistingOwnedStaging(
   await rm(bootstrap.staging, { recursive: true, force: true })
 }
 
-/** 恢复时改选目录需协调旧来源记录，并保留暂时无法清理的事务暂存目录。 */
+/**
+ * 恢复时改选目录需协调旧来源记录，并保留复制类事务中暂时无法清理的暂存目录；
+ * legacy-copy 分支不登记被放弃事务的暂存目录，见
+ * TODO-data-directory-abandoned-staging.md。
+ */
 async function abandonPendingMigration(
   userDataDir: string,
   selected: string

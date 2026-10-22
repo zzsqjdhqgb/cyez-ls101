@@ -46,7 +46,7 @@ page; a retry or reload resolves it once the underlying read works.
 
 ## Reproduction
 
-1. Make one of the six reads reject, for example `examLibrary.listRecords`, while the other five
+1. Make one of the six reads reject, for example `exams.listRecords()`, while the other five
    resolve with empty collections.
 2. Render the workbench and wait for loading to finish.
 3. Observe `0` in the status band, `0 份...` in the quick action details, `0` / `0%` in the pending
