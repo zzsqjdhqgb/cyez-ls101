@@ -25,6 +25,7 @@ export const AIROUTER_CHANNELS = {
   listSpeechVoices: 'airouter:list-speech-voices',
   testSpeechConnection: 'airouter:test-speech-connection',
   probeQwenTtsCuda: 'airouter:probe-qwen-tts-cuda',
+  probeIndexTtsCuda: 'airouter:probe-index-tts-cuda',
   speechSynthesisStart: 'airouter:speech-synthesis-start',
   speechSynthesisAbort: 'airouter:speech-synthesis-abort',
   speechSynthesisEvent: 'airouter:speech-synthesis-event',

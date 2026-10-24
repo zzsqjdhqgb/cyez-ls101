@@ -179,6 +179,37 @@ describe('IndexTtsSynthesizer', () => {
     expect(helper.killed).toBe(true)
   })
 
+  it('routes a CUDA provider request through the CUDA helper', async () => {
+    const helper = new FakeHelper()
+    const spawner = new HelperSpawner(helper)
+    const cudaHelperPath = path.join(directory, 'helper-cuda')
+    await writeFile(cudaHelperPath, 'mock')
+    const synthesizer = new IndexTtsSynthesizer({
+      helperPaths: { cpu: helperPath, cuda: cudaHelperPath },
+      spawnProcess: spawner.spawn
+    })
+
+    await synthesizer.synthesize({ ...request, provider: { ...request.provider, backend: 'cuda' } })
+
+    expect(spawner.spawnProcess).toHaveBeenCalledWith(
+      cudaHelperPath,
+      expect.arrayContaining(['--backend', 'cuda']),
+      expect.any(Object)
+    )
+    await synthesizer.dispose()
+  })
+
+  it('rejects a CUDA provider request when the CUDA helper is missing', async () => {
+    const synthesizer = new IndexTtsSynthesizer({
+      helperPaths: { cpu: helperPath, cuda: path.join(directory, 'missing-cuda-helper') }
+    })
+
+    await expect(
+      synthesizer.synthesize({ ...request, provider: { ...request.provider, backend: 'cuda' } })
+    ).rejects.toThrow(/CUDA helper 不存在/)
+    await synthesizer.dispose()
+  })
+
   it('spawns the CPU helper with the documented arguments and private temp dir', async () => {
     const helper = new FakeHelper()
     const spawner = new HelperSpawner(helper)

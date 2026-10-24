@@ -15,7 +15,7 @@ export type AIRouterLocalSpeechProviderType = Extract<
   'pocket-tts' | 'qwen-tts' | 'index-tts'
 >
 export type AIRouterSpeechProviderKind = 'online' | 'local'
-export type AIRouterQwenTtsBackend = 'cpu' | 'cuda'
+export type AIRouterLocalSpeechBackend = 'cpu' | 'cuda'
 export type AIRouterSpeechRole = 'default' | 'man' | 'woman'
 export type AIRouterSpeechAudioFormat = 'wav' | 'mp3' | 'opus' | 'pcm-s16le'
 
@@ -354,7 +354,7 @@ export interface AIRouterSpeechProviderConfig {
   modelPackageVersion: string
   models: AIRouterModelConfig[]
   voices: AIRouterSpeechVoiceConfig[]
-  backend?: AIRouterQwenTtsBackend
+  backend?: AIRouterLocalSpeechBackend
 }
 
 export interface AIRouterSpeechProviderConfigInput {
@@ -367,7 +367,7 @@ export interface AIRouterSpeechProviderConfigInput {
   modelPackageVersion?: string
   models: AIRouterModelConfig[]
   voices: AIRouterSpeechVoiceConfig[]
-  backend?: AIRouterQwenTtsBackend
+  backend?: AIRouterLocalSpeechBackend
   apiKey?: string
   clearApiKey?: boolean
 }
@@ -494,7 +494,7 @@ export interface AIRouterSpeechTestResult {
   audio: AIRouterGeneratedAudio
 }
 
-export interface AIRouterQwenTtsCudaProbeResult {
+export interface AIRouterLocalTtsCudaProbeResult {
   available: boolean
   device?: string
   description?: string
@@ -502,6 +502,9 @@ export interface AIRouterQwenTtsCudaProbeResult {
   memoryTotal?: number
   message?: string
 }
+
+export type AIRouterQwenTtsCudaProbeResult = AIRouterLocalTtsCudaProbeResult
+export type AIRouterIndexTtsCudaProbeResult = AIRouterLocalTtsCudaProbeResult
 
 export interface AIRouterSpeechVoiceListInput {
   config: AIRouterSpeechProviderConfigInput
@@ -544,6 +547,7 @@ export interface AIRouterClient {
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
   probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
+  probeIndexTtsCuda(): Promise<AIRouterIndexTtsCudaProbeResult>
   listSpeechRecognitionProviderConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
   saveSpeechRecognitionProviderConfig(
     config: AIRouterSpeechRecognitionProviderConfigInput
@@ -617,6 +621,7 @@ export interface AIRouterBridge {
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
   probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
+  probeIndexTtsCuda(): Promise<AIRouterIndexTtsCudaProbeResult>
   listSpeechRecognitionProviderConfigs(): Promise<AIRouterSpeechRecognitionProviderConfigSummary[]>
   saveSpeechRecognitionProviderConfig(
     config: AIRouterSpeechRecognitionProviderConfigInput

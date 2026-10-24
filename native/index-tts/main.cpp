@@ -27,6 +27,7 @@
 #include "audio.h"
 #include "audiocpp.h"
 #include "cJSON.h"
+#include "ggml-backend.h"
 
 #include <algorithm>
 #include <cctype>
@@ -58,6 +59,7 @@ constexpr size_t kMaxResultBytes = 100 * 1024 * 1024;
 struct Options {
     std::string model_path;
     std::string backend = "cpu";
+    std::string probe_backend;
     int threads = 4;
     int device = 0;
     int low_memory = 1;
@@ -105,6 +107,44 @@ bool parse_int_value(const char * value, int min, int max, int & output) {
     return true;
 }
 
+std::string json_escape(const std::string & value);
+
+bool is_cuda_device(ggml_backend_dev_t device) {
+    ggml_backend_reg_t registry = ggml_backend_dev_backend_reg(device);
+    const char * name = registry ? ggml_backend_reg_name(registry) : nullptr;
+    return name && std::strcmp(name, "CUDA") == 0;
+}
+
+// Mirrors the Qwen helper's probe: enumerate ggml backends, initialize the
+// first CUDA device and report its name and memory as a single JSON line on
+// stdout. Used by the Electron main process to enable the CUDA radio option.
+bool probe_cuda_backend() {
+    const size_t device_count = ggml_backend_dev_count();
+    for (size_t index = 0; index < device_count; ++index) {
+        ggml_backend_dev_t device = ggml_backend_dev_get(index);
+        if (!is_cuda_device(device)) continue;
+
+        ggml_backend_t backend = ggml_backend_dev_init(device, nullptr);
+        if (!backend) continue;
+
+        size_t memory_free = 0;
+        size_t memory_total = 0;
+        ggml_backend_dev_memory(device, &memory_free, &memory_total);
+        std::printf(
+            "{\"available\":true,\"backend\":\"cuda\",\"device\":\"%s\","
+            "\"description\":\"%s\",\"memoryFree\":%zu,\"memoryTotal\":%zu}\n",
+            json_escape(ggml_backend_dev_name(device)).c_str(),
+            json_escape(ggml_backend_dev_description(device)).c_str(),
+            memory_free,
+            memory_total);
+        ggml_backend_free(backend);
+        return true;
+    }
+    std::printf("{\"available\":false,\"backend\":\"cuda\","
+                "\"message\":\"CUDA backend or device is unavailable\"}\n");
+    return false;
+}
+
 // argc/argv are normalized to UTF-8 on Windows and to plain char** elsewhere.
 char ** acquire_arguments(int & argc) {
 #ifdef _WIN32
@@ -147,10 +187,12 @@ bool parse_options(int argc, char ** argv, Options & options, std::string & erro
     bool have_threads = false;
     bool have_device = false;
     bool have_low_memory = false;
+    bool have_probe_backend = false;
     for (int index = 1; index < argc; ++index) {
         const std::string argument = argv[index];
         const bool needs_value = argument == "--model" || argument == "--backend" ||
-            argument == "--threads" || argument == "--device" || argument == "--low-memory";
+            argument == "--threads" || argument == "--device" || argument == "--low-memory" ||
+            argument == "--probe-backend";
         if (!needs_value) {
             error = "unknown argument: " + argument;
             return false;
@@ -179,6 +221,17 @@ bool parse_options(int argc, char ** argv, Options & options, std::string & erro
                 return false;
             }
             options.backend = value;
+        } else if (argument == "--probe-backend") {
+            if (have_probe_backend) {
+                error = "--probe-backend must be given once";
+                return false;
+            }
+            have_probe_backend = true;
+            if (value != "cuda") {
+                error = "--probe-backend must be cuda";
+                return false;
+            }
+            options.probe_backend = value;
         } else if (argument == "--threads") {
             if (have_threads) {
                 error = "--threads must be given once";
@@ -211,6 +264,13 @@ bool parse_options(int argc, char ** argv, Options & options, std::string & erro
             }
         }
     }
+    if (have_probe_backend) {
+        if (have_model || have_backend || have_threads || have_device || have_low_memory) {
+            error = "--probe-backend cannot be combined with other options";
+            return false;
+        }
+        return true;
+    }
     if (!have_model || options.model_path.empty()) {
         // The exact message is part of the CI smoke contract.
         error = "An absolute --model path is required";
@@ -228,8 +288,9 @@ void print_usage(const char * program) {
         stderr,
         "Usage:\n"
         "  %s --model ABSOLUTE_MODEL_PATH [--backend cpu|cuda] [--threads N] "
-        "[--device N] [--low-memory 0|1]\n",
-        program);
+        "[--device N] [--low-memory 0|1]\n"
+        "  %s --probe-backend cuda\n",
+        program, program);
 }
 
 std::string json_escape(const std::string & value) {
@@ -488,6 +549,10 @@ int main(int argc, char ** argv) {
         return 1;
     }
     release_arguments(argument_count, owned);
+
+    if (!options.probe_backend.empty()) {
+        return probe_cuda_backend() ? 0 : 1;
+    }
 
     // The ABI is versioned as (major << 16) | (minor << 8) | patch. A helper
     // may run against a runtime with a newer minor (entry points were added)

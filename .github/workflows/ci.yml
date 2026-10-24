@@ -86,6 +86,9 @@ jobs:
             externals/ai/qwen3-tts/runtime/win32-x64
             externals/ai/qwen3-tts/models
             externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cpu-win32-x64.exe
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cuda-win32-x64.exe
+            externals/ai/index-tts/downloads/releases/cublas64_12.dll
+            externals/ai/index-tts/downloads/releases/cublasLt64_12.dll
             externals/ai/index-tts/downloads/releases/index-tts-runtime-manifest.json
             externals/ai/index-tts/runtime/win32-x64
             assets/file-icons
@@ -111,6 +114,9 @@ jobs:
             externals/ai/qwen3-tts/runtime/win32-x64
             externals/ai/qwen3-tts/models
             externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cpu-win32-x64.exe
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cuda-win32-x64.exe
+            externals/ai/index-tts/downloads/releases/cublas64_12.dll
+            externals/ai/index-tts/downloads/releases/cublasLt64_12.dll
             externals/ai/index-tts/downloads/releases/index-tts-runtime-manifest.json
             externals/ai/index-tts/runtime/win32-x64
             assets/file-icons
@@ -271,6 +277,7 @@ jobs:
             externals/ai/qwen3-tts/runtime/linux-x64
             externals/ai/qwen3-tts/models
             externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cpu-linux-x64
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cuda-linux-x64
             externals/ai/index-tts/downloads/releases/index-tts-runtime-manifest.json
             externals/ai/index-tts/runtime/linux-x64
             assets/file-icons
@@ -295,6 +302,7 @@ jobs:
             externals/ai/qwen3-tts/runtime/linux-x64
             externals/ai/qwen3-tts/models
             externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cpu-linux-x64
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cuda-linux-x64
             externals/ai/index-tts/downloads/releases/index-tts-runtime-manifest.json
             externals/ai/index-tts/runtime/linux-x64
             assets/file-icons

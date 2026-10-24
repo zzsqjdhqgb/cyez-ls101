@@ -708,8 +708,13 @@ describe('AIRouterSettingsPage', () => {
     )
   })
 
-  it('keeps Qwen on CPU while CUDA runtime packaging is disabled', async () => {
-    const probeQwenTtsCuda = vi.fn()
+  it('shows the stored backend and lets CUDA probing drive the Qwen backend choice', async () => {
+    const probeQwenTtsCuda = vi.fn().mockResolvedValue({
+      available: true,
+      device: 'CUDA0',
+      description: 'NVIDIA GeForce RTX 5080',
+      memoryTotal: 17 * 1024 ** 3
+    })
     const saveSpeechConfig = vi
       .fn()
       .mockImplementation(async (input: AIRouterSpeechProviderConfigInput) => ({
@@ -734,7 +739,7 @@ describe('AIRouterSettingsPage', () => {
           modelPackageVersion: '',
           models: [],
           voices: [],
-          backend: 'cuda',
+          backend: 'cpu',
           hasApiKey: false
         }
       ])
@@ -745,14 +750,89 @@ describe('AIRouterSettingsPage', () => {
     fireEvent.click(provider)
     const dialog = screen.getByRole('dialog', { name: 'Qwen 本地语音' })
 
-    expect(within(dialog).queryByRole('radiogroup', { name: 'Qwen TTS 计算后端' })).toBeNull()
-    expect(within(dialog).queryByRole('button', { name: '检测 CUDA' })).toBeNull()
-    expect(probeQwenTtsCuda).not.toHaveBeenCalled()
+    const group = within(dialog).getByRole('radiogroup', { name: 'Qwen TTS 计算后端' })
+    expect(within(group).getByRole('radio', { name: /CPU/ })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '检测 CUDA' }))
+    await waitFor(() =>
+      expect(within(dialog).getByText(/CUDA 可用：NVIDIA GeForce RTX 5080/)).toBeInTheDocument()
+    )
+
+    fireEvent.click(within(group).getByRole('radio', { name: /CUDA/ }))
+    expect(within(group).getByRole('radio', { name: /CUDA/ })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
 
     fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
     await waitFor(() =>
       expect(saveSpeechConfig).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'qwen-local', backend: 'cpu' })
+        expect.objectContaining({ id: 'qwen-local', backend: 'cuda' })
+      )
+    )
+  })
+
+  it('resets to CPU when the IndexTTS CUDA probe reports no device', async () => {
+    const probeIndexTtsCuda = vi.fn().mockResolvedValue({
+      available: false,
+      message: 'CUDA backend or device is unavailable'
+    })
+    const saveSpeechConfig = vi
+      .fn()
+      .mockImplementation(async (input: AIRouterSpeechProviderConfigInput) => ({
+        ...input,
+        id: input.id ?? 'index-local',
+        baseUrl: '',
+        modelPackageId: '',
+        modelPackageVersion: '',
+        hasApiKey: false
+      }))
+    const application = applicationWith({
+      probeIndexTtsCuda,
+      saveSpeechConfig,
+      listSpeechConfigs: vi.fn().mockResolvedValue([
+        {
+          id: 'index-local',
+          name: 'IndexTTS 本地语音',
+          kind: 'local',
+          type: 'index-tts',
+          baseUrl: '',
+          modelPackageId: '',
+          modelPackageVersion: '',
+          models: [],
+          voices: [],
+          backend: 'cuda',
+          hasApiKey: false
+        }
+      ])
+    })
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+    const provider = await screen.findByRole('button', { name: /IndexTTS 本地语音/ })
+    expect(within(provider).getByText('CUDA')).toBeInTheDocument()
+    fireEvent.click(provider)
+    const dialog = screen.getByRole('dialog', { name: 'IndexTTS 本地语音' })
+
+    const group = within(dialog).getByRole('radiogroup', { name: 'IndexTTS 计算后端' })
+    expect(within(group).getByRole('radio', { name: /CUDA/ })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '检测 CUDA' }))
+    await waitFor(() =>
+      expect(within(dialog).getByText(/CUDA backend or device is unavailable/)).toBeInTheDocument()
+    )
+    expect(
+      within(group).getByRole('radio', { name: /CPU/ })
+    ).toHaveAttribute('aria-checked', 'true')
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '保存 Provider' }))
+    await waitFor(() =>
+      expect(saveSpeechConfig).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'index-local', backend: 'cpu' })
       )
     )
   })
@@ -884,6 +964,7 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     listSpeechVoices: vi.fn(),
     testSpeechConnection: vi.fn(),
     probeQwenTtsCuda: vi.fn().mockResolvedValue({ available: false }),
+    probeIndexTtsCuda: vi.fn().mockResolvedValue({ available: false }),
     getPronunciationExtensionStatus: vi.fn().mockResolvedValue({
       extensionId: 'charsiu-en-w2v2-pronunciation',
       requiredVersion: '1.0.0',

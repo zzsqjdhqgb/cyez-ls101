@@ -7,27 +7,11 @@
   },
   "runtimeRelease": {
     "repository": "zzsqjdhqgb/cyez-ls101",
-    "version": "0.1.0",
-    "tag": "index-tts-runtime-v0.1.0",
+    "version": "0.2.0",
+    "tag": "index-tts-runtime-v0.2.0",
     "prerelease": true,
-    "published": true,
-    "assets": [
-      {
-        "name": "ls101-index-tts-helper-cpu-linux-x64",
-        "size": 8316776,
-        "sha256": "6b5f91d16f83a8bfdcbbe03b9034350feaa2b7b364edd5bb776ce83e651238d0"
-      },
-      {
-        "name": "ls101-index-tts-helper-cpu-win32-x64.exe",
-        "size": 4788224,
-        "sha256": "7bdde330084e6b3c54e5de2be9a67c5f83ce62c92a4cf23524cb6f75205a5ebb"
-      },
-      {
-        "name": "index-tts-runtime-manifest.json",
-        "size": 1572,
-        "sha256": "1c3d661b5fb6eea97c7e0c84838c0508fe2ea7e610879f0f1d4df139f08d5147"
-      }
-    ]
+    "published": false,
+    "assets": []
   },
   "modelRelease": {
     "repository": "zzsqjdhqgb/cyez-ls101",
@@ -81,7 +65,9 @@
       "file": "native/qwen-tts/voice-design/american-man.wav",
       "provenance": "native/qwen-tts/voice-design/american-man.json",
       "license": "Apache-2.0 (Qwen VoiceDesign model); generated reference audio",
-      "languageCodes": ["en"]
+      "languageCodes": [
+        "en"
+      ]
     },
     {
       "id": "american-woman",
@@ -89,7 +75,9 @@
       "file": "native/qwen-tts/voice-design/american-woman.wav",
       "provenance": "native/qwen-tts/voice-design/american-woman.json",
       "license": "Apache-2.0 (Qwen VoiceDesign model); generated reference audio",
-      "languageCodes": ["en"]
+      "languageCodes": [
+        "en"
+      ]
     }
   ]
 }

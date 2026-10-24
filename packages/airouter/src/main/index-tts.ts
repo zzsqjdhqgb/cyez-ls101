@@ -6,6 +6,8 @@ import path from 'node:path'
 import { app } from 'electron'
 import type {
   AIRouterGeneratedAudio,
+  AIRouterIndexTtsCudaProbeResult,
+  AIRouterLocalSpeechBackend,
   AIRouterSpeechModelPackageManifest,
   AIRouterSpeechModelPackageModel,
   AIRouterSpeechModelPackageVoice
@@ -25,6 +27,8 @@ const DEFAULT_SYNTHESIS_TIMEOUT_MS = 600_000
 const DEFAULT_SHUTDOWN_TIMEOUT_MS = 5_000
 const DEFAULT_IDLE_TIMEOUT_MS = 300_000
 const DEFAULT_MAX_QUEUED_REQUESTS = 32
+const CUDA_PROBE_TIMEOUT_MS = 10_000
+const CUDA_PROBE_OUTPUT_BYTES = 64 * 1024
 const KILL_GRACE_MS = 5_000
 const MAX_STDERR_BYTES = 16 * 1024
 
@@ -66,6 +70,7 @@ interface QueueEntry {
 
 interface SynthesisJob {
   key: string
+  backend: AIRouterLocalSpeechBackend
   modelPath: string
   voicePath: string
   text: string
@@ -75,6 +80,7 @@ interface SynthesisJob {
 
 export interface IndexTtsSynthesizerOptions {
   helperPath?: string
+  helperPaths?: Partial<Record<AIRouterLocalSpeechBackend, string>>
   spawnProcess?: typeof spawn
   startupTimeoutMs?: number
   synthesisTimeoutMs?: number
@@ -109,6 +115,55 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     this.shutdownTimeoutMs = options.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS
     this.idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_IDLE_TIMEOUT_MS
     this.maxQueuedRequests = options.maxQueuedRequests ?? DEFAULT_MAX_QUEUED_REQUESTS
+  }
+
+  async probeCuda(): Promise<AIRouterIndexTtsCudaProbeResult> {
+    const helperPath = this.resolveHelperPath('cuda')
+    try {
+      await assertExecutableExists(helperPath)
+    } catch (error) {
+      return { available: false, message: error instanceof Error ? error.message : String(error) }
+    }
+
+    return new Promise((resolve) => {
+      const child = this.spawnProcess(helperPath, ['--probe-backend', 'cuda'], {
+        stdio: ['ignore', 'pipe', 'pipe'],
+        windowsHide: true
+      })
+      let settled = false
+      let stdout = ''
+      let stderr = ''
+      const finish = (result: AIRouterIndexTtsCudaProbeResult): void => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        resolve(result)
+      }
+      const append = (current: string, chunk: Buffer): string =>
+        `${current}${chunk.toString('utf8')}`.slice(-CUDA_PROBE_OUTPUT_BYTES)
+      child.stdout.on('data', (chunk: Buffer) => {
+        stdout = append(stdout, chunk)
+      })
+      child.stderr.on('data', (chunk: Buffer) => {
+        stderr = append(stderr, chunk)
+      })
+      child.once('error', (error) => finish({ available: false, message: error.message }))
+      child.once('exit', (code) => {
+        const result = parseCudaProbe(stdout)
+        if (code === 0 && result?.available) {
+          finish(result)
+          return
+        }
+        finish({
+          available: false,
+          message: result?.message || stderr.trim() || `CUDA 检测失败（code=${code ?? 'null'}）`
+        })
+      })
+      const timer = setTimeout(() => {
+        if (!child.killed) child.kill()
+        finish({ available: false, message: 'CUDA 检测超时' })
+      }, CUDA_PROBE_TIMEOUT_MS)
+    })
   }
 
   async synthesize(request: AIRouterLocalSpeechRequest): Promise<AIRouterGeneratedAudio> {
@@ -193,14 +248,28 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     // Asset resolution happens before any spawn and stays abortable.
     const modelPath = await abortable(request.resolveAssetPath(modelAsset), request.signal)
     const voicePath = await abortable(request.resolveAssetPath(voiceAsset), request.signal)
+    const backend = request.provider.backend ?? 'cpu'
+    if (backend === 'cuda') {
+      try {
+        await assertExecutableExists(this.resolveHelperPath('cuda'))
+      } catch (error) {
+        throw new Error(
+          'CUDA helper 不存在：请重新执行 yarn install 让 setup 从 Release 下载 ' +
+            'index-tts CUDA 运行时，或将 Provider 切回 CPU',
+          { cause: error }
+        )
+      }
+    }
     const key = JSON.stringify([
       modelPath,
+      backend,
       parameters.load.device,
       parameters.load.threads,
       parameters.load.lowMemory
     ])
     const job: SynthesisJob = {
       key,
+      backend,
       modelPath,
       voicePath,
       text,
@@ -349,7 +418,7 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     if (current) await this.terminateSession(current)
     if (this.exitFailure) throw this.exitFailure
     if (this.disposed) throw new Error('IndexTTS 已关闭')
-    await assertExecutableExists(this.resolveHelperPath())
+    await assertExecutableExists(this.resolveHelperPath(job.backend))
 
     const session = this.spawnSession(job)
     this.currentSession = session
@@ -377,10 +446,10 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
   }
 
   private spawnSession(job: SynthesisJob): HelperSession {
-    const helperPath = this.resolveHelperPath()
+    const helperPath = this.resolveHelperPath(job.backend)
     const args = [
       '--backend',
-      'cpu',
+      job.backend,
       '--model',
       job.modelPath,
       '--device',
@@ -617,8 +686,12 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     return session.terminating
   }
 
-  private resolveHelperPath(): string {
-    return this.options.helperPath ?? resolveHelperPath()
+  private resolveHelperPath(backend: AIRouterLocalSpeechBackend): string {
+    return (
+      this.options.helperPaths?.[backend] ??
+      (backend === 'cpu' ? this.options.helperPath : undefined) ??
+      resolveHelperPath(backend)
+    )
   }
 }
 
@@ -653,9 +726,9 @@ async function abortable<T>(promise: Promise<T>, signal?: AbortSignal): Promise<
   return Promise.race([promise, aborted])
 }
 
-function resolveHelperPath(): string {
+function resolveHelperPath(backend: AIRouterLocalSpeechBackend): string {
   const extension = process.platform === 'win32' ? '.exe' : ''
-  const executable = `ls101-index-tts-helper-cpu${extension}`
+  const executable = `ls101-index-tts-helper-${backend}${extension}`
   const electronApp = app as typeof app & { isPackaged?: boolean; getAppPath?: () => string }
   return electronApp.isPackaged
     ? path.join(
@@ -689,6 +762,23 @@ function helperEnvironment(helperPath: string, temporaryDirectory: string): Node
   environment.TEMP = temporaryDirectory
   environment.TMP = temporaryDirectory
   return environment
+}
+
+function parseCudaProbe(output: string): AIRouterIndexTtsCudaProbeResult | null {
+  try {
+    const value = JSON.parse(output.trim()) as Partial<AIRouterIndexTtsCudaProbeResult>
+    if (typeof value.available !== 'boolean') return null
+    return {
+      available: value.available,
+      device: typeof value.device === 'string' ? value.device : undefined,
+      description: typeof value.description === 'string' ? value.description : undefined,
+      memoryFree: typeof value.memoryFree === 'number' ? value.memoryFree : undefined,
+      memoryTotal: typeof value.memoryTotal === 'number' ? value.memoryTotal : undefined,
+      message: typeof value.message === 'string' ? value.message : undefined
+    }
+  } catch {
+    return null
+  }
 }
 
 async function assertExecutableExists(filePath: string): Promise<void> {

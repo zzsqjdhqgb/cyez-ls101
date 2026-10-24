@@ -20,6 +20,36 @@
         "name": "qwen-tts-runtime-manifest.json",
         "size": 1735,
         "sha256": "a104310e7be74bc153853606e0172c86a2d6cb148eee6648076a15685bff9525"
+      },
+      {
+        "name": "ls101-qwen-tts-helper-cuda-linux-x64",
+        "size": 909257360,
+        "sha256": "f443b51191d3f495c5444a52c2cdf40b41e5642e9cdfaa89d9b539b73891b63b"
+      },
+      {
+        "name": "ls101-qwen-tts-helper-cuda-win32-x64.exe",
+        "size": 111437824,
+        "sha256": "d1442eef21c4bf63729921396ab2aa305d875fa50f83d46bef9ccb4d655ba99b"
+      },
+      {
+        "name": "cublas64_12.dll",
+        "size": 113716224,
+        "sha256": "9513540e4ec4c51ee9e7304138c2cc255c29a8c181f9e80c38efa25738becd99"
+      },
+      {
+        "name": "cublasLt64_12.dll",
+        "size": 674667520,
+        "sha256": "b199d1ff892a81b7fd3d57ba1781549609b41500b36008fef326038393ad46c7"
+      },
+      {
+        "name": "nvJitLink_120_0.dll",
+        "size": 77860352,
+        "sha256": "959d3cb44527ec884db8dc20772520b584dbe7d622d11b0530e6326417078b3e"
+      },
+      {
+        "name": "LICENSE.NVIDIA-CUDA.html",
+        "size": 102279,
+        "sha256": "6180cc2a02db890cf87ba52f078b7a222b04dcb3c2650865763d4f32ad663a5c"
       }
     ]
   },

@@ -174,6 +174,9 @@ const airouterBridge: AIRouterBridge = {
   probeQwenTtsCuda() {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.probeQwenTtsCuda)
   },
+  probeIndexTtsCuda() {
+    return ipcRenderer.invoke(AIROUTER_CHANNELS.probeIndexTtsCuda)
+  },
   listSpeechRecognitionProviderConfigs() {
     return ipcRenderer.invoke(AIROUTER_CHANNELS.listRecognitionConfigs)
   },

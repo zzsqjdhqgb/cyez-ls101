@@ -33,12 +33,16 @@ that file before publishing assets or changing the locally assembled model packa
   downloads CUDA artifacts and packaging excludes them. `LS101_SKIP_INDEX_TTS_DOWNLOAD=1` skips
   both downloads and the CUDA cleanup so locally built development artifacts survive. The CPU
   helper is stored in application resources rather than the user's data directory.
-- Application execution always passes `--backend cpu`. The Provider configuration exposes no
-  backend field; the synthesizer resolves only `ls101-index-tts-helper-cpu` and never spawns the
-  CUDA helper.
+- The Provider configuration exposes a `backend` field (`cpu`, the default, or `cuda`). CUDA is
+  selected in the settings UI after a probe (`--probe-backend cuda`) reports a usable device, and
+  the synthesizer then spawns `ls101-index-tts-helper-cuda` with `--backend cuda`. The session key
+  includes the backend, so switching backends restarts the process. Setup downloads the CUDA
+  helper (and on Windows the cuBLAS DLLs beside it) from the runtime Release alongside the CPU
+  helper, pinned in `assets.json`; installers still ship CPU-only via the packaging filters, and
+  a CUDA request without the helper fails with a clear message.
 - Unlike Qwen TTS, a voice is not a fixed speaker embedding: every request carries the reference
   WAV (zero-shot cloning), so switching voices neither restarts the helper nor changes the model.
-  The session key is `[modelPath, device, threads, lowMemory]`; only a model or load-parameter
+  The session key is `[modelPath, backend, device, threads, lowMemory]`; only a model or load-parameter
   change restarts the process, and the old process must fully exit (including its temporary
   directory) before the replacement spawns.
 - The Electron main process communicates with the helper through a bounded binary protocol:

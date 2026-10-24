@@ -4,6 +4,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createHash } = require('node:crypto')
 const { access, mkdir, mkdtemp, readFile, rm, writeFile, stat } = require('node:fs/promises')
+const { readFileSync } = require('node:fs')
 const { tmpdir } = require('node:os')
 const path = require('node:path')
 
@@ -23,7 +24,7 @@ test('selects runtime-only downloads for product documentation setup', async () 
   )
 })
 
-test('skip mode exits before cleaning locally built CUDA runtime files', async (context) => {
+test('skip mode leaves locally staged CUDA runtime files untouched', async (context) => {
   const { main } = await modulePromise
   const runtimeRoot = await mkdtemp(path.join(tmpdir(), 'index-tts-skip-'))
   context.after(() => rm(runtimeRoot, { recursive: true, force: true }))
@@ -136,18 +137,18 @@ test('rejects a merge whose parts do not reconstruct the pinned bytes', async (c
   await assert.rejects(access(destination))
 })
 
-test('selects the pinned platform helper from runtime release metadata', async () => {
+test('selects the pinned platform helpers from runtime release metadata', async () => {
   const { runtimeTarget, selectRuntimeReleaseAssets } = await modulePromise
   const target = runtimeTarget('linux', 'x64')
   const digest = 'a'.repeat(64)
   const release = {
-    tag_name: 'index-tts-runtime-v0.1.0',
+    tag_name: JSON.parse(readFileSync('scripts/index-tts/assets.json', 'utf8')).runtimeRelease.tag,
     draft: false,
     prerelease: true,
     assets: [
       ...Object.values(target.helpers).map((helper) => asset(helper.name, digest)),
-      asset('ls101-index-tts-helper-cuda-linux-x64', digest),
-      asset('index-tts-runtime-manifest.json', digest)
+      asset('index-tts-runtime-manifest.json', digest),
+      asset('LICENSE.NVIDIA-CUDA.html', digest)
     ]
   }
 
@@ -159,7 +160,14 @@ test('selects the pinned platform helper from runtime release metadata', async (
       ])
     ),
     dependencies: [],
-    licenses: [],
+    licenses: [
+      {
+        name: 'LICENSE.NVIDIA-CUDA.html',
+        size: 1,
+        digest,
+        url: 'https://example.test/LICENSE.NVIDIA-CUDA.html'
+      }
+    ],
     manifest: {
       name: 'index-tts-runtime-manifest.json',
       size: 1,
@@ -250,89 +258,26 @@ test('atomically replaces a wrong staged runtime path with a verified helper', a
   }
 })
 
-test('uses the canonical helper filename on Windows', async () => {
+test('uses the canonical helper filenames on Windows', async () => {
   const { runtimeTarget } = await modulePromise
   assert.deepEqual(runtimeTarget('win32', 'x64'), {
     directory: 'win32-x64',
-    dependencies: [],
-    licenses: [],
+    dependencies: [
+      { name: 'cublas64_12.dll', file: 'cublas64_12.dll' },
+      { name: 'cublasLt64_12.dll', file: 'cublasLt64_12.dll' }
+    ],
+    licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
     helpers: {
       cpu: {
         name: 'ls101-index-tts-helper-cpu-win32-x64.exe',
         executable: 'ls101-index-tts-helper-cpu.exe'
+      },
+      cuda: {
+        name: 'ls101-index-tts-helper-cuda-win32-x64.exe',
+        executable: 'ls101-index-tts-helper-cuda.exe'
       }
     }
   })
-})
-
-test('lists the CUDA prefixes setup must remove while CUDA packaging is disabled', async () => {
-  const { disabledCudaRuntimePrefixes, matchesDisabledCudaRuntimePrefix } = await modulePromise
-
-  for (const name of ['ls101-index-tts-helper-cuda', 'libcublas.so.12', 'libcufft.so.11']) {
-    assert.equal(matchesDisabledCudaRuntimePrefix(name, disabledCudaRuntimePrefixes('linux')), true)
-  }
-  for (const name of [
-    'ls101-index-tts-helper-cuda.exe',
-    'cublas64_12.dll',
-    'cublasLt64_12.dll',
-    'cudart64_12.dll',
-    'cufft64_11.dll',
-    'nvJitLink_120_0.dll',
-    'LICENSE.NVIDIA-CUDA.html'
-  ]) {
-    assert.equal(matchesDisabledCudaRuntimePrefix(name, disabledCudaRuntimePrefixes('win32')), true)
-  }
-  for (const name of ['ls101-index-tts-helper-cpu', 'ls101-index-tts-helper-cpu.exe']) {
-    assert.equal(matchesDisabledCudaRuntimePrefix(name, disabledCudaRuntimePrefixes('linux')), false)
-    assert.equal(
-      matchesDisabledCudaRuntimePrefix(name, disabledCudaRuntimePrefixes('win32')),
-      false
-    )
-  }
-})
-
-test('removes staged CUDA files for every platform without removing CPU helpers', async (context) => {
-  const { cleanupStagedCudaRuntimes } = await modulePromise
-  const runtimeRoot = await mkdtemp(path.join(tmpdir(), 'index-tts-runtime-'))
-  context.after(() => rm(runtimeRoot, { recursive: true, force: true }))
-  const linuxDirectory = path.join(runtimeRoot, 'linux-x64')
-  const windowsDirectory = path.join(runtimeRoot, 'win32-x64')
-  await Promise.all([
-    mkdir(linuxDirectory, { recursive: true }),
-    mkdir(windowsDirectory, { recursive: true })
-  ])
-  const linuxCudaHelper = path.join(linuxDirectory, 'ls101-index-tts-helper-cuda')
-  const linuxCudaLibrary = path.join(linuxDirectory, 'libcublasLt.so.12')
-  const windowsCpuHelper = path.join(windowsDirectory, 'ls101-index-tts-helper-cpu.exe')
-  const windowsCudaFiles = [
-    'ls101-index-tts-helper-cuda.exe',
-    'cublas64_12.dll',
-    'cublasLt64_12.dll',
-    'cudart64_12.dll',
-    'cufft64_11.dll',
-    'nvJitLink_120_0.dll',
-    'LICENSE.NVIDIA-CUDA.html'
-  ].map((file) => path.join(windowsDirectory, file))
-  await Promise.all([
-    writeFile(linuxCudaHelper, 'cuda'),
-    writeFile(linuxCudaLibrary, 'cuda'),
-    writeFile(windowsCpuHelper, 'cpu'),
-    ...windowsCudaFiles.map((file) => writeFile(file, 'cuda'))
-  ])
-
-  await cleanupStagedCudaRuntimes(runtimeRoot)
-
-  await access(windowsCpuHelper)
-  await assert.rejects(access(linuxCudaHelper))
-  await assert.rejects(access(linuxCudaLibrary))
-  await Promise.all(windowsCudaFiles.map((file) => assert.rejects(access(file))))
-})
-
-test('tolerates missing runtime directories during CUDA cleanup', async () => {
-  const { cleanupStagedCudaRuntimes } = await modulePromise
-  const runtimeRoot = await mkdtemp(path.join(tmpdir(), 'index-tts-empty-'))
-  await rm(runtimeRoot, { recursive: true, force: true })
-  await cleanupStagedCudaRuntimes(runtimeRoot)
 })
 
 test('rejects release assets without the GitHub API digest', async () => {

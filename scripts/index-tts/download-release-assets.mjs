@@ -7,7 +7,6 @@ import {
   copyFile,
   mkdir,
   open,
-  readdir,
   readFile,
   rename,
   rm,
@@ -62,11 +61,15 @@ export function runtimeTarget(platform = process.platform, architecture = proces
     return {
       directory: 'linux-x64',
       dependencies: [],
-      licenses: [],
+      licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
       helpers: {
         cpu: {
           name: 'ls101-index-tts-helper-cpu-linux-x64',
           executable: 'ls101-index-tts-helper-cpu'
+        },
+        cuda: {
+          name: 'ls101-index-tts-helper-cuda-linux-x64',
+          executable: 'ls101-index-tts-helper-cuda'
         }
       }
     }
@@ -74,74 +77,24 @@ export function runtimeTarget(platform = process.platform, architecture = proces
   if (platform === 'win32') {
     return {
       directory: 'win32-x64',
-      dependencies: [],
-      licenses: [],
+      dependencies: [
+        { name: 'cublas64_12.dll', file: 'cublas64_12.dll' },
+        { name: 'cublasLt64_12.dll', file: 'cublasLt64_12.dll' }
+      ],
+      licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
       helpers: {
         cpu: {
           name: 'ls101-index-tts-helper-cpu-win32-x64.exe',
           executable: 'ls101-index-tts-helper-cpu.exe'
+        },
+        cuda: {
+          name: 'ls101-index-tts-helper-cuda-win32-x64.exe',
+          executable: 'ls101-index-tts-helper-cuda.exe'
         }
       }
     }
   }
   return null
-}
-
-// CUDA artifacts are published for native runtime development only. Setup
-// removes them so packaging never ships a CUDA helper or toolkit DLL, and
-// `LS101_SKIP_INDEX_TTS_DOWNLOAD=1` keeps locally built ones for development.
-export function disabledCudaRuntimePrefixes(platform = process.platform) {
-  if (platform === 'linux') {
-    return [
-      'ls101-index-tts-helper-cuda',
-      'libcublas',
-      'libcublasLt',
-      'libcudart',
-      'libcufft',
-      'libnvJitLink',
-      'LICENSE.NVIDIA-CUDA.html'
-    ]
-  }
-  if (platform === 'win32') {
-    return [
-      'ls101-index-tts-helper-cuda',
-      'cublas',
-      'cublasLt',
-      'cudart',
-      'cufft',
-      'nvJitLink',
-      'LICENSE.NVIDIA-CUDA.html'
-    ]
-  }
-  return []
-}
-
-export function matchesDisabledCudaRuntimePrefix(name, prefixes) {
-  return prefixes.some((prefix) => name.startsWith(prefix))
-}
-
-export async function cleanupDisabledCudaRuntimeFiles(
-  runtimeDirectory,
-  platform = process.platform
-) {
-  const prefixes = disabledCudaRuntimePrefixes(platform)
-  const entries = await readdir(runtimeDirectory).catch((error) => {
-    if (error?.code === 'ENOENT' || error?.code === 'ENOTDIR') return []
-    throw error
-  })
-  for (const name of entries) {
-    if (!matchesDisabledCudaRuntimePrefix(name, prefixes)) continue
-    await rm(path.join(runtimeDirectory, name), { force: true }).catch((error) => {
-      if (error?.code !== 'ENOENT' && error?.code !== 'ENOTDIR') throw error
-    })
-  }
-}
-
-export async function cleanupStagedCudaRuntimes(runtimeRoot) {
-  await Promise.all([
-    cleanupDisabledCudaRuntimeFiles(path.join(runtimeRoot, 'linux-x64'), 'linux'),
-    cleanupDisabledCudaRuntimeFiles(path.join(runtimeRoot, 'win32-x64'), 'win32')
-  ])
 }
 
 export function downloadMode(environment = process.env) {
@@ -528,6 +481,19 @@ async function ensureRuntimePublished({
       source: path.join(releaseDirectory, asset.name)
     }
   })
+  stagedRuntimeAssets.push(
+    ...[...target.dependencies, ...target.licenses].map((entry) => {
+      const asset =
+        [...runtimeAssets.dependencies, ...runtimeAssets.licenses].find(
+          (candidate) => candidate.name === entry.name
+        ) ?? null
+      if (!asset) throw new Error(`IndexTTS Release 缺少运行时文件：${entry.name}`)
+      return {
+        ...managedAsset(asset, entry.file),
+        source: path.join(releaseDirectory, asset.name)
+      }
+    })
+  )
   const stagedRuntime = await ensureAssetSet({
     boundary,
     root: runtimeDirectory,
@@ -693,7 +659,6 @@ export async function main(options = {}) {
   } else {
     await ensureRuntimeLocalBuild(runtimeDirectory, target)
   }
-  await cleanupStagedCudaRuntimes(runtimeRoot)
 
   if (mode === 'runtime-only') {
     console.log('[index-tts] model verification skipped in runtime-only mode')
