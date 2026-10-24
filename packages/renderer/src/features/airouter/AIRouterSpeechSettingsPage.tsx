@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import type {
   AIRouterModelConfig,
-  AIRouterQwenTtsBackend,
+  AIRouterLocalSpeechBackend,
   AIRouterSpeechModelPackageSummary,
   AIRouterSpeechProviderConfigInput,
   AIRouterSpeechProviderConfigSummary,
@@ -14,12 +14,14 @@ import {
   AudioLines,
   Box,
   ChevronRight,
+  Cpu,
   Download,
   Eye,
   EyeOff,
   FolderOpen,
   Plus,
   Save,
+  Search,
   TestTube2,
   Trash2,
   Upload,
@@ -54,13 +56,14 @@ interface SpeechProviderDraft {
   modelPackageVersion: string
   models: AIRouterModelConfig[]
   voices: AIRouterSpeechVoiceConfig[]
-  backend: AIRouterQwenTtsBackend
+  backend: AIRouterLocalSpeechBackend
   apiKey: string
   hasApiKey: boolean
 }
 
 type SpeechFeedbackScope =
   | 'api-key'
+  | 'cuda'
   | 'package'
   | 'models'
   | 'voices'
@@ -73,14 +76,16 @@ const providerLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   elevenlabs: 'ElevenLabs',
   'pocket-tts': 'Pocket TTS (WASM)',
-  'qwen-tts': 'Qwen3-TTS 0.6B'
+  'qwen-tts': 'Qwen3-TTS 0.6B',
+  'index-tts': 'IndexTTS 2.5'
 }
 
 const modelPackageLabels: Record<AIRouterSpeechProviderType, string> = {
   'openai-compatible': 'OpenAI Compatible',
   elevenlabs: 'ElevenLabs',
   'pocket-tts': 'Pocket TTS',
-  'qwen-tts': 'Qwen3-TTS 0.6B'
+  'qwen-tts': 'Qwen3-TTS 0.6B',
+  'index-tts': 'IndexTTS 2.5'
 }
 
 function defaultOnlineBaseUrl(type: AIRouterSpeechProviderType): string {
@@ -115,6 +120,7 @@ export function AIRouterSpeechSettingsPage({
   const [deletePackageTarget, setDeletePackageTarget] =
     useState<AIRouterSpeechModelPackageSummary | null>(null)
   const [testAudioUrl, setTestAudioUrl] = useState<string | null>(null)
+  const [cudaAvailable, setCudaAvailable] = useState(false)
 
   const loadSettings = useCallback(async (): Promise<void> => {
     const requestId = loadRequest.current + 1
@@ -211,11 +217,16 @@ export function AIRouterSpeechSettingsPage({
     setApiKeyVisible(false)
     setApiKeyBaseline('')
     setApiKeyLoaded(false)
+    setCudaAvailable(false)
     setFeedback({})
   }
 
   const openEditor = (nextDraft: SpeechProviderDraft): void => {
     resetEditorState()
+    setCudaAvailable(
+      (nextDraft.type === 'qwen-tts' || nextDraft.type === 'index-tts') &&
+        nextDraft.backend === 'cuda'
+    )
     setDraft(nextDraft)
   }
 
@@ -306,7 +317,9 @@ export function AIRouterSpeechSettingsPage({
                   <span className={styles.providerMeta}>
                     <span>{providerLabels[config.type]}</span>
                     <span>{config.kind === 'local' ? '本地' : '在线'}</span>
-                    {config.type === 'qwen-tts' ? <span>CPU</span> : null}
+                    {config.type === 'qwen-tts' || config.type === 'index-tts' ? (
+                      <span>{(config.backend ?? 'cpu').toUpperCase()}</span>
+                    ) : null}
                     <span>{config.models.filter((model) => model.enabled).length} 个模型</span>
                     <span>{config.voices.filter((voice) => voice.enabled).length} 个音色</span>
                   </span>
@@ -501,6 +514,7 @@ export function AIRouterSpeechSettingsPage({
                       <>
                         <option value="pocket-tts">Pocket TTS (WASM)</option>
                         <option value="qwen-tts">Qwen3-TTS 0.6B</option>
+                        <option value="index-tts">IndexTTS 2.5</option>
                       </>
                     )}
                   </select>
@@ -573,6 +587,82 @@ export function AIRouterSpeechSettingsPage({
                   </>
                 ) : null}
               </SettingsSection>
+
+              {draft.kind === 'local' &&
+              (draft.type === 'qwen-tts' || draft.type === 'index-tts') ? (
+                <SettingsSection title="计算后端">
+                  <SettingsRow label="后端">
+                    <div className={styles.backendControl}>
+                      <div
+                        aria-label={`${draft.type === 'qwen-tts' ? 'Qwen TTS' : 'IndexTTS'} 计算后端`}
+                        className={styles.backendSegmented}
+                        role="radiogroup"
+                      >
+                        <button
+                          aria-checked={draft.backend === 'cpu'}
+                          className={styles.backendOption}
+                          data-selected={draft.backend === 'cpu'}
+                          disabled={Boolean(busy)}
+                          onClick={() => setDraft({ ...draft, backend: 'cpu' })}
+                          role="radio"
+                          type="button"
+                        >
+                          <Cpu aria-hidden="true" />
+                          CPU
+                        </button>
+                        <button
+                          aria-checked={draft.backend === 'cuda'}
+                          className={styles.backendOption}
+                          data-selected={draft.backend === 'cuda'}
+                          disabled={Boolean(busy) || !cudaAvailable}
+                          onClick={() => setDraft({ ...draft, backend: 'cuda' })}
+                          role="radio"
+                          type="button"
+                        >
+                          CUDA
+                        </button>
+                      </div>
+                      <Button
+                        icon={Search}
+                        disabled={Boolean(busy)}
+                        onClick={() =>
+                          void run(
+                            'cuda',
+                            async () => {
+                              const result =
+                                draft.type === 'qwen-tts'
+                                  ? await application.probeQwenTtsCuda()
+                                  : await application.probeIndexTtsCuda()
+                              if (!result.available) {
+                                setCudaAvailable(false)
+                                setDraft((current) =>
+                                  current && current.type === draft.type
+                                    ? { ...current, backend: 'cpu' }
+                                    : current
+                                )
+                                throw new Error(result.message || '未检测到可用的 CUDA 设备')
+                              }
+                              setCudaAvailable(true)
+                              const device = result.description || result.device || 'CUDA 设备'
+                              const memory = result.memoryTotal
+                                ? `，显存 ${(result.memoryTotal / 1024 ** 3).toFixed(1)} GiB`
+                                : ''
+                              setFeedback((current) => ({
+                                ...current,
+                                cuda: { kind: 'success', text: `CUDA 可用：${device}${memory}` }
+                              }))
+                            },
+                            'cuda'
+                          )
+                        }
+                      >
+                        检测 CUDA
+                      </Button>
+                      <AIRouterOperationFeedback value={feedback.cuda} />
+                    </div>
+                  </SettingsRow>
+                </SettingsSection>
+              ) : null}
 
               {draft.kind === 'local' ? (
                 localPackages.length ? (
@@ -1038,6 +1128,9 @@ function ModelVoiceSections({
           onChange={(models) => setDraft({ ...draft, models })}
         />
       </SettingsSection>
+      {draft.type === 'index-tts' ? (
+        <IndexTtsParametersSection modelPackage={modelPackage} />
+      ) : null}
       <SettingsSection title="启用音色" description="模型包中的音色适用于包内全部模型。">
         <ToggleList
           empty="模型包中没有音色。"
@@ -1048,6 +1141,71 @@ function ModelVoiceSections({
       </SettingsSection>
     </>
   )
+}
+
+// IndexTTS has no per-Provider runtime settings: threads, language, maxTokens
+// and seed are carried by the model package manifest, so the editor shows the
+// values the installed package will run with (the CLI-side knobs are the
+// package builder's).
+function IndexTtsParametersSection({
+  modelPackage
+}: {
+  modelPackage: AIRouterSpeechModelPackageSummary
+}): JSX.Element {
+  const parameters = modelPackage.models[0]?.parameters as
+    | {
+        load?: { threads?: unknown; device?: unknown; lowMemory?: unknown }
+        synthesis?: { language?: unknown; maxTokens?: unknown; seed?: unknown }
+      }
+    | undefined
+  const load = parameters?.load ?? {}
+  const synthesis = parameters?.synthesis ?? {}
+  const seed =
+    typeof synthesis.seed === 'number' && Number.isSafeInteger(synthesis.seed)
+      ? String(synthesis.seed)
+      : '随机'
+  return (
+    <SettingsSection
+      title="IndexTTS 运行参数"
+      description="参数随模型包提供；重新打包可在 yarn index-tts:build-package 时调整。"
+    >
+      <SettingsRow label="推理线程">
+        <span className={styles.parameterValue}>{formatParameterNumber(load.threads, 4)}</span>
+      </SettingsRow>
+      <SettingsRow label="合成语言">
+        <span className={styles.parameterValue}>
+          {typeof synthesis.language === 'string' && synthesis.language
+            ? languageLabel(synthesis.language)
+            : '自动'}
+        </span>
+      </SettingsRow>
+      <SettingsRow label="最大音频 Token">
+        <span className={styles.parameterValue}>
+          {formatParameterNumber(synthesis.maxTokens, 1500)}
+        </span>
+      </SettingsRow>
+      <SettingsRow label="随机种子">
+        <span className={styles.parameterValue}>{seed}</span>
+      </SettingsRow>
+    </SettingsSection>
+  )
+}
+
+const indexTtsLanguageLabels: Record<string, string> = {
+  auto: '自动',
+  zh: '中文',
+  en: '英语',
+  ja: '日语',
+  es: '西班牙语',
+  ar: '阿拉伯语'
+}
+
+function languageLabel(language: string): string {
+  return indexTtsLanguageLabels[language] ?? language
+}
+
+function formatParameterNumber(value: unknown, fallback: number): string {
+  return typeof value === 'number' && Number.isSafeInteger(value) ? String(value) : String(fallback)
 }
 
 function ManualEntry({
@@ -1150,7 +1308,7 @@ function fromConfig(config: AIRouterSpeechProviderConfigSummary): SpeechProvider
     ...config,
     models: config.models.map((model) => ({ ...model })),
     voices: config.voices.map((voice) => ({ ...voice })),
-    backend: config.type === 'qwen-tts' ? 'cpu' : (config.backend ?? 'cpu'),
+    backend: config.backend ?? 'cpu',
     apiKey: ''
   }
 }
@@ -1169,7 +1327,10 @@ function toInput(
     baseUrl: draft.kind === 'online' ? draft.baseUrl : undefined,
     modelPackageId: draft.kind === 'local' ? draft.modelPackageId : undefined,
     modelPackageVersion: draft.kind === 'local' ? draft.modelPackageVersion : undefined,
-    backend: draft.kind === 'local' && draft.type === 'qwen-tts' ? 'cpu' : undefined,
+    backend:
+      draft.kind === 'local' && (draft.type === 'qwen-tts' || draft.type === 'index-tts')
+        ? draft.backend
+        : undefined,
     models: draft.models,
     voices: draft.voices,
     apiKey:

@@ -1,0 +1,22 @@
+NVIDIA CUDA Toolkit 12.8 runtime libraries
+===========================================
+
+The IndexTTS (and Qwen TTS) runtime Releases redistribute the following NVIDIA
+CUDA Toolkit 12.8 runtime libraries so a locally built CUDA helper can run on a
+development machine:
+
+  - cublas / cublasLt (cuBLAS)
+  - cudart (CUDA runtime)
+  - cufft (cuFFT)
+  - nvJitLink
+
+These binaries are distributed under the NVIDIA CUDA Toolkit End User License
+Agreement, available at https://docs.nvidia.com/cuda/eula/index.html (a copy is
+published as LICENSE.NVIDIA-CUDA.html alongside the runtime assets). They are
+not part of the application's installation packages: application builds always
+use the CPU helper, and the CUDA assets exist only for native runtime
+development.
+
+The application itself does not distribute these libraries to end users; this
+notice records the redistribution that happens through the repository's GitHub
+Releases.

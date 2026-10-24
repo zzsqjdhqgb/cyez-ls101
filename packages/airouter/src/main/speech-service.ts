@@ -412,12 +412,12 @@ export class AIRouterSpeechService {
       throw new Error('离线语音 Provider 类型无效')
     }
     if (
-      input.type === 'qwen-tts' &&
+      (input.type === 'qwen-tts' || input.type === 'index-tts') &&
       input.backend !== undefined &&
       input.backend !== 'cpu' &&
       input.backend !== 'cuda'
     ) {
-      throw new Error('Qwen TTS 计算后端无效')
+      throw new Error('本地 TTS 计算后端无效')
     }
     if (input.kind === 'online') {
       const baseUrl = (
@@ -460,7 +460,9 @@ export class AIRouterSpeechService {
       modelPackageVersion,
       models: modelPackageId ? models : [],
       voices: modelPackageId ? voices : [],
-      ...(input.type === 'qwen-tts' ? { backend: 'cpu' as const } : {})
+      ...(input.type === 'qwen-tts' || input.type === 'index-tts'
+        ? { backend: input.backend ?? 'cpu' }
+        : {})
     }
   }
 
@@ -486,13 +488,7 @@ export class AIRouterSpeechService {
     const value = await this.configStorage.read<JsonValue>({ scope: ['airouter'], key: CONFIG_KEY })
     if (!value) return { version: CONFIG_VERSION, providers: [] }
     if (!isStoredDocument(value)) throw new Error('语音 Provider 配置数据无效')
-    const document: StoredDocument = value
-    return {
-      ...document,
-      providers: document.providers.map((config) =>
-        config.type === 'qwen-tts' ? { ...config, backend: 'cpu' } : config
-      )
-    }
+    return value
   }
 
   private writeDocument(document: StoredDocument): Promise<void> {
@@ -533,7 +529,8 @@ function assertProviderConfigInput(
     candidate.type !== 'openai-compatible' &&
     candidate.type !== 'elevenlabs' &&
     candidate.type !== 'pocket-tts' &&
-    candidate.type !== 'qwen-tts'
+    candidate.type !== 'qwen-tts' &&
+    candidate.type !== 'index-tts'
   ) {
     throw new Error('语音 Provider 类型无效')
   }
@@ -580,7 +577,8 @@ function isProviderConfig(value: unknown): value is AIRouterSpeechProviderConfig
     (candidate.type === 'openai-compatible' ||
       candidate.type === 'elevenlabs' ||
       candidate.type === 'pocket-tts' ||
-      candidate.type === 'qwen-tts') &&
+      candidate.type === 'qwen-tts' ||
+      candidate.type === 'index-tts') &&
     typeof candidate.baseUrl === 'string' &&
     typeof candidate.modelPackageId === 'string' &&
     typeof candidate.modelPackageVersion === 'string' &&

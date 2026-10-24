@@ -34,14 +34,16 @@ assembled model package.
   are left untouched. The CPU helper is stored in application resources rather than the user's data
   directory.
 - A helper loads the Base talker, speech tokenizer/vocoder, and one 1024-float speaker embedding,
-  then remains alive for serialized synthesis requests. Application execution always passes
-  `--backend cpu`.
-- Qwen TTS Provider configuration is normalized to `cpu` in the Electron main process. This applies
-  to API writes, transient connection tests, and previously stored `cuda` values. The synthesizer
-  also forces CPU before resolving a helper as a final boundary check.
+  then remains alive for serialized synthesis requests.
+- The Provider configuration carries a `backend` field (`cpu`, the default, or `cuda`). CUDA is
+  selected in the settings UI after a probe (`--probe-backend cuda`) reports a usable device; the
+  synthesizer then spawns the CUDA helper. Setup downloads the CUDA helper (and on Windows the
+  cuBLAS/cuBLASLt/nvJitLink DLLs beside it) from the runtime Release alongside the CPU helper,
+  pinned in `assets.json`; installers still ship CPU-only via the packaging filters, and a CUDA
+  request without the helper fails with a clear message.
 - The Electron main process communicates with the selected helper through a bounded binary
-  protocol. CUDA probing remains available only for native runtime development and is not part of
-  the application configuration or synthesis flow.
+  protocol. CUDA probing (`probeQwenTtsCuda`) is part of the settings flow and gates the CUDA
+  option; a failed probe resets the selection to CPU.
 - The model Release contains two raw GGUF assets. A local model ZIP combines those models with one
   or more Git-managed `.spk` files. The Electron main process resolves content-addressed installed
   assets and passes every model and speaker file to the helper by its absolute path.

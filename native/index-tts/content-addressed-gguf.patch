@@ -1,0 +1,78 @@
+diff --git a/include/engine/framework/assets/tensor_source.h b/include/engine/framework/assets/tensor_source.h
+index 12321a5..fb31a0f 100644
+--- a/include/engine/framework/assets/tensor_source.h
++++ b/include/engine/framework/assets/tensor_source.h
+@@ -206,6 +206,12 @@ void convert_tensor_sources_to_gguf(const std::vector<TensorSourceInput> & input
+                                     GgufConversionOptions options = {});
+ void convert_tensor_source_to_gguf(const std::filesystem::path & input_path, const std::filesystem::path & output_path,
+                                    TensorStorageType weight_type, bool overwrite = false, bool embed_sidecars = true);
++// Content-addressed installs rename GGUF blobs to bare hash names, so the file
++// extension cannot identify one. This reads the file's leading bytes instead:
++// true only for an existing regular file whose first four bytes are "GGUF".
++// A well-formed *.gguf file always passes, so extension-based callers keep
++// their behaviour; extensionless blobs become loadable.
++[[nodiscard]] bool has_gguf_magic(const std::filesystem::path & path);
+ [[nodiscard]] bool gguf_has_embedded_sidecars(const std::filesystem::path & path);
+ // The destinations of a GGUF's embedded sidecars, in the order it stores them.
+ // Read from the file itself, so a caller re-emitting a package does not have to
+diff --git a/src/framework/assets/tensor_source.cpp b/src/framework/assets/tensor_source.cpp
+index f5d0da2..2037c8f 100644
+--- a/src/framework/assets/tensor_source.cpp
++++ b/src/framework/assets/tensor_source.cpp
+@@ -1592,7 +1592,7 @@ std::shared_ptr<const TensorSource> open_tensor_source(
+     if (extension == ".safetensors") {
+         return std::make_shared<SafeTensorSource>(path, options);
+     }
+-    if (extension == ".gguf") {
++    if (has_gguf_magic(path)) {
+         return std::make_shared<GgufTensorSource>(path, options);
+     }
+     throw std::runtime_error("unsupported tensor source format: " + path.string());
+@@ -1798,6 +1798,20 @@ std::filesystem::path materialize_gguf_sidecars(const std::filesystem::path & pa
+     return root;
+ }
+ 
++bool has_gguf_magic(const std::filesystem::path & path) {
++    if (!engine::io::is_existing_file(path)) {
++        return false;
++    }
++    std::ifstream input(path, std::ios::binary);
++    if (!input) {
++        return false;
++    }
++    char magic[4] = {0, 0, 0, 0};
++    input.read(magic, sizeof(magic));
++    return input.gcount() == static_cast<std::streamsize>(sizeof(magic)) &&
++        std::memcmp(magic, "GGUF", sizeof(magic)) == 0;
++}
++
+ std::vector<std::filesystem::path> directory_gguf_files(const std::filesystem::path & directory) {
+     std::vector<std::filesystem::path> files;
+     if (!engine::io::is_existing_directory(directory)) {
+@@ -1838,7 +1852,7 @@ PreparedModelDirectory prepare_model_directory(const std::filesystem::path & mod
+     } else {
+         throw std::runtime_error("model path does not exist: " + model_path.string());
+     }
+-    if (engine::io::is_existing_file(gguf_path) && lower_ascii(gguf_path.extension().string()) == ".gguf") {
++    if (has_gguf_magic(gguf_path)) {
+         const auto canonical_gguf = std::filesystem::weakly_canonical(gguf_path);
+         if (gguf_has_embedded_sidecars(gguf_path)) {
+             return {materialize_gguf_sidecars(gguf_path), canonical_gguf};
+diff --git a/src/framework/model_spec/package.cpp b/src/framework/model_spec/package.cpp
+index ea58610..5015ef7 100644
+--- a/src/framework/model_spec/package.cpp
++++ b/src/framework/model_spec/package.cpp
+@@ -52,12 +52,7 @@ std::string model_spec_description(const std::filesystem::path & spec_path) {
+ }
+ 
+ bool is_gguf_file(const std::filesystem::path & path) {
+-    if (!engine::io::is_existing_file(path))
+-        return false;
+-    std::string extension = path.extension().string();
+-    std::transform(extension.begin(), extension.end(), extension.begin(),
+-                   [](unsigned char value) { return static_cast<char>(std::tolower(value)); });
+-    return extension == ".gguf";
++    return assets::has_gguf_magic(path);
+ }
+ 
+ std::string gguf_file_list(const std::vector<std::filesystem::path> & files) {

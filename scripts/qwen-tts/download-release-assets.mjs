@@ -25,11 +25,15 @@ export function runtimeTarget(platform = process.platform, architecture = proces
     return {
       directory: 'linux-x64',
       dependencies: [],
-      licenses: [],
+      licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
       helpers: {
         cpu: {
           name: 'ls101-qwen-tts-helper-cpu-linux-x64',
           executable: 'ls101-qwen-tts-helper-cpu'
+        },
+        cuda: {
+          name: 'ls101-qwen-tts-helper-cuda-linux-x64',
+          executable: 'ls101-qwen-tts-helper-cuda'
         }
       }
     }
@@ -37,49 +41,25 @@ export function runtimeTarget(platform = process.platform, architecture = proces
   if (platform === 'win32') {
     return {
       directory: 'win32-x64',
-      dependencies: [],
-      licenses: [],
+      dependencies: [
+        { name: 'cublas64_12.dll', file: 'cublas64_12.dll' },
+        { name: 'cublasLt64_12.dll', file: 'cublasLt64_12.dll' },
+        { name: 'nvJitLink_120_0.dll', file: 'nvJitLink_120_0.dll' }
+      ],
+      licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
       helpers: {
         cpu: {
           name: 'ls101-qwen-tts-helper-cpu-win32-x64.exe',
           executable: 'ls101-qwen-tts-helper-cpu.exe'
+        },
+        cuda: {
+          name: 'ls101-qwen-tts-helper-cuda-win32-x64.exe',
+          executable: 'ls101-qwen-tts-helper-cuda.exe'
         }
       }
     }
   }
   return null
-}
-
-export function disabledCudaRuntimeFiles(platform = process.platform) {
-  if (platform === 'linux') return ['ls101-qwen-tts-helper-cuda']
-  if (platform === 'win32') {
-    return [
-      'ls101-qwen-tts-helper-cuda.exe',
-      'cublas64_12.dll',
-      'cublasLt64_12.dll',
-      'nvJitLink_120_0.dll',
-      'LICENSE.NVIDIA-CUDA.html'
-    ]
-  }
-  return []
-}
-
-export async function cleanupDisabledCudaRuntimeFiles(
-  runtimeDirectory,
-  platform = process.platform
-) {
-  for (const file of disabledCudaRuntimeFiles(platform)) {
-    await rm(path.join(runtimeDirectory, file), { force: true }).catch((error) => {
-      if (error?.code !== 'ENOENT' && error?.code !== 'ENOTDIR') throw error
-    })
-  }
-}
-
-export async function cleanupStagedCudaRuntimes(runtimeRoot) {
-  await Promise.all([
-    cleanupDisabledCudaRuntimeFiles(path.join(runtimeRoot, 'linux-x64'), 'linux'),
-    cleanupDisabledCudaRuntimeFiles(path.join(runtimeRoot, 'win32-x64'), 'win32')
-  ])
 }
 
 export function modelAssetNames() {
@@ -431,7 +411,6 @@ export async function main(options = {}) {
     forceHash: commandOptions.verify,
     repair: (asset, destination) => copyVerifiedAsset(asset.source, destination, asset)
   })
-  await cleanupStagedCudaRuntimes(runtimeRoot)
   logAssetSet('runtime cache', runtimeCache)
   logAssetSet('staged runtime', stagedRuntime)
 

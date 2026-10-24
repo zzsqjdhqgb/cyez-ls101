@@ -27,7 +27,7 @@ export type {
   AIRouterSpeechProviderConfigSummary,
   AIRouterSpeechProviderKind,
   AIRouterSpeechProviderType,
-  AIRouterQwenTtsBackend,
+  AIRouterLocalSpeechBackend,
   AIRouterQwenTtsCudaProbeResult,
   AIRouterSpeechRole,
   AIRouterSpeechRouting,

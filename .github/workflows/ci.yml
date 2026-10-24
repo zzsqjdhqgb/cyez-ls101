@@ -85,13 +85,19 @@ jobs:
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
             externals/ai/qwen3-tts/runtime/win32-x64
             externals/ai/qwen3-tts/models
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cpu-win32-x64.exe
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cuda-win32-x64.exe
+            externals/ai/index-tts/downloads/releases/cublas64_12.dll
+            externals/ai/index-tts/downloads/releases/cublasLt64_12.dll
+            externals/ai/index-tts/downloads/releases/index-tts-runtime-manifest.json
+            externals/ai/index-tts/runtime/win32-x64
             assets/file-icons
-          key: ${{ runner.os }}-${{ runner.arch }}-setup-assets-v1-${{ hashFiles('scripts/*-assets.json', 'scripts/qwen-tts/assets.json', 'resources/file-icons/*.png') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-setup-assets-v1-${{ hashFiles('scripts/*-assets.json', 'scripts/qwen-tts/assets.json', 'scripts/index-tts/assets.json', 'resources/file-icons/*.png') }}
 
       - name: Install dependencies
         run: yarn install --immutable
 
-      # Save before builds and tests can add unrelated files under externals/ or assets/.
+      # Save before builds and tests can add unrelated files under externals/ or assets.
       - name: Save setup assets
         if: matrix.save_setup_assets && steps.setup-assets-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
@@ -107,6 +113,12 @@ jobs:
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
             externals/ai/qwen3-tts/runtime/win32-x64
             externals/ai/qwen3-tts/models
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cpu-win32-x64.exe
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cuda-win32-x64.exe
+            externals/ai/index-tts/downloads/releases/cublas64_12.dll
+            externals/ai/index-tts/downloads/releases/cublasLt64_12.dll
+            externals/ai/index-tts/downloads/releases/index-tts-runtime-manifest.json
+            externals/ai/index-tts/runtime/win32-x64
             assets/file-icons
           key: ${{ steps.setup-assets-cache.outputs.cache-primary-key }}
 
@@ -264,8 +276,12 @@ jobs:
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
             externals/ai/qwen3-tts/runtime/linux-x64
             externals/ai/qwen3-tts/models
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cpu-linux-x64
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cuda-linux-x64
+            externals/ai/index-tts/downloads/releases/index-tts-runtime-manifest.json
+            externals/ai/index-tts/runtime/linux-x64
             assets/file-icons
-          key: ${{ runner.os }}-${{ runner.arch }}-setup-assets-v1-${{ hashFiles('scripts/*-assets.json', 'scripts/qwen-tts/assets.json', 'resources/file-icons/*.png') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-setup-assets-v1-${{ hashFiles('scripts/*-assets.json', 'scripts/qwen-tts/assets.json', 'scripts/index-tts/assets.json', 'resources/file-icons/*.png') }}
 
       - name: Install dependencies
         run: yarn install --immutable
@@ -285,6 +301,10 @@ jobs:
             externals/ai/qwen3-tts/downloads/releases/qwen-tts-model-manifest.json
             externals/ai/qwen3-tts/runtime/linux-x64
             externals/ai/qwen3-tts/models
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cpu-linux-x64
+            externals/ai/index-tts/downloads/releases/ls101-index-tts-helper-cuda-linux-x64
+            externals/ai/index-tts/downloads/releases/index-tts-runtime-manifest.json
+            externals/ai/index-tts/runtime/linux-x64
             assets/file-icons
           key: ${{ steps.setup-assets-cache.outputs.cache-primary-key }}
 

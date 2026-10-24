@@ -5,7 +5,7 @@ import path from 'node:path'
 import { app } from 'electron'
 import type {
   AIRouterGeneratedAudio,
-  AIRouterQwenTtsBackend,
+  AIRouterLocalSpeechBackend,
   AIRouterQwenTtsCudaProbeResult,
   AIRouterSpeechModelPackageModel,
   AIRouterSpeechModelPackageVoice
@@ -49,7 +49,7 @@ interface HelperSession {
 
 export interface QwenTtsSynthesizerOptions {
   helperPath?: string
-  helperPaths?: Partial<Record<AIRouterQwenTtsBackend, string>>
+  helperPaths?: Partial<Record<AIRouterLocalSpeechBackend, string>>
   spawnProcess?: typeof spawn
 }
 
@@ -147,7 +147,18 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       throw new Error('Qwen TTS 模型包缺少 TTS、语音解码器或音色资产')
     }
     const parameters = parseRuntimeParameters(model.parameters)
-    const backend = 'cpu'
+    const backend = request.provider.backend ?? 'cpu'
+    if (backend === 'cuda') {
+      try {
+        await assertExecutableExists(this.resolveHelperPath('cuda'))
+      } catch (error) {
+        throw new Error(
+          'CUDA helper 不存在：请重新执行 yarn install 让 setup 从 Release 下载 ' +
+            'qwen-tts CUDA 运行时，或将 Provider 切回 CPU',
+          { cause: error }
+        )
+      }
+    }
     const [ttsModelPath, tokenizerPath, speakerPath] = await Promise.all([
       request.resolveAssetPath(ttsModelAsset),
       request.resolveAssetPath(tokenizerAsset),
@@ -198,7 +209,7 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     ttsModelPath: string,
     tokenizerPath: string,
     speakerPath: string,
-    backend: AIRouterQwenTtsBackend,
+    backend: AIRouterLocalSpeechBackend,
     parameters: QwenRuntimeParameters
   ): Promise<HelperSession> {
     const existing = this.sessions.get(key)
@@ -223,7 +234,7 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     ttsModelPath: string,
     tokenizerPath: string,
     speakerPath: string,
-    backend: AIRouterQwenTtsBackend,
+    backend: AIRouterLocalSpeechBackend,
     parameters: QwenRuntimeParameters
   ): Promise<HelperSession> {
     const helperPath = this.resolveHelperPath(backend)
@@ -313,7 +324,7 @@ export class QwenTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     }
   }
 
-  private resolveHelperPath(backend: AIRouterQwenTtsBackend): string {
+  private resolveHelperPath(backend: AIRouterLocalSpeechBackend): string {
     return (
       this.options.helperPaths?.[backend] ??
       (backend === 'cpu' ? this.options.helperPath : undefined) ??
@@ -450,7 +461,7 @@ function parseRuntimeParameters(parameters: Record<string, unknown>): QwenRuntim
   }
 }
 
-function resolveHelperPath(backend: AIRouterQwenTtsBackend): string {
+function resolveHelperPath(backend: AIRouterLocalSpeechBackend): string {
   const extension = process.platform === 'win32' ? '.exe' : ''
   const executable = `ls101-qwen-tts-helper-${backend}${extension}`
   const relative = path.join('qwen-tts', `${process.platform}-${process.arch}`, executable)
