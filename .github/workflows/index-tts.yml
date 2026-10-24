@@ -476,7 +476,7 @@ jobs:
           const { createReadStream, createWriteStream } = require('node:fs')
           const { once } = require('node:events')
           const { finished } = require('node:stream/promises')
-          const { readFileSync, statSync, writeFileSync } = require('node:fs')
+          const { readFileSync, rmSync, statSync, writeFileSync } = require('node:fs')
           const path = require('node:path')
 
           const config = JSON.parse(readFileSync('scripts/index-tts/assets.json', 'utf8'))
@@ -583,6 +583,12 @@ jobs:
               'release-assets/model-build-info.json',
               `${JSON.stringify(info, null, 2)}\n`
             )
+            // The merged GGUF is dead weight from here on: every part hash is
+            // verified against assets.json, and the artifact/download path
+            // must carry only the parts. Keeping the 3.3 GiB original in the
+            // artifact doubled it to ~7 GiB and throttled artifact downloads
+            // blew the release job's timeout.
+            rmSync(modelPath)
             console.log(`Staged ${parts.map((part) => part.name).join(', ')}`)
           })().catch((error) => {
             console.error(error instanceof Error ? error.message : error)
@@ -611,11 +617,28 @@ jobs:
     name: Publish IndexTTS runtime
     needs: [metadata, build]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # ~2 GiB of artifact download plus the release upload; the previous
+    # 15-minute cap killed legitimate runs when artifact storage was slow.
+    timeout-minutes: 30
     permissions:
       contents: write
 
     steps:
+      - name: Require an unused runtime tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.runtime_tag }}
+        run: |
+          # Checked before the ~2 GiB artifact download: when the immutable
+          # tag already exists this job can never succeed, so fail in seconds
+          # instead of grinding the download first.
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
+            gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "::error::Tag or release $RELEASE_TAG already exists; publish a new runtime version"
+            exit 1
+          fi
+
       - name: Check out source
         uses: actions/checkout@v6
         with:
@@ -750,25 +773,11 @@ jobs:
           NODE
           cat release-assets/index-tts-runtime-manifest.json
 
-      - name: Require an unused runtime tag
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ needs.metadata.outputs.runtime_tag }}
-        run: |
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
-            gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "::error::Tag or release $RELEASE_TAG already exists; publish a new runtime version"
-            exit 1
-          fi
-
       - name: Create runtime release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.metadata.outputs.runtime_tag }}
           target_commitish: ${{ github.sha }}
-          name: IndexTTS Runtime v${{ needs.metadata.outputs.runtime_version }}
-          prerelease: ${{ needs.metadata.outputs.runtime_prerelease }}
           make_latest: false
           generate_release_notes: false
           body: |
@@ -795,11 +804,29 @@ jobs:
     name: Publish IndexTTS model
     needs: [metadata, model]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # ~3.3 GiB of artifact download plus ~3.3 GiB of release upload; the
+    # previous 15-minute cap killed legitimate runs when artifact storage
+    # was slow.
+    timeout-minutes: 45
     permissions:
       contents: write
 
     steps:
+      - name: Require an unused model tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.model_tag }}
+        run: |
+          # Checked before the ~3.3 GiB artifact download: when the immutable
+          # tag already exists this job can never succeed, so fail in seconds
+          # instead of grinding the download first.
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
+            gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "::error::Tag or release $RELEASE_TAG already exists; publish a new model version"
+            exit 1
+          fi
+
       - name: Check out source
         uses: actions/checkout@v6
         with:
@@ -882,21 +909,8 @@ jobs:
             `${JSON.stringify(manifest, null, 2)}\n`
           )
           NODE
-          rm release-assets/index-tts2_5-q8_0.gguf
           rm release-assets/model-build-info.json
           cat release-assets/index-tts-model-manifest.json
-
-      - name: Require an unused model tag
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          RELEASE_TAG: ${{ needs.metadata.outputs.model_tag }}
-        run: |
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1 || \
-            gh api "repos/$GH_REPO/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
-            echo "::error::Tag or release $RELEASE_TAG already exists; publish a new model version"
-            exit 1
-          fi
 
       - name: Create model release
         uses: softprops/action-gh-release@v3
