@@ -2,4 +2,5 @@
   "[typescript]": {
     "editor.defaultFormatter": "vscode.typescript-language-features"
   },
+  "cmake.sourceDirectory": "/Users/alfred/Desktop/Tools/Projects/cyez-ls101/native/qwen-tts",
 }

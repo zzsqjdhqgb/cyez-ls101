@@ -52,7 +52,7 @@ xvfb-run -a yarn test:product-docs
 
 ## Electron 集成测试
 
-配置文件为 `playwright.config.ts`，测试位于 `tests/integration/`。`yarn test:playwright` 先调用 `build.js --dir --current-platform`，再直接启动 `dist/win-unpacked/CYEZ-LS101.exe` 或 `dist/linux-unpacked/cyez-ls101`。测试断言 `app.isPackaged`，不会使用开发 Electron 或 `out/` 入口。公共生命周期、数据隔离和维护规则参见[工程测试](./engineering/testing/README.md)。
+配置文件为 `playwright.config.ts`，测试位于 `tests/integration/`。`yarn test:playwright` 先调用 `build.js --dir --current-platform`，再直接启动 `dist/win-unpacked/CYEZ-LS101.exe`、`dist/linux-unpacked/cyez-ls101` 或 `dist/mac-arm64/曹二听说101.app/Contents/MacOS/曹二听说101`。测试断言 `app.isPackaged`，不会使用开发 Electron 或 `out/` 入口。公共生命周期、数据隔离和维护规则参见[工程测试](./engineering/testing/README.md)。
 
 ## 测试产物
 

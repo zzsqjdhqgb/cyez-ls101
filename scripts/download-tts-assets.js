@@ -13,6 +13,7 @@ const ROOT_DIR = path.resolve(__dirname, '..')
 const MANIFEST_PATH = path.join(__dirname, 'pocket-tts-assets.json')
 const ASSETS_DIR = path.join(ROOT_DIR, 'externals', 'ai', 'pocket-tts', 'model')
 const STATE_PATH = path.join(ROOT_DIR, 'externals', 'ai', '.setup-verification', 'pocket-tts.json')
+const DEFAULT_HF_ENDPOINT = 'https://huggingface.co'
 const PINNED_MANIFEST = readManifest()
 
 function readManifest() {
@@ -61,13 +62,24 @@ function parseOptions(argv) {
   }
 }
 
-function modelFileUrl(file, manifest = PINNED_MANIFEST) {
-  const remote = file.remote.split('/').map(encodeURIComponent).join('/')
-  return `https://huggingface.co/${manifest.modelId}/resolve/${manifest.revision}/${remote}`
+function resolveHfEndpoint(explicit = process.env.LS101_HF_ENDPOINT) {
+  return String(explicit || DEFAULT_HF_ENDPOINT).replace(/\/+$/, '')
 }
 
-async function verifyUpstreamMetadata(manifest = PINNED_MANIFEST) {
-  const response = await fetch(manifest.sourceApi)
+function withHfEndpoint(url, endpoint = resolveHfEndpoint()) {
+  return endpoint === DEFAULT_HF_ENDPOINT ? url : url.replace(DEFAULT_HF_ENDPOINT, endpoint)
+}
+
+function modelFileUrl(file, manifest = PINNED_MANIFEST, endpoint = resolveHfEndpoint()) {
+  const remote = file.remote.split('/').map(encodeURIComponent).join('/')
+  return withHfEndpoint(
+    `${DEFAULT_HF_ENDPOINT}/${manifest.modelId}/resolve/${manifest.revision}/${remote}`,
+    endpoint
+  )
+}
+
+async function verifyUpstreamMetadata(manifest = PINNED_MANIFEST, endpoint = resolveHfEndpoint()) {
+  const response = await fetch(withHfEndpoint(manifest.sourceApi, endpoint))
   if (!response.ok) throw new Error(`Pocket TTS API 请求失败（HTTP ${response.status}）`)
   const official = await response.json()
   if (official?.sha !== manifest.revision) {
@@ -131,6 +143,7 @@ if (require.main === module) {
 module.exports = {
   PINNED_MANIFEST,
   main,
+  resolveHfEndpoint,
   modelFileUrl,
   parseOptions,
   validateManifest,

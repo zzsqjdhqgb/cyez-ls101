@@ -49,6 +49,20 @@
       "vendoredFile": "sherpa-onnx-c-api.dll",
       "vendoredSize": 3234816,
       "vendoredSha256": "36fc4bed08fde511c51e84db4c0fdf2fcde5c7a34c25a17c3d2f4d3911a05a07"
+    },
+    {
+      "name": "darwin-arm64",
+      "npmPackage": "sherpa-onnx-darwin-arm64",
+      "nodePlatform": "darwin",
+      "nodeArch": "arm64",
+      "releaseArtifact": "sherpa-onnx-v1.13.6-osx-arm64-shared-no-tts-lib.tar.bz2",
+      "releaseArtifactSize": 8018061,
+      "releaseArtifactSha256": "30dde4971d286decd7c952e006779531ad55306acabc7aa288f5625995b5ba74",
+      "member": "sherpa-onnx-v1.13.6-osx-arm64-shared-no-tts-lib/lib/libsherpa-onnx-c-api.dylib",
+      "packagePath": "libsherpa-onnx-c-api.dylib",
+      "vendoredFile": "libsherpa-onnx-c-api.dylib",
+      "vendoredSize": 2980544,
+      "vendoredSha256": "1325c386d03c004cfa231b771feb6c80e73a186376fdeeeccecf9e92c63364d6"
     }
   ]
 }

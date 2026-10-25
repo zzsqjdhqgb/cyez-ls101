@@ -15,7 +15,9 @@ const {
   REQUIRED_MODEL_FILES,
   assertMetadataMatches,
   downloadVerifiedAsset,
+  hfModelFileUrl,
   parseOptions,
+  resolveHfEndpoint,
   validateContentRange,
   verifyFile
 } = require('../download-stt-models.js')
@@ -45,6 +47,15 @@ test('validates file size and SHA-256', async () => {
 
 test('pins a SHA-256 for every installed Qwen3 ASR file', () => {
   for (const file of REQUIRED_MODEL_FILES) assert.match(file.sha256, /^[a-f0-9]{64}$/)
+  assert.match(PINNED_MANIFEST.huggingFaceRevision, /^[a-f0-9]{40}$/)
+})
+
+test('builds immutable Hugging Face mirror URLs', () => {
+  assert.equal(resolveHfEndpoint('https://hf-mirror.com/'), 'https://hf-mirror.com')
+  assert.equal(
+    hfModelFileUrl(REQUIRED_MODEL_FILES[0], 'https://hf-mirror.com'),
+    `https://hf-mirror.com/${PINNED_MANIFEST.huggingFaceModelId}/resolve/${PINNED_MANIFEST.huggingFaceRevision}/${REQUIRED_MODEL_FILES[0].path}`
+  )
 })
 
 test('resumes a partial download and verifies it before publishing', async () => {

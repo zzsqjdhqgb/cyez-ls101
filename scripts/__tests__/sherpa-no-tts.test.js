@@ -29,6 +29,9 @@ const VENDOR_DIR = path.join(__dirname, '..', '..', 'thirdparty-libs', 'sherpa-o
 const LINUX_TARGET = MANIFEST.targets.find(
   (target) => target.npmPackage === 'sherpa-onnx-linux-x64'
 )
+const DARWIN_TARGET = MANIFEST.targets.find(
+  (target) => target.npmPackage === 'sherpa-onnx-darwin-arm64'
+)
 
 const temporaryDirectories = []
 
@@ -72,6 +75,7 @@ test('manifest covers the platforms the build entry point can produce', () => {
   )
   assert.ok(names.has('linux-x64'))
   assert.ok(names.has('win32-x64'))
+  assert.ok(names.has('darwin-arm64'))
 })
 
 test('markers do not collide with unrelated sherpa symbols', () => {
@@ -163,15 +167,32 @@ test('swap reports missing when the platform package is not installed', async ()
   assert.equal(result.status, 'missing')
 })
 
+test('swap installs the vendored macOS arm64 library', async () => {
+  const nodeModules = await fakeNodeModules([DARWIN_TARGET.npmPackage])
+  const destination = path.join(
+    platformPackageDirectory(nodeModules, DARWIN_TARGET.npmPackage),
+    DARWIN_TARGET.packagePath
+  )
+  await writeFile(destination, Buffer.from('espeak_Initialize', 'latin1'))
+
+  const result = await swapCurrentPlatform({
+    platform: DARWIN_TARGET.nodePlatform,
+    arch: DARWIN_TARGET.nodeArch,
+    nodeModulesDir: nodeModules
+  })
+  assert.equal(result.status, 'replaced')
+  assert.equal(await sha256File(destination), DARWIN_TARGET.vendoredSha256)
+})
+
 test('swap reports unsupported for a platform without a no-tts variant', async () => {
   const nodeModules = await fakeNodeModules([])
   const result = await swapCurrentPlatform({
-    platform: 'darwin',
+    platform: 'linux',
     arch: 'arm64',
     nodeModulesDir: nodeModules
   })
   assert.equal(result.status, 'unsupported')
-  assert.equal(targetForPlatform('darwin', 'arm64'), undefined)
+  assert.equal(targetForPlatform('linux', 'arm64'), undefined)
 })
 
 test('a GPL-tainted platform package fails the guard', async () => {
@@ -187,7 +208,7 @@ test('a GPL-tainted platform package fails the guard', async () => {
 })
 
 test('an unregistered platform package fails the guard', async () => {
-  const nodeModules = await fakeNodeModules(['sherpa-onnx-darwin-arm64'])
+  const nodeModules = await fakeNodeModules(['sherpa-onnx-linux-arm64'])
   await assert.rejects(() => assertNoGplSherpaPackages(nodeModules), /不在 no-tts 清单里/)
 })
 

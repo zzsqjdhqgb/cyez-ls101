@@ -216,7 +216,7 @@ function createIco(image, outDir) {
   fs.writeFileSync(path.join(outDir, 'icon.ico'), packIco(frames))
 }
 
-function createIcns(image, outDir) {
+function encodeIcns(image) {
   const sourceSize = Math.max(image.width, image.height)
   const entries = ICNS_ENTRIES.filter((entry) => entry.size <= sourceSize)
   const pngBySize = new Map()
@@ -224,7 +224,15 @@ function createIcns(image, outDir) {
     pngBySize.set(size, resizeToPng(image, size))
   }
   const frames = entries.map(({ osType, size }) => ({ osType, png: pngBySize.get(size) }))
-  fs.writeFileSync(path.join(outDir, 'icon.icns'), packIcns(frames))
+  return packIcns(frames)
+}
+
+function createIcns(image, outDir) {
+  fs.writeFileSync(path.join(outDir, 'icon.icns'), encodeIcns(image))
+}
+
+function createIcnsBuffer(input) {
+  return encodeIcns(decodeInput(input))
 }
 
 function createLinuxSet(image, outDir) {
@@ -287,9 +295,13 @@ function main() {
   console.log(`Done: ${format} -> ${outDir}`)
 }
 
-try {
-  main()
-} catch (error) {
-  console.error('Error:', (error && error.message) || String(error))
-  process.exit(1)
+if (require.main === module) {
+  try {
+    main()
+  } catch (error) {
+    console.error('Error:', (error && error.message) || String(error))
+    process.exit(1)
+  }
 }
+
+module.exports = { createIcnsBuffer }

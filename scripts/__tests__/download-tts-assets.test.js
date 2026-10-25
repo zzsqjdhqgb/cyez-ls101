@@ -14,6 +14,7 @@ const {
   main,
   modelFileUrl,
   parseOptions,
+  resolveHfEndpoint,
   validateManifest
 } = require('../download-tts-assets.js')
 
@@ -36,6 +37,15 @@ test('pins every Pocket TTS asset to an immutable revision and SHA-256', () => {
     assert.match(modelFileUrl(file), new RegExp(`/resolve/${PINNED_MANIFEST.revision}/`))
     assert.doesNotMatch(modelFileUrl(file), /\/resolve\/main\//)
   }
+})
+
+test('supports a Hugging Face mirror endpoint', () => {
+  const file = PINNED_MANIFEST.files[0]
+  assert.equal(resolveHfEndpoint('https://hf-mirror.com/'), 'https://hf-mirror.com')
+  assert.equal(
+    modelFileUrl(file, PINNED_MANIFEST, 'https://hf-mirror.com'),
+    `https://hf-mirror.com/${PINNED_MANIFEST.modelId}/resolve/${PINNED_MANIFEST.revision}/${file.remote}`
+  )
 })
 
 test('supports explicit local and upstream verification without enabling it by default', () => {

@@ -101,7 +101,7 @@ mac.files:   from node_modules/sherpa-onnx-darwin-${arch} filter: '**/*'   # :10
 
 `packages/airouter/src/main/qwen3-asr-worker.ts` 在运行时 `require` 该依赖，所以平台原生包必然随包发布。
 本机只装了 `sherpa-onnx-linux-x64`；Windows / macOS 的同名库当时无法在本机验证，现已按 1.5 的方式
-分别核对（Windows x64 已纳入替换并校验；macOS 未纳入，构建入口也不支持 macOS）。
+分别核对（Windows x64 与 macOS arm64 已纳入替换并校验）。
 
 注意：应用只用到 sherpa-onnx 的**语音识别**，eSpeak 属于其 **TTS（piper）前端**，本应用并不调用；
 `espeak-ng-data` 数据目录也没有随包发布，所以这段代码在运行时其实跑不起来。
@@ -121,17 +121,18 @@ mac.files:   from node_modules/sherpa-onnx-darwin-${arch} filter: '**/*'   # :10
 
 ### 1.5 已落地的处置：替换为上游 no-tts 变体
 
-选 1.4 第 1 条，按平台逐个处理，只覆盖实际会构建的 `win-x64` 与 `linux-x64`
-（`build.js` 的 `BUILD_PLATFORMS` 只有 `win`/`linux`，CI 分别在 `windows-latest` 与
-`ubuntu-latest` 上出包，两者都是 x64）。
+选 1.4 第 1 条，按平台逐个处理，当前覆盖 `linux-x64`、`win-x64` 与 `darwin-arm64`
+（`build.js` 支持 `win`、`linux` 和 arm64 macOS；CI 仍分别在 `windows-latest` 与
+`ubuntu-latest` 上出包）。
 
-| | 替换前（npm 平台包） | 替换后（上游 no-tts） |
-| --- | --- | --- |
-| linux-x64 `libsherpa-onnx-c-api.so` | `1cc4d26c…f841d9`，5,101,472 B | `a2950d46…ba13e`，3,606,240 B |
-| win-x64 `sherpa-onnx-c-api.dll` | 随平台包分发 | `36fc4bed…a05a07`，3,234,816 B |
-| eSpeak 特征串 | 16 条 | **0** |
-| eSpeak/piper 符号 | `espeak_Initialize`、`phonemize_eSpeak`、`CallPhonemizeEspeak`、`InitEspeak` 等 | **0** |
-| `libonnxruntime` | — | **不改**，与 npm 包逐字节相同 |
+|                                           | 替换前（npm 平台包）                                                            | 替换后（上游 no-tts）          |
+| ----------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------ |
+| linux-x64 `libsherpa-onnx-c-api.so`       | `1cc4d26c…f841d9`，5,101,472 B                                                  | `a2950d46…ba13e`，3,606,240 B  |
+| win-x64 `sherpa-onnx-c-api.dll`           | 随平台包分发                                                                    | `36fc4bed…a05a07`，3,234,816 B |
+| darwin-arm64 `libsherpa-onnx-c-api.dylib` | 随平台包分发                                                                    | `1325c386…364d6`，2,980,544 B  |
+| eSpeak 特征串                             | 16 条                                                                           | **0**                          |
+| eSpeak/piper 符号                         | `espeak_Initialize`、`phonemize_eSpeak`、`CallPhonemizeEspeak`、`InitEspeak` 等 | **0**                          |
+| `libonnxruntime`                          | —                                                                               | **不改**，与 npm 包逐字节相同  |
 
 替换是安全的，因为两者同为 sherpa-onnx 1.13.6，C API 版本一致；且 no-tts 构建**仍然导出全部
 12 个 `SherpaOnnx*OfflineTts*` 入口**（行为变为 "TTS is not enabled. Please rebuild sherpa-onnx"），
@@ -152,9 +153,8 @@ mac.files:   from node_modules/sherpa-onnx-darwin-${arch} filter: '**/*'   # :10
 之所以必须挂在 `yarn install` 之后自动执行：npm 平台包是自包含 tarball，yarn 重新解包会把文件
 还原成含 eSpeak 的版本。手工替换活不过下一次安装，因此 `setup.js` 负责修复、`build.js` 负责拦截。
 
-未覆盖的平台（`darwin-*`、`linux-arm64`、`win-ia32`）**故意不静默通过**：只要这样的平台包出现在
+未覆盖的平台（`darwin-x64`、`linux-arm64`、`win-ia32`）**故意不静默通过**：只要这样的平台包出现在
 `node_modules` 里，`assertNoGplSherpaPackages()` 就会让构建失败，并提示补充清单项或不要在该平台出包。
-
 
 ## 2. 自有代码与资产：干净
 
@@ -171,16 +171,16 @@ mac.files:   from node_modules/sherpa-onnx-darwin-${arch} filter: '**/*'   # :10
 
 ## 3. eSpeak 时代的残留（不是 GPL 代码，但应清理）
 
-| 位置 | 性质 |
-| --- | --- |
-| `packages/grading-engine/src/pronunciation.ts:174-180` | `resolveBlankTokenId` 仍接受 eSpeak 词表的 `<pad>` / `[pad]` 拼写 |
-| `packages/grading-engine/src/pronunciation.ts:505-508` | 仍保留「39 个 CMU 音素一一映射到 canonical IPA token」的旧词表模式 |
-| `packages/grading-engine/src/__tests__/pronunciation.test.ts`（12、74、120、137、155、208、228 行） | 上述兼容路径的测试 |
-| `features/ai-router.md:84` | 文档仍在描述「早期多语言 eSpeak 词表仍被兼容识别」 |
-| `.gop-research/run_current_pronunciation.mjs:9`、`.gop-research/exam/filter_pronunciation_feedback.mjs:138` | 硬编码已删除的 `facebook-wav2vec2-lv-60-espeak-cv-ft-int8` 目录 |
-| `thirdparty-licenses/LICENSE.facebook-wav2vec2-lv-60-espeak-cv-ft.txt` | 旧模型的许可文件，仍随安装包发布 |
-| `pronunciation-report-666666.md:4`、`textpa/SIDE_CONVERSATION_HANDOFF.md` | 历史报告，仍以旧模型描述引擎 |
-| `externals/ai/.setup-verification/pronunciation-model.json` | 旧模型的本地校验状态（vocab 4637 B / onnx 317 MB），新流程已不再读它 |
+| 位置                                                                                                        | 性质                                                                 |
+| ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `packages/grading-engine/src/pronunciation.ts:174-180`                                                      | `resolveBlankTokenId` 仍接受 eSpeak 词表的 `<pad>` / `[pad]` 拼写    |
+| `packages/grading-engine/src/pronunciation.ts:505-508`                                                      | 仍保留「39 个 CMU 音素一一映射到 canonical IPA token」的旧词表模式   |
+| `packages/grading-engine/src/__tests__/pronunciation.test.ts`（12、74、120、137、155、208、228 行）         | 上述兼容路径的测试                                                   |
+| `features/ai-router.md:84`                                                                                  | 文档仍在描述「早期多语言 eSpeak 词表仍被兼容识别」                   |
+| `.gop-research/run_current_pronunciation.mjs:9`、`.gop-research/exam/filter_pronunciation_feedback.mjs:138` | 硬编码已删除的 `facebook-wav2vec2-lv-60-espeak-cv-ft-int8` 目录      |
+| `thirdparty-licenses/LICENSE.facebook-wav2vec2-lv-60-espeak-cv-ft.txt`                                      | 旧模型的许可文件，仍随安装包发布                                     |
+| `pronunciation-report-666666.md:4`、`textpa/SIDE_CONVERSATION_HANDOFF.md`                                   | 历史报告，仍以旧模型描述引擎                                         |
+| `externals/ai/.setup-verification/pronunciation-model.json`                                                 | 旧模型的本地校验状态（vocab 4637 B / onnx 317 MB），新流程已不再读它 |
 
 `textpa/` 内的 eSpeak 使用属于研究复现：`textpa/requirements-cpu.txt` 钉住 `phonemizer==3.4.0`，
 运行时需要系统 `espeak-ng`（`textpa/src/textpa_repro/doctor.py:21` 会检测）。
@@ -216,11 +216,11 @@ sherpa-onnx 的预编译库。**
 
 ### 4.3 已落地的处置
 
-| GPLv3 §6 义务 | 处置 | 状态 |
-| --- | --- | --- |
-| 随附许可证全文 | `thirdparty-licenses/LICENSE.ffmpeg.txt` + `README.ffmpeg-build.txt`（与 release 资产逐字节校验一致） | ✅ |
-| 不得施加额外限制 | 仓库根 `LICENSE` 新增「第三方组件 / Third-party components」一节，明确 FFmpeg 为独立程序、按 GPLv3 授权、不受本许可约束 | ✅ |
-| 提供对应源码（Corresponding Source） | 见 4.4 | ❌ **未闭合** |
+| GPLv3 §6 义务                        | 处置                                                                                                                    | 状态          |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | ------------- |
+| 随附许可证全文                       | `thirdparty-licenses/LICENSE.ffmpeg.txt` + `README.ffmpeg-build.txt`（与 release 资产逐字节校验一致）                   | ✅            |
+| 不得施加额外限制                     | 仓库根 `LICENSE` 新增「第三方组件 / Third-party components」一节，明确 FFmpeg 为独立程序、按 GPLv3 授权、不受本许可约束 | ✅            |
+| 提供对应源码（Corresponding Source） | 见 4.4                                                                                                                  | ❌ **未闭合** |
 
 `thirdparty-licenses/NOTICE.ffmpeg.txt` 记录了版本、完整 configuration、精确的 release 资产 URL、
 独立程序声明，以及源码状况。
