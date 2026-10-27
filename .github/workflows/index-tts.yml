@@ -1,7 +1,9 @@
 name: IndexTTS Assets
 
 # Builds and publishes the IndexTTS native helpers and the split IndexTTS 2.5
-# Q8_0 model assets. Mirrors qwen-tts.yml job for job.
+# Q8_0 model assets. Mirrors qwen-tts.yml job for job. Release versions and
+# tags are read from scripts/index-tts/assets.json (the single source of
+# truth); they are never hardcoded here or in the docs.
 #
 # Bootstrap order (hard requirement): ci.yml runs `yarn install --immutable`
 # whose postinstall executes scripts/setup.js, and setup fails on a fresh runner
@@ -9,16 +11,30 @@ name: IndexTTS Assets
 # intended sequence is:
 #   1. From this feature branch, run this workflow with `workflow_dispatch`
 #      (target=both) to build the four helpers, split the model, and publish
-#      `index-tts-runtime-v0.1.0` and `index-tts-model-v1.0.0`. The first cuda
-#      run can take hours; rerun it once to warm the sccache cache if it times
-#      out (the timeout is 360 minutes for cuda legs).
-#   2. Backfill assets.json: set `runtimeRelease.published: true` plus the
-#      pinned cpu helper and runtime manifest entries (name/size/SHA-256) and
-#      `modelRelease.published: true` (the part entries are already pinned).
-#      Only the CPU helper is pinned; cuda assets ship but are never downloaded.
+#      the runtime and model Releases (tags `index-tts-runtime-v<version>` and
+#      `index-tts-model-v<version>` from assets.json). The first cuda run can
+#      take hours; rerun it once to warm the sccache cache if it times out
+#      (the timeout is 360 minutes for cuda legs).
+#   2. Backfill assets.json: set `runtimeRelease.published: true` plus pinned
+#      entries (name/size/SHA-256) for both helpers on each platform, the
+#      Windows cuBLAS DLLs, LICENSE.NVIDIA-CUDA.html, and
+#      index-tts-runtime-manifest.json, and `modelRelease.published: true`
+#      (the part entries are already pinned). Setup downloads every pinned
+#      runtime asset for the current platform, CUDA helpers included, while
+#      installers stay CPU-only through the electron-builder filters. The
+#      third-party license notices (LICENSE.cJSON/sentencepiece/libyaml.txt)
+#      are uploaded by this workflow but are not pinned assets; they are kept
+#      locally by the pattern-based preserve allowlist in
+#      download-release-assets.mjs instead.
 #   3. Commit the backfill. Full CI and `yarn test:smoke` only become
 #      meaningful from that point on. Do not relax any pin to make setup green
 #      before the releases exist.
+#
+# Tag prechecks: both release jobs fail fast when their tag already exists. If
+# a target=both run publishes one Release and then fails before the other,
+# re-run only the failed jobs (GitHub skips succeeded jobs) or dispatch the
+# missing target alone; a fresh target=both dispatch would fail the
+# already-published tag precheck immediately.
 
 on:
   workflow_dispatch:
@@ -338,7 +354,54 @@ jobs:
             )
           }
           console.log(`Validated ${helper} (${stats.size} bytes)`)
+
+          // 非 ASCII 模型路径回归门禁：helper 内部全程按 UTF-8 语义处理路径
+          // （u8path 补丁 + audio.h），中文名目录必须能一路走到模型加载失败，
+          // 而不是被 ANSI 代码页错误解码。空文件 + 中文目录的组合让"路径
+          // 解析正确（打开了一个存在但非法的模型）"与"路径被错误解码（打开
+          // 了不存在的路径）"产生可区分的报错。
+          const nonAsciiDirectory = '构建产物-模型目录'
+          const nonAsciiModel = `${nonAsciiDirectory}/模型.gguf`
+          spawnSync('mkdir', ['-p', nonAsciiDirectory])
+          require('node:fs').writeFileSync(nonAsciiModel, Buffer.alloc(0))
+          const nonAscii = spawnSync(helper, ['--model', nonAsciiModel], {
+            encoding: 'utf8'
+          })
+          const nonAsciiError = `${nonAscii.stderr || ''}${nonAscii.stdout || ''}`
+          if (nonAscii.status !== 1) {
+            throw new Error(
+              `Helper must fail (exit 1) for a non-ASCII empty model, got ` +
+                `status=${nonAscii.status}, signal=${nonAscii.signal ?? 'none'}: ${nonAsciiError}`
+            )
+          }
+          if (nonAsciiError.includes('An absolute --model path is required')) {
+            throw new Error('Helper rejected a valid absolute non-ASCII model path')
+          }
+          console.log('Non-ASCII model path reached model loading as expected')
           NODE
+
+      # Windows 交付门禁：CPU helper 链接静态 CRT（/MT，见
+      # native/index-tts/CMakeLists.txt 的 CMAKE_MSVC_RUNTIME_LIBRARY），干净
+      # 机器上没有 VC++ 运行库也必须能启动。导入表里的运行库 DLL 名以明文
+      # 存在于 PE 中，直接按字节扫描即可，无需 dumpbin。
+      - name: Assert static CRT imports (Windows CPU)
+        if: runner.os == 'Windows' && matrix.backend == 'cpu'
+        shell: pwsh
+        env:
+          HELPER_PATH: externals/ai/index-tts/runtime/${{ matrix.runtime-directory }}/${{ matrix.executable }}
+        run: |
+          $bytes = [System.IO.File]::ReadAllBytes($env:HELPER_PATH)
+          $text = [System.Text.Encoding]::ASCII.GetString($bytes)
+          foreach ($forbidden in @('MSVCP140', 'VCRUNTIME140', 'UCRTBASE')) {
+            if ($text.Contains($forbidden)) {
+              throw "CPU helper must not import $forbidden (static CRT /MT expected); see CMAKE_MSVC_RUNTIME_LIBRARY in native/index-tts/CMakeLists.txt"
+            }
+          }
+          Write-Output 'Static CRT verified: no VC++ runtime imports'
+
+      # ISA 可移植门禁已内建于构建脚本：默认 CPU 构建后
+      # scripts/index-tts/build-runtime.mjs 会反汇编并断言 0 ymm / 0 zmm
+      # （assertPortableCpuIsaBaseline），Linux 构建腿无需重复实现。
 
       - name: Stage runtime asset
         shell: bash
@@ -659,6 +722,9 @@ jobs:
         run: |
           cp thirdparty-licenses/LICENSE.ggml.txt release-assets/
           cp native/index-tts/licenses/LICENSE.audio-cpp.txt release-assets/
+          cp native/index-tts/licenses/LICENSE.cJSON.txt release-assets/
+          cp native/index-tts/licenses/LICENSE.sentencepiece.txt release-assets/
+          cp native/index-tts/licenses/LICENSE.libyaml.txt release-assets/
           curl --fail --location --silent --show-error \
             https://docs.nvidia.com/cuda/eula/index.html \
             --output release-assets/LICENSE.NVIDIA-CUDA.html
@@ -741,7 +807,10 @@ jobs:
           const licenseFiles = [
             'LICENSE.NVIDIA-CUDA.html',
             'LICENSE.ggml.txt',
-            'LICENSE.audio-cpp.txt'
+            'LICENSE.audio-cpp.txt',
+            'LICENSE.cJSON.txt',
+            'LICENSE.sentencepiece.txt',
+            'LICENSE.libyaml.txt'
           ]
           const assets = runtimeFiles.map((name) => ({
             kind: 'native-runtime',
@@ -778,14 +847,21 @@ jobs:
         with:
           tag_name: ${{ needs.metadata.outputs.runtime_tag }}
           target_commitish: ${{ github.sha }}
+          # name/prerelease 必须与 assets.json 的 pin 一致：validateRelease 会比对
+          # prerelease 标记，缺失该字段会创建正式 release，导致
+          # `yarn index-tts:download --verify-upstream` 必然失败。
+          name: IndexTTS Runtime v${{ needs.metadata.outputs.runtime_version }}
+          prerelease: ${{ needs.metadata.outputs.runtime_prerelease }}
           make_latest: false
           generate_release_notes: false
           body: |
             CPU and NVIDIA CUDA native IndexTTS helpers for Linux x64 and Windows x64.
-            Both backends are published; the application only uses the CPU helper, and
-            CUDA assets are excluded from application packages. The Windows CUDA build
-            bundles the cuBLAS/cuBLASLt runtime DLLs its helper imports; the
-            Linux CUDA build statically links cuBLAS/cuBLASLt/cuDART and needs
+            Both backends are pinned in scripts/index-tts/assets.json and downloaded by
+            `yarn install`: the application runs the CPU helper by default and the CUDA
+            helper when the user selects the CUDA backend after a device probe, while
+            installers stay CPU-only (the packaging filters exclude the CUDA assets). The
+            Windows CUDA build bundles the cuBLAS/cuBLASLt runtime DLLs its helper imports;
+            the Linux CUDA build statically links cuBLAS/cuBLASLt/cuDART and needs
             no extra libraries beside the NVIDIA driver.
 
             Runtime and source revisions are recorded in `index-tts-runtime-manifest.json`.
@@ -796,6 +872,9 @@ jobs:
             release-assets/LICENSE.NVIDIA-CUDA.html
             release-assets/LICENSE.ggml.txt
             release-assets/LICENSE.audio-cpp.txt
+            release-assets/LICENSE.cJSON.txt
+            release-assets/LICENSE.sentencepiece.txt
+            release-assets/LICENSE.libyaml.txt
             release-assets/index-tts-runtime-manifest.json
           fail_on_unmatched_files: true
           overwrite_files: false

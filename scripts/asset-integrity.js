@@ -35,7 +35,7 @@ async function ensureAssetSet(options) {
   }
 
   if (normalized.exact) {
-    await cleanUnexpectedEntries(normalized.root, normalized.assets)
+    await cleanUnexpectedEntries(normalized.root, normalized.assets, normalized.preserve)
   }
   await writeAssetVerificationState(normalized, verifiedFingerprints)
   return { method: 'repaired', repaired }
@@ -192,13 +192,14 @@ async function sha256File(filename) {
   return hash.digest('hex')
 }
 
-async function cleanUnexpectedEntries(root, assets) {
+async function cleanUnexpectedEntries(root, assets, preserve = []) {
   const normalized = normalizeAssets(assets)
   const tree = await inspectManagedTree({
     root: path.resolve(root),
     boundary: path.dirname(path.resolve(root)),
     assets: normalized,
-    exact: true
+    exact: true,
+    preserve
   })
   await Promise.all(
     tree.unexpectedPaths.map((entry) => rm(entry, { recursive: true, force: true }))
@@ -230,24 +231,49 @@ async function inspectManagedTree(options) {
   }
 
   if (options.exact) {
-    await walkExactTree(options.root, '', expectedFiles, expectedDirectories, unexpectedPaths)
+    await walkExactTree(
+      options.root,
+      '',
+      expectedFiles,
+      expectedDirectories,
+      unexpectedPaths,
+      options.preserve ?? []
+    )
   }
   return { readableAssets, unexpectedPaths }
 }
 
-async function walkExactTree(root, relative, expectedFiles, expectedDirectories, unexpectedPaths) {
+async function walkExactTree(
+  root,
+  relative,
+  expectedFiles,
+  expectedDirectories,
+  unexpectedPaths,
+  preserve = []
+) {
   const directory = relative ? assetPath(root, relative) : root
   const entries = await readdir(directory, { withFileTypes: true }).catch(() => [])
   for (const entry of entries) {
     const child = relative ? `${relative}/${entry.name}` : entry.name
     const filename = assetPath(root, child)
+    // Preserved entries are neither managed nor removed: they belong to a
+    // coexisting local artifact set (e.g. build metadata written by a local
+    // helper build) and are skipped wholesale, including recursion.
+    if (preserve.some((pattern) => pattern.test(child))) continue
     if (expectedFiles.has(child)) {
       if (!entry.isFile() || entry.isSymbolicLink()) unexpectedPaths.push(filename)
       continue
     }
     if (expectedDirectories.has(child)) {
       if (entry.isDirectory() && !entry.isSymbolicLink()) {
-        await walkExactTree(root, child, expectedFiles, expectedDirectories, unexpectedPaths)
+        await walkExactTree(
+          root,
+          child,
+          expectedFiles,
+          expectedDirectories,
+          unexpectedPaths,
+          preserve
+        )
       } else {
         unexpectedPaths.push(filename)
       }
@@ -313,6 +339,12 @@ function normalizeOptions(options, { repairRequired = true } = {}) {
   const statePath = path.resolve(options.statePath)
   const assets = normalizeAssets(options.assets)
   if (repairRequired && typeof options.repair !== 'function') throw new Error('缺少资产恢复函数')
+  // preserve: 受管目录里"非受管但保留"的文件名模式（正则，匹配相对路径）。
+  // exact 清理跳过命中模式的条目，其余语义不变。
+  const preserve = Array.isArray(options.preserve) ? options.preserve : []
+  if (preserve.some((pattern) => !(pattern instanceof RegExp))) {
+    throw new Error('preserve 选项必须是正则表达式数组')
+  }
   return {
     ...options,
     root,
@@ -321,7 +353,8 @@ function normalizeOptions(options, { repairRequired = true } = {}) {
     assets,
     exact: options.exact !== false,
     forceHash: options.forceHash === true,
-    cleanUnexpected: options.cleanUnexpected === true
+    cleanUnexpected: options.cleanUnexpected === true,
+    preserve
   }
 }
 

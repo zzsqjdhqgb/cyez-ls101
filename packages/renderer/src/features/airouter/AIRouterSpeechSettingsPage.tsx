@@ -465,6 +465,9 @@ export function AIRouterSpeechSettingsPage({
                       const kind = event.target.value as AIRouterSpeechProviderKind
                       const type: AIRouterSpeechProviderType =
                         kind === 'online' ? 'openai-compatible' : 'pocket-tts'
+                      // 切换运行方式会同时更换引擎类型，CUDA 探测结果一并作废
+                      setCudaAvailable(false)
+                      setFeedback((current) => ({ ...current, cuda: undefined }))
                       setDraft({
                         ...draft,
                         kind,
@@ -492,6 +495,10 @@ export function AIRouterSpeechSettingsPage({
                     onChange={(event) => {
                       const type = event.target.value as AIRouterSpeechProviderType
                       setDiscoveredVoices([])
+                      // 探测结果只对当前引擎有效：切换引擎后必须重新检测，
+                      // 否则 qwen 探测成功会串到 index-tts 上绕过检测。
+                      setCudaAvailable(false)
+                      setFeedback((current) => ({ ...current, cuda: undefined }))
                       setDraft({
                         ...draft,
                         type,
@@ -1129,7 +1136,7 @@ function ModelVoiceSections({
         />
       </SettingsSection>
       {draft.type === 'index-tts' ? (
-        <IndexTtsParametersSection modelPackage={modelPackage} />
+        <IndexTtsParametersSection draft={draft} modelPackage={modelPackage} />
       ) : null}
       <SettingsSection title="启用音色" description="模型包中的音色适用于包内全部模型。">
         <ToggleList
@@ -1143,52 +1150,84 @@ function ModelVoiceSections({
   )
 }
 
-// IndexTTS has no per-Provider runtime settings: threads, language, maxTokens
-// and seed are carried by the model package manifest, so the editor shows the
-// values the installed package will run with (the CLI-side knobs are the
-// package builder's).
+// IndexTTS 没有逐 Provider 的运行时设置：threads、language、maxTokens 与 seed 都由
+// 模型包 manifest 携带，编辑器展示引擎实际生效的值（CLI 侧的调节属于打包方）。
+// 引擎会先归一化再使用（main 侧 indexTtsParameters），显示原始 manifest 值会与
+// 实际行为不符；@ls101/airouter 的 exports 映射未开放 main 深层路径且 main 模块
+// 依赖 Node/Electron 运行时，renderer 无法直接导入，故在此等价复刻归一化规则。
 function IndexTtsParametersSection({
+  draft,
   modelPackage
 }: {
+  draft: SpeechProviderDraft
   modelPackage: AIRouterSpeechModelPackageSummary
 }): JSX.Element {
-  const parameters = modelPackage.models[0]?.parameters as
-    | {
-        load?: { threads?: unknown; device?: unknown; lowMemory?: unknown }
-        synthesis?: { language?: unknown; maxTokens?: unknown; seed?: unknown }
-      }
-    | undefined
-  const load = parameters?.load ?? {}
-  const synthesis = parameters?.synthesis ?? {}
-  const seed =
-    typeof synthesis.seed === 'number' && Number.isSafeInteger(synthesis.seed)
-      ? String(synthesis.seed)
-      : '随机'
+  const enabledModelIds = new Set(
+    draft.models.filter((model) => model.enabled).map((model) => model.id)
+  )
+  // 引擎按请求的 modelId 取参数；多模型包里跟随当前启用的模型，而不是包内第一个
+  const model =
+    modelPackage.models.find((item) => enabledModelIds.has(item.id)) ?? modelPackage.models[0]
+  const parameters = normalizeIndexTtsParameters(model?.parameters)
   return (
     <SettingsSection
       title="IndexTTS 运行参数"
       description="参数随模型包提供；重新打包可在 yarn index-tts:build-package 时调整。"
     >
       <SettingsRow label="推理线程">
-        <span className={styles.parameterValue}>{formatParameterNumber(load.threads, 4)}</span>
+        <span className={styles.parameterValue}>{parameters.threads}</span>
       </SettingsRow>
       <SettingsRow label="合成语言">
-        <span className={styles.parameterValue}>
-          {typeof synthesis.language === 'string' && synthesis.language
-            ? languageLabel(synthesis.language)
-            : '自动'}
-        </span>
+        <span className={styles.parameterValue}>{languageLabel(parameters.language)}</span>
       </SettingsRow>
       <SettingsRow label="最大音频 Token">
-        <span className={styles.parameterValue}>
-          {formatParameterNumber(synthesis.maxTokens, 1500)}
-        </span>
+        <span className={styles.parameterValue}>{parameters.maxTokens}</span>
       </SettingsRow>
       <SettingsRow label="随机种子">
-        <span className={styles.parameterValue}>{seed}</span>
+        <span className={styles.parameterValue}>
+          {parameters.seed !== undefined ? parameters.seed : '随机'}
+        </span>
       </SettingsRow>
     </SettingsSection>
   )
+}
+
+interface NormalizedIndexTtsParameters {
+  threads: number
+  language: string
+  maxTokens: number
+  seed?: number
+}
+
+// 与 main 侧 indexTtsParameters（packages/airouter/src/main/index-tts-model.ts）
+// 保持一致的归一化：threads 1..256 缺省 4、language 合法值缺省 auto、
+// maxTokens 1..8192 缺省 1500、seed 0..4294967295 缺省随机。
+const INDEX_TTS_LANGUAGES = ['auto', 'zh', 'en', 'ja', 'es', 'ar']
+
+function normalizeIndexTtsParameters(parameters: unknown): NormalizedIndexTtsParameters {
+  const root = recordValue(parameters)
+  const load = recordValue(root.load)
+  const synthesis = recordValue(root.synthesis)
+  const language = INDEX_TTS_LANGUAGES.find((candidate) => candidate === synthesis.language)
+  const seed = integerValue(synthesis.seed, 0, 4294967295)
+  return {
+    threads: integerValue(load.threads, 1, 256) ?? 4,
+    language: language ?? 'auto',
+    maxTokens: integerValue(synthesis.maxTokens, 1, 8192) ?? 1500,
+    ...(seed === undefined ? {} : { seed })
+  }
+}
+
+function recordValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function integerValue(value: unknown, min: number, max: number): number | undefined {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= min && value <= max
+    ? value
+    : undefined
 }
 
 const indexTtsLanguageLabels: Record<string, string> = {
@@ -1202,10 +1241,6 @@ const indexTtsLanguageLabels: Record<string, string> = {
 
 function languageLabel(language: string): string {
   return indexTtsLanguageLabels[language] ?? language
-}
-
-function formatParameterNumber(value: unknown, fallback: number): string {
-  return typeof value === 'number' && Number.isSafeInteger(value) ? String(value) : String(fallback)
 }
 
 function ManualEntry({

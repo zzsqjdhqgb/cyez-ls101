@@ -29,6 +29,17 @@ const defaultStateDirectory = path.join(root, 'externals', 'ai', '.setup-verific
 export const MODEL_PART_BYTES = 1073741824
 export const MODEL_FILE_NAME = 'index-tts2_5-q8_0.gguf'
 
+// 本地构建产物不是受管资产，但必须与 Release 资产共存于同一 runtime 目录：
+// build-runtime 写入构建元数据（build-cpu.json / build-cuda.json）与随包
+// 许可证（LICENSE.* / DISCLAIMER.*，含第三方 notices），"release 未发布时用
+// 本地构建回落"的路径依赖它们。exact 清理按模式保留这些文件，后续新增的
+// 许可证/元数据文件名命中同一模式即自动受保护，无需逐个登记。
+export const LOCAL_RUNTIME_ARTIFACT_PATTERNS = [
+  /^build-(cpu|cuda)\.json$/,
+  /^LICENSE\./,
+  /^DISCLAIMER\./
+]
+
 export function loadConfig() {
   return JSON.parse(readFileSync(path.join(root, 'scripts', 'index-tts', 'assets.json'), 'utf8'))
 }
@@ -300,35 +311,47 @@ async function writeMetadataCache(filename, value) {
   }
 }
 
-async function verifyUpstreamMetadata(target, downloadDirectory, boundary) {
-  const [runtimeRelease, modelTree] = await Promise.all([
-    fetchRelease(config.runtimeRelease),
-    fetchUpstreamModelTree()
-  ])
+export async function verifyUpstreamMetadata(target, downloadDirectory, boundary) {
+  // 未发布的 runtime pin（backfill 窗口期）跳过 Release 元数据校验：此时
+  // setup 走本地构建回落（ensureRuntimeLocalBuild），上游 Release 尚不存在，
+  // 请求它只会得到 404。
+  const runtimeRelease = config.runtimeRelease.published
+    ? await fetchRelease(config.runtimeRelease)
+    : null
+  const modelTree = await fetchUpstreamModelTree()
   findUpstreamModelBlob(modelTree)
-  if (config.runtimeRelease.published) {
+  if (runtimeRelease) {
     assertSelectedAssetsMatch(
       selectRuntimeReleaseAssets(runtimeRelease, target),
       pinnedRuntimeReleaseAssets(target),
       'runtime'
     )
   }
-  const caches = [
-    writeMetadataCache(path.join(downloadDirectory, 'runtime-release-api.json'), runtimeRelease),
-    writeMetadataCache(path.join(downloadDirectory, 'hf-model-tree-api.json'), modelTree)
-  ]
+  let modelRelease
   if (config.modelRelease.published) {
-    const modelRelease = await fetchRelease(config.modelRelease)
+    modelRelease = await fetchRelease(config.modelRelease)
     assertSelectedAssetsMatch(
       { parts: selectModelReleaseAssets(modelRelease).parts },
       { parts: pinnedModelReleaseParts() },
       'model'
     )
+  }
+  // The download directory must exist before any writeMetadataCache promise is
+  // constructed: writeFile starts eagerly, so a clean tree would hit ENOENT.
+  await ensureManagedDirectory(downloadDirectory, boundary)
+  const caches = [
+    writeMetadataCache(path.join(downloadDirectory, 'hf-model-tree-api.json'), modelTree)
+  ]
+  if (runtimeRelease) {
+    caches.unshift(
+      writeMetadataCache(path.join(downloadDirectory, 'runtime-release-api.json'), runtimeRelease)
+    )
+  }
+  if (modelRelease) {
     caches.push(
       writeMetadataCache(path.join(downloadDirectory, 'model-release-api.json'), modelRelease)
     )
   }
-  await ensureManagedDirectory(downloadDirectory, boundary)
   await Promise.all(caches)
 }
 
@@ -347,6 +370,8 @@ function assertSelectedAssetsMatch(actual, expected, label) {
     ...(expected.licenses ?? []),
     expected.manifest
   ].filter(Boolean)
+  // Both lists are built from the same target helpers / modelPartPlan on every
+  // call path, so the counts are structurally equal; this guard is defensive.
   if (actualAssets.length !== expectedAssets.length) {
     throw new Error(`IndexTTS ${label} Release 资产数量与固定清单不一致`)
   }
@@ -501,6 +526,7 @@ async function ensureRuntimePublished({
     assets: stagedRuntimeAssets,
     exact: true,
     forceHash: commandOptions.verify,
+    preserve: LOCAL_RUNTIME_ARTIFACT_PATTERNS,
     repair: (asset, destination) => copyVerifiedAsset(asset.source, destination, asset)
   })
   logAssetSet('staged runtime', stagedRuntime)

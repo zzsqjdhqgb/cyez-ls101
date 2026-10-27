@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { PassThrough } from 'node:stream'
@@ -8,6 +8,28 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AIRouterLocalSpeechRequest } from '../main/speech-service'
 
 vi.mock('electron', () => ({ app: { getPath: () => tmpdir(), getAppPath: () => process.cwd() } }))
+
+/**
+ * Everything in node:fs/promises passes through to the real module except
+ * that a test can arm a one-shot mkdtemp failure — the only way to exercise
+ * the helper-startup path where creating the temporary directory fails.
+ */
+const mkdtempState = vi.hoisted(() => ({ failure: null as Error | null }))
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>()
+  return {
+    ...actual,
+    mkdtemp: async (prefix: string): Promise<string> => {
+      if (mkdtempState.failure) {
+        const error = mkdtempState.failure
+        mkdtempState.failure = null
+        throw error
+      }
+      return actual.mkdtemp(prefix)
+    }
+  }
+})
 
 import { IndexTtsSynthesizer } from '../main/index-tts'
 
@@ -391,6 +413,105 @@ describe('IndexTtsSynthesizer', () => {
     await synthesizer.dispose()
   })
 
+  it('rejects promptly, cleans up, and keeps teardown bounded when spawn throws synchronously', async () => {
+    // A synchronous spawn throw must reject `ready` with the failure itself
+    // (not via the startup timeout), settle `spawned`/`exited` so the next
+    // request, maintenance, and dispose() all stay bounded, remove the
+    // temporary directory created before the failed spawn, and leak no
+    // unhandled rejection.
+    const unhandled: unknown[] = []
+    const onUnhandled = (reason: unknown): void => {
+      unhandled.push(reason)
+    }
+    process.on('unhandledRejection', onUnhandled)
+    const temporaryDirectories: string[] = []
+    const spawnProcess = vi.fn(
+      (
+        _command: string,
+        _args: string[],
+        options?: { env?: Record<string, string | undefined> }
+      ) => {
+        temporaryDirectories.push(options?.env?.TMPDIR ?? '')
+        throw new Error('spawn exploded')
+      }
+    )
+    const synthesizer = new IndexTtsSynthesizer({
+      helperPath,
+      spawnProcess: spawnProcess as unknown as typeof spawn,
+      // Short on purpose: the rejection must be driven by the failure, never
+      // by the startup timer.
+      startupTimeoutMs: 100
+    })
+    try {
+      await expect(synthesizer.synthesize(request)).rejects.toThrow(
+        'IndexTTS helper 进程启动失败：spawn exploded'
+      )
+      // The next request tears the failed session down instead of hanging on
+      // its never-settling `spawned` promise, and fails the same way.
+      await expect(synthesizer.synthesize(request)).rejects.toThrow(
+        'IndexTTS helper 进程启动失败：spawn exploded'
+      )
+      await completesWithin(
+        synthesizer.releasePackage('index-package', '1.0.0', async () => undefined),
+        1_000
+      )
+      await completesWithin(
+        synthesizer.releaseAssets(async () => undefined),
+        1_000
+      )
+      await completesWithin(synthesizer.dispose(), 1_000)
+      expect(spawnProcess).toHaveBeenCalledTimes(2)
+      expect(temporaryDirectories).toHaveLength(2)
+      for (const temporary of temporaryDirectories) {
+        expect(temporary).toMatch(/index-tts-/)
+        expect(await stat(temporary).catch(() => null)).toBeNull()
+      }
+      // Give the process a few ticks to report any stray rejection.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(unhandled).toEqual([])
+    } finally {
+      process.off('unhandledRejection', onUnhandled)
+    }
+  })
+
+  it('rejects promptly without spawning when the temporary directory cannot be created', async () => {
+    // mkdtemp runs before the spawn, so its failure must reject `ready`
+    // immediately without ever creating a child process, and the failed
+    // session must not block later recovery or dispose().
+    const unhandled: unknown[] = []
+    const onUnhandled = (reason: unknown): void => {
+      unhandled.push(reason)
+    }
+    process.on('unhandledRejection', onUnhandled)
+    const helper = new FakeHelper()
+    const spawner = new HelperSpawner(helper)
+    const synthesizer = new IndexTtsSynthesizer({
+      helperPath,
+      spawnProcess: spawner.spawn,
+      startupTimeoutMs: 100
+    })
+    try {
+      mkdtempState.failure = new Error('ENOSPC: no space left on device')
+      await expect(synthesizer.synthesize(request)).rejects.toThrow(
+        'IndexTTS 临时目录创建失败：ENOSPC: no space left on device'
+      )
+      // The failure happened before the spawn, so no child was ever created.
+      expect(spawner.spawnProcess).not.toHaveBeenCalled()
+      // The failed session terminates without hanging, and the next request
+      // recovers through a fresh process.
+      const audio = await synthesizer.synthesize(request)
+      expect(audio.format).toBe('wav')
+      await completesWithin(synthesizer.dispose(), 1_000)
+      expect(helper.killed).toBe(true)
+      // Give the process a few ticks to report any stray rejection.
+      await new Promise((resolve) => setTimeout(resolve, 50))
+      expect(unhandled).toEqual([])
+    } finally {
+      process.off('unhandledRejection', onUnhandled)
+      mkdtempState.failure = null
+    }
+  })
+
   it('keeps the session alive after a per-request ERROR', async () => {
     // Invariant 6.
     let failures = 0
@@ -481,6 +602,10 @@ describe('IndexTtsSynthesizer', () => {
     const active = synthesizer.synthesize(request)
     await vi.waitFor(() => expect(helper.received).toHaveLength(1))
     const queued = synthesizer.synthesize(request)
+    // Wait until the request is really parked in the queue before deleting:
+    // otherwise schedule() would refuse it before it ever queues, and the
+    // cancellation path under test would never run.
+    await vi.waitFor(() => expect(queuedEntriesOf(synthesizer)).toHaveLength(1))
 
     let removed = false
     const deletion = synthesizer.releasePackage('index-package', '1.0.0', async () => {
@@ -488,6 +613,7 @@ describe('IndexTtsSynthesizer', () => {
       expect(helper.killed).toBe(true)
     })
     await expect(queued).rejects.toThrow('IndexTTS 模型包正在删除')
+    expect(queuedEntriesOf(synthesizer)).toHaveLength(0)
     helper.answer(helper.received[0].id, 'result')
     await expect(active).resolves.toMatchObject({ format: 'wav' })
     await deletion
@@ -507,6 +633,70 @@ describe('IndexTtsSynthesizer', () => {
     const second = new FakeHelper()
     spawner.helpers.push(second)
     await expect(synthesizer.synthesize(request)).resolves.toMatchObject({ format: 'wav' })
+    await synthesizer.dispose()
+  })
+
+  it('rejects a queued request as soon as package deletion begins, before the queue drains', async () => {
+    // Invariant 8: the cancellation must fire when the maintenance state is
+    // set — before ownerTail drains — so a parked request is rejected right
+    // away, is never dispatched, and does not delay the deletion.
+    const helper = new FakeHelper(() => 'silence')
+    const spawner = new HelperSpawner(helper)
+    const synthesizer = new IndexTtsSynthesizer({
+      helperPath,
+      spawnProcess: spawner.spawn
+    })
+    const active = synthesizer.synthesize(request)
+    await vi.waitFor(() => expect(helper.received).toHaveLength(1))
+    const queued = synthesizer.synthesize(request)
+    await vi.waitFor(() => expect(queuedEntriesOf(synthesizer)).toHaveLength(1))
+
+    let removed = false
+    const deletion = synthesizer.releasePackage('index-package', '1.0.0', async () => {
+      removed = true
+    })
+    // The parked request is rejected while the active one is still running,
+    // with the maintenance message.
+    await expect(queued).rejects.toThrow('IndexTTS 模型包正在删除')
+    expect(queuedEntriesOf(synthesizer)).toHaveLength(0)
+    // The cancelled request never reaches the helper, and the deletion is not
+    // delayed by it: it still waits for the in-flight request only.
+    expect(helper.received).toHaveLength(1)
+    expect(removed).toBe(false)
+    helper.answer(helper.received[0].id, 'result')
+    await expect(active).resolves.toMatchObject({ format: 'wav' })
+    await deletion
+    expect(removed).toBe(true)
+    expect(helper.killed).toBe(true)
+    await synthesizer.dispose()
+  })
+
+  it('rejects a queued request as soon as an asset update begins, before the queue drains', async () => {
+    // Invariant 8: releaseAssets cancels every parked request before the
+    // queue drains too.
+    const helper = new FakeHelper(() => 'silence')
+    const spawner = new HelperSpawner(helper)
+    const synthesizer = new IndexTtsSynthesizer({
+      helperPath,
+      spawnProcess: spawner.spawn
+    })
+    const active = synthesizer.synthesize(request)
+    await vi.waitFor(() => expect(helper.received).toHaveLength(1))
+    const queued = synthesizer.synthesize(request)
+    await vi.waitFor(() => expect(queuedEntriesOf(synthesizer)).toHaveLength(1))
+
+    let updated = false
+    const update = synthesizer.releaseAssets(async () => {
+      updated = true
+    })
+    await expect(queued).rejects.toThrow('IndexTTS 模型资源正在更新，请稍后重试')
+    expect(queuedEntriesOf(synthesizer)).toHaveLength(0)
+    expect(helper.received).toHaveLength(1)
+    expect(updated).toBe(false)
+    helper.answer(helper.received[0].id, 'result')
+    await expect(active).resolves.toMatchObject({ format: 'wav' })
+    await update
+    expect(updated).toBe(true)
     await synthesizer.dispose()
   })
 
@@ -565,8 +755,12 @@ describe('IndexTtsSynthesizer', () => {
     const active = synthesizer.synthesize(request)
     await vi.waitFor(() => expect(helper.received).toHaveLength(1))
     const queued = synthesizer.synthesize(request)
+    // Wait until the request is parked in the queue so dispose() has to
+    // cancel it, rather than letting schedule() refuse it before it queues.
+    await vi.waitFor(() => expect(queuedEntriesOf(synthesizer)).toHaveLength(1))
     const disposal = synthesizer.dispose()
     await expect(queued).rejects.toThrow('IndexTTS 已关闭')
+    expect(queuedEntriesOf(synthesizer)).toHaveLength(0)
     helper.answer(helper.received[0].id, 'result')
     await expect(active).resolves.toMatchObject({ format: 'wav' })
     await disposal
@@ -702,6 +896,36 @@ describe('IndexTtsSynthesizer', () => {
     await synthesizer.dispose()
   })
 })
+
+/**
+ * Test-only view of the synthesizer's wait queue. `queuedEntries` is private
+ * only at compile time, so reading it through a cast lets tests wait for a
+ * request to be truly parked in the queue before starting a maintenance or a
+ * disposal — otherwise the rejection could come from `schedule`'s refusal
+ * instead of the cancellation under test.
+ */
+function queuedEntriesOf(synthesizer: IndexTtsSynthesizer): unknown[] {
+  return (synthesizer as unknown as { queuedEntries: unknown[] }).queuedEntries
+}
+
+/**
+ * Fails when `promise` does not settle within `ms` milliseconds. Used to
+ * prove that session teardown, maintenance, and disposal stay bounded even
+ * when helper startup failed before a child process existed.
+ */
+async function completesWithin(promise: Promise<void>, ms: number): Promise<void> {
+  let timer: NodeJS.Timeout | undefined
+  try {
+    await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`did not complete within ${ms} ms`)), ms)
+      })
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 function requestWithModelPath(
   base: AIRouterLocalSpeechRequest,

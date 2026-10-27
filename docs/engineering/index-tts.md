@@ -1,15 +1,18 @@
 # IndexTTS 2.5 runtime
 
 The application runs [`IndexTeam/IndexTTS-2.5`](https://huggingface.co/IndexTeam/IndexTTS-2.5)
-through the pinned CPU build of [`0xShug0/audio.cpp`](https://github.com/0xShug0/audio.cpp)
-(`index_tts2` model family). IndexTTS 2.5 is a zero-shot voice-cloning TTS engine for zh/en/ja/es/ar;
+through pinned builds of [`0xShug0/audio.cpp`](https://github.com/0xShug0/audio.cpp) (`index_tts2`
+model family) — the CPU helper by default and the CUDA helper when the user selects that backend.
+IndexTTS 2.5 is a zero-shot voice-cloning TTS engine for zh/en/ja/es/ar;
 this application uses it for English exam audio. No Python runtime is involved. Imported model
 packages never contain executables.
 
-Published assets use two independent immutable releases in the application repository:
-`index-tts-runtime-v0.1.0` contains the native helpers, while `index-tts-model-v1.0.0` contains the
-model split into four parts. Their filenames, sizes, and SHA-256 digests are pinned in
-`scripts/index-tts/assets.json`. Normal `yarn setup` is offline-capable and verifies those pinned
+Published assets use two independent immutable releases in the application repository: the
+runtime Release (`index-tts-runtime-v<version>`) contains the native helpers, while the model
+Release (`index-tts-model-v<version>`) contains the model split into four parts. Their versions,
+filenames, sizes, and SHA-256 digests are pinned in `scripts/index-tts/assets.json`; the release
+versions are never hardcoded in the IndexTTS docs or the workflow. Normal `yarn setup` is
+offline-capable and verifies those pinned
 values without querying GitHub; `yarn index-tts:download --verify-upstream` compares the pinned
 metadata with the GitHub Release Assets API and the Hugging Face tree API, caching the reviewed
 responses under `externals/ai/index-tts/downloads/`.
@@ -23,23 +26,28 @@ helper is staged under `externals/ai/index-tts/runtime/`.
 
 Runtime release version, model release version, package version, upstream revisions, model
 selection, and voice metadata have one source of truth: `scripts/index-tts/assets.json`. Update
-that file before publishing assets or changing the locally assembled model package.
+that file before publishing assets or changing the locally assembled model package, and never
+hardcode a release version in docs, scripts, or workflow comments — refer to this file instead.
 
 ## Runtime architecture
 
-- Each supported operating-system target distributes one `cpu` helper asset. The workflow also
-  builds and publishes `cuda` helpers and their CUDA runtime libraries for native runtime
-  development, but `assets.json` pins only the CPU helper and the runtime manifest, so setup never
-  downloads CUDA artifacts and packaging excludes them. `LS101_SKIP_INDEX_TTS_DOWNLOAD=1` skips
-  both downloads and the CUDA cleanup so locally built development artifacts survive. The CPU
-  helper is stored in application resources rather than the user's data directory.
+- Each supported operating-system target distributes one `cpu` and one `cuda` helper asset.
+  `assets.json` pins both helpers, the Windows cuBLAS DLLs, `LICENSE.NVIDIA-CUDA.html`, and the
+  runtime manifest, so the default `yarn install` (whose postinstall runs setup) downloads every
+  pinned artifact for the current platform — the CUDA helper included — even though installers
+  stay CPU-only through the electron-builder packaging filters. TODO: this "pin and download
+  everything" policy is deliberate for now and will be revisited by a follow-up plan (for example
+  downloading the CUDA artifacts only on demand); it is not a settled contract.
+  `LS101_SKIP_INDEX_TTS_DOWNLOAD=1` skips the whole IndexTTS download task so locally built
+  development artifacts survive, and `LS101_INDEX_TTS_RUNTIME_ONLY=1` stages the runtime without
+  the model (product-docs builds use this). The CPU helper is stored in application resources
+  rather than the user's data directory.
 - The Provider configuration exposes a `backend` field (`cpu`, the default, or `cuda`). CUDA is
   selected in the settings UI after a probe (`--probe-backend cuda`) reports a usable device, and
   the synthesizer then spawns `ls101-index-tts-helper-cuda` with `--backend cuda`. The session key
-  includes the backend, so switching backends restarts the process. Setup downloads the CUDA
-  helper (and on Windows the cuBLAS DLLs beside it) from the runtime Release alongside the CPU
-  helper, pinned in `assets.json`; installers still ship CPU-only via the packaging filters, and
-  a CUDA request without the helper fails with a clear message.
+  includes the backend, so switching backends restarts the process. Installers still ship CPU-only
+  via the packaging filters, and a CUDA request without the staged helper fails with a clear
+  message pointing at `yarn install`.
 - Unlike Qwen TTS, a voice is not a fixed speaker embedding: every request carries the reference
   WAV (zero-shot cloning), so switching voices neither restarts the helper nor changes the model.
   The session key is `[modelPath, backend, device, threads, lowMemory]`; only a model or load-parameter
@@ -117,8 +125,9 @@ cuBLAS/cuBLASLt/cuDART). Discovered files are staged beside the helper with per-
 (cuDART keeps a 100 KB floor — it is a thin loader; the others keep qwen's 1 MiB floor), the
 staged runtime must re-resolve under `ldd` with no "not found", and `LICENSE.NVIDIA-CUDA.html`
 is staged alongside. If a future audio.cpp pin makes something dynamic, discovery picks it up
-automatically and the manifest job fails loudly until the release file list is updated. These
-artifacts are not selected by setup or included in application packages.
+automatically and the manifest job fails loudly until the release file list is updated. The
+discovered DLLs are pinned in `assets.json` and downloaded by setup on Windows; the packaging
+filters keep them out of application packages.
 
 Helpers are written per operating system; do not copy a binary between platforms. CUDA compilation
 does not require a GPU, but a development build must be exercised on a machine with a compatible
@@ -144,13 +153,22 @@ channels down to mono and the engine conditions on it per request.
 yarn index-tts:prepare
 ```
 
-This downloads/verifies the model and writes `dist/index-tts-2.5-q8_0-<version>.zip` containing
-`manifest.json`, the GGUF (`tts-model`), and the reference WAVs (`speaker-reference`). The ZIP
-builder streams multi-gigabyte files, verifies each asset's SHA-256, and deliberately never
-includes a helper executable. Import the ZIP in AI Router, create a local `IndexTTS 2.5` provider,
-and run its CPU connection test. Runtime parameters shown in the settings page (threads, language,
-maxTokens, seed) come from the package manifest; use `yarn index-tts:build-package --voice id=path`
-to assemble a package with different voices or parameters.
+The model is staged beforehand by `yarn setup` (or `yarn index-tts:download`); `prepare` then
+verifies the local GGUF bytes against the `model` block of `scripts/index-tts/assets.json` (size
+and SHA-256) and writes `dist/index-tts-2.5-q8_0-<version>.zip`, with the version taken from
+`package.version` in the same file. The package contains `manifest.json`, the GGUF (`tts-model`),
+the reference WAVs (`speaker-reference`), and the license texts `LICENSE.IndexTTS.txt`,
+`DISCLAIMER.IndexTTS.txt`, and `LICENSE.audio-cpp.txt`. The builder hashes every asset while
+streaming it into the archive, and the pre-packaging pin check means a truncated or tampered GGUF
+is rejected — with no partial ZIP left behind (`prepare` writes a `.part` file and renames it only
+on success) — before the manifest could legitimize bytes that differ from the pinned model. The
+archive is a classic ZIP written through fflate's streaming writer: it does not support ZIP64, so
+the builder refuses to assemble a package whose inputs exceed the format's ~4 GiB limit. The
+package deliberately never includes a helper executable; `LS101_SKIP_INDEX_TTS_DOWNLOAD=1` skips
+the local package preparation as well. Import the ZIP in AI Router, create a local `IndexTTS 2.5`
+provider, and run its CPU connection test. Runtime parameters shown in the settings page (threads,
+language, maxTokens, seed) come from the package manifest; use `yarn index-tts:build-package
+--voice id=path` to assemble a package with different voices or parameters.
 
 The runtime, raw model, and assembled package versions are independent. Reuse the existing model
 Release when only the helper or Git-managed voices change; increment `package.version` whenever
@@ -162,9 +180,13 @@ The IndexTTS Assets workflow accepts `runtime`, `model`, or `both`. The `build` 
 legs (linux-x64 and win32-x64, each cpu and cuda); the `model` job downloads the pinned GGUF from
 Hugging Face, verifies it, splits it into the four pinned parts, and re-verifies every part hash.
 `release-runtime` asserts all four build-info files agree on the upstream revisions, that exactly
-four helpers are present, that the CUDA dependency closure covers all five families with a 1 MiB
-size floor, then publishes the manifest, helpers, CUDA libraries, and licenses. `release-model`
-publishes the four parts, licenses, and manifest. Both jobs refuse to overwrite an existing tag.
+four helpers are present, and that the Windows CUDA closure covers the cuBLAS/cuBLASLt families
+(cuDART keeps its 100 KB floor if it ever appears; Linux must stage no shared CUDA libraries at
+all), then publishes the manifest, helpers, CUDA libraries, and licenses. `release-model`
+publishes the four parts, licenses, and manifest. Both jobs refuse to overwrite an existing tag:
+if a `both` run publishes one Release and then fails before the other, re-run only the failed jobs
+(GitHub skips succeeded jobs) or dispatch the missing target alone — a fresh `both` dispatch fails
+fast on the already-published tag's precondition check.
 
 **Bootstrap order (hard requirement):** `ci.yml` runs `yarn install --immutable`, whose postinstall
 executes `scripts/setup.js`; on a fresh runner setup fails while `runtimeRelease.published` is
@@ -173,13 +195,23 @@ correct sequence is:
 
 1. From the feature branch, run this workflow with `workflow_dispatch` (target `both`). The first
    cuda leg may take hours; rerun it once to warm sccache if it times out.
-2. Publish creates `index-tts-runtime-v0.1.0` and `index-tts-model-v1.0.0`. Backfill
-   `scripts/index-tts/assets.json`: set both `published` flags to `true`, and pin the CPU helper
-   and `index-tts-runtime-manifest.json` entries (name/size/SHA-256) under `runtimeRelease.assets`.
-   CUDA assets stay unpinned — they ship for native development only. The model part entries are
-   already pinned.
+2. Publish creates the runtime and model Releases (tags `index-tts-runtime-v<version>` and
+   `index-tts-model-v<version>`; the versions live only in `scripts/index-tts/assets.json`).
+   Backfill that file: set both `published` flags to `true`, and pin every runtime asset setup
+   downloads — both helpers for each platform, the Windows cuBLAS DLLs,
+   `LICENSE.NVIDIA-CUDA.html`, and `index-tts-runtime-manifest.json` (name/size/SHA-256) under
+   `runtimeRelease.assets`. The model part entries are already pinned.
 3. Commit the backfill. From that point full CI and `yarn test:smoke` are expected to pass. Do not
    relax a pin or hash check to make setup green before the releases exist.
+
+Current state: `runtimeRelease` is pinned at an **unpublished** version with an empty asset list —
+the v0.2.1 binaries are intentionally not pinned yet because this branch changes them (portable
+ISA baseline, static CRT, UTF-8 path handling, third-party notices). After the workflow publishes
+`index-tts-runtime-v0.2.1`, backfill the pins in a follow-up commit exactly as described above.
+The third-party license notices (`LICENSE.cJSON.txt` / `LICENSE.sentencepiece.txt` /
+`LICENSE.libyaml.txt`) are uploaded by the workflow but are not pinned assets; locally staged
+copies survive `exact` cleanup through the pattern-based preserve allowlist in
+`download-release-assets.mjs`.
 
 Until the runtime Release exists, only machines that ran `yarn index-tts:build-runtime` locally can
 pass setup; the local helper is validated against its `build-cpu.json` metadata and its hash is
@@ -189,13 +221,19 @@ logged so it can be pinned.
 
 - **audio.cpp** is Apache-2.0 (`LICENSE.audio-cpp.txt`); GGML is MIT (`LICENSE.ggml.txt`). Both
   ship in `thirdparty-licenses/` and in the Releases.
+- **Statically linked helper dependencies** — cJSON (MIT), sentencepiece (Apache-2.0), and
+  libyaml (MIT) — carry their notices in `native/index-tts/licenses/` as
+  `LICENSE.cJSON.txt` / `LICENSE.sentencepiece.txt` / `LICENSE.libyaml.txt`; the release
+  workflow uploads them alongside the runtime assets.
 - **IndexTTS 2.5 model weights** are distributed under the bilibili Model Use License
   (`LICENSE.IndexTTS.txt` with `DISCLAIMER.IndexTTS.txt`). Commercial use requires a separate
   licence when the licensor's annual revenue exceeds 1 billion RMB or monthly active users exceed
-  100 million, and model outputs must not be used to improve other commercial AI models. Preserve
-  the license and disclaimer when distributing a generated model package outside the application.
+  100 million, and model outputs must not be used to improve other commercial AI models. The
+  package builder includes the license and disclaimer texts in every generated model package, and
+  they must be preserved when distributing a package outside the application.
 - **Reference voices** are Qwen VoiceDesign output (Apache-2.0) with provenance recorded beside
   each WAV.
-- **CUDA runtime DLLs** (cublas, cublasLt, cudart, cufft, nvJitLink) are redistributed under the
-  NVIDIA CUDA Toolkit 12.8 EULA (`LICENSE.NVIDIA-CUDA.html`); they are published with the runtime
-  Release for development builds only and never enter application packages.
+- **CUDA runtime DLLs** (the discovered closure — currently `cublas64_12.dll` and
+  `cublasLt64_12.dll` on Windows) are redistributed under the NVIDIA CUDA Toolkit 12.8 EULA
+  (`LICENSE.NVIDIA-CUDA.html`); they are published with the runtime Release, pinned in
+  `assets.json`, and downloaded by setup, but never enter application packages.

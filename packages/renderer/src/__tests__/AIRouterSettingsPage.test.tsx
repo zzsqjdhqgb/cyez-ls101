@@ -755,6 +755,7 @@ describe('AIRouterSettingsPage', () => {
       'aria-checked',
       'true'
     )
+    expect(within(group).getByRole('radio', { name: /CUDA/ })).toBeDisabled()
 
     fireEvent.click(within(dialog).getByRole('button', { name: '检测 CUDA' }))
     await waitFor(() =>
@@ -835,6 +836,121 @@ describe('AIRouterSettingsPage', () => {
         expect.objectContaining({ id: 'index-local', backend: 'cpu' })
       )
     )
+  })
+
+  it('invalidates the CUDA probe result when the speech engine type changes', async () => {
+    const probeQwenTtsCuda = vi.fn().mockResolvedValue({
+      available: true,
+      device: 'CUDA0',
+      description: 'NVIDIA GeForce RTX 5080',
+      memoryTotal: 17 * 1024 ** 3
+    })
+    const probeIndexTtsCuda = vi.fn().mockResolvedValue({ available: false })
+    const application = applicationWith({
+      probeQwenTtsCuda,
+      probeIndexTtsCuda,
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([])
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音运行方式'), {
+      target: { value: 'local' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'qwen-tts' }
+    })
+
+    const group = within(dialog).getByRole('radiogroup', { name: 'Qwen TTS 计算后端' })
+    expect(within(group).getByRole('radio', { name: /CUDA/ })).toBeDisabled()
+
+    fireEvent.click(within(dialog).getByRole('button', { name: '检测 CUDA' }))
+    await waitFor(() =>
+      expect(within(dialog).getByText(/CUDA 可用：NVIDIA GeForce RTX 5080/)).toBeInTheDocument()
+    )
+    fireEvent.click(within(group).getByRole('radio', { name: /CUDA/ }))
+    expect(within(group).getByRole('radio', { name: /CUDA/ })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+
+    // 新建 qwen 探测成功后切到 index-tts：旧探测结果作废，必须重新检测才能选 CUDA
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'index-tts' }
+    })
+    const nextGroup = within(dialog).getByRole('radiogroup', { name: 'IndexTTS 计算后端' })
+    expect(within(nextGroup).getByRole('radio', { name: /CUDA/ })).toBeDisabled()
+    expect(within(nextGroup).getByRole('radio', { name: /CPU/ })).toHaveAttribute(
+      'aria-checked',
+      'true'
+    )
+    expect(within(dialog).queryByText(/CUDA 可用：/)).toBeNull()
+    expect(probeQwenTtsCuda).toHaveBeenCalledOnce()
+    expect(probeIndexTtsCuda).not.toHaveBeenCalled()
+  })
+
+  it('shows engine-normalized IndexTTS parameters for the enabled model', async () => {
+    const modelPackage = {
+      package: { id: 'index-tts-zh', version: '1.0.0', name: 'IndexTTS 中文' },
+      runtime: { engine: 'index-tts' as const, engineApiVersion: 1 },
+      models: [
+        {
+          id: 'index-default',
+          name: '默认模型',
+          artifacts: { 'tts-model': ['model.bin'] },
+          parameters: {
+            load: { threads: 0 },
+            synthesis: { language: 'fr', maxTokens: 99_999 }
+          }
+        },
+        {
+          id: 'index-tuned',
+          name: '调优模型',
+          artifacts: { 'tts-model': ['model-tuned.bin'] },
+          parameters: {
+            load: { threads: 8 },
+            synthesis: { language: 'zh', maxTokens: 2000, seed: 7 }
+          }
+        }
+      ],
+      voices: [{ id: 'speaker-a', name: '讲者甲', files: ['speaker-a.wav'] }],
+      assetCount: 3,
+      totalBytes: 4096
+    }
+    const application = applicationWith({
+      listSpeechConfigs: vi.fn().mockResolvedValue([]),
+      listSpeechPackages: vi.fn().mockResolvedValue([modelPackage])
+    })
+
+    renderAIRouter(application, '/settings/ai-router/speech-synthesis')
+
+    fireEvent.click(await screen.findByRole('button', { name: '添加 Provider' }))
+    const dialog = screen.getByRole('dialog', { name: '未命名 Provider' })
+    fireEvent.change(within(dialog).getByLabelText('语音运行方式'), {
+      target: { value: 'local' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('语音 Provider 类型'), {
+      target: { value: 'index-tts' }
+    })
+    fireEvent.change(within(dialog).getByLabelText('本地 TTS 模型包'), {
+      target: { value: 'index-tts-zh@1.0.0' }
+    })
+
+    // 包内第一个模型启用时展示其归一化后的参数，而不是原始 manifest 值
+    expect(settingsRowValue(dialog, '推理线程')).toBe('4')
+    expect(settingsRowValue(dialog, '合成语言')).toBe('自动')
+    expect(settingsRowValue(dialog, '最大音频 Token')).toBe('1500')
+    expect(settingsRowValue(dialog, '随机种子')).toBe('随机')
+
+    // 多模型包里跟随当前启用的模型，而不是包内第一个
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: '默认模型 (index-default)' }))
+    expect(settingsRowValue(dialog, '推理线程')).toBe('8')
+    expect(settingsRowValue(dialog, '合成语言')).toBe('中文')
+    expect(settingsRowValue(dialog, '最大音频 Token')).toBe('2000')
+    expect(settingsRowValue(dialog, '随机种子')).toBe('7')
   })
 
   it('manages image Providers without a default Provider control', async () => {
@@ -983,6 +1099,11 @@ function applicationWith(overrides: Partial<AIRouterApplication>): AIRouterAppli
     listSpeechRecognitionModels: vi.fn(),
     ...overrides
   }
+}
+
+function settingsRowValue(container: HTMLElement, label: string): string {
+  const control = within(container).getByText(label).closest('div')?.nextElementSibling
+  return control?.textContent?.trim() ?? ''
 }
 
 function createSpeechPackageSummary() {

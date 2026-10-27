@@ -7,11 +7,18 @@ import process from 'node:process'
 import { once } from 'node:events'
 import { pathToFileURL } from 'node:url'
 import { Zip, ZipPassThrough, strToU8 } from 'fflate'
+import assetIntegrity from '../asset-integrity.js'
 
+const { assertAssetFile } = assetIntegrity
 const MAX_FFLATE_ARCHIVE_BYTES = 0xffffffff - 1024 * 1024
 const MAX_PACKAGE_ASSET_BYTES = 10 * 1024 ** 3
 const root = path.resolve(import.meta.dirname, '..', '..')
 const assetConfig = loadAssetConfig()
+// 模型包必须随附的许可文本（docs/engineering/index-tts.md §5：分发模型包时须保留
+// bilibili Model Use License 的 license/disclaimer，audio.cpp 的 Apache-2.0 文本一并
+// 随包）。native/index-tts/licenses/ 与 thirdparty-licenses/ 下是同一份文本，与
+// build-runtime.mjs 的 stageLicenses 一致，以 native/index-tts/licenses/ 为规范来源。
+const licenseTexts = ['LICENSE.IndexTTS.txt', 'DISCLAIMER.IndexTTS.txt', 'LICENSE.audio-cpp.txt']
 
 function loadAssetConfig() {
   const file = path.join(import.meta.dirname, 'assets.json')
@@ -125,18 +132,62 @@ function displayName(id) {
     .join(' ')
 }
 
-async function resolveModels(options) {
-  const modelFile = path.join(options.modelDir, 'index-tts2_5-q8_0.gguf')
-  if (!(await isFile(modelFile))) {
-    throw new Error(`Required GGUF model is missing: ${modelFile}`)
+// 打包前必须按固定清单校验 GGUF 字节：manifest 里的 sha256 是打包时从实际读到的
+// 字节现算的，若不先对照 assets.json 的 model 块，截断或损坏的模型会被打成
+// "哈希自洽"的坏包——导入校验拦不住，直到合成时才失败。expectedModel 仅供测试
+// 注入固定值，生产入口一律使用 assets.json 固定的 size/sha256。
+function resolveModelExpectation(options) {
+  const expected = options.expectedModel ?? assetConfig.model
+  if (
+    !Number.isSafeInteger(expected?.size) ||
+    expected.size <= 0 ||
+    !/^[a-f0-9]{64}$/.test(expected?.sha256 ?? '')
+  ) {
+    throw new Error('IndexTTS GGUF 模型固定校验值无效：需要正整数 size 与 64 位十六进制 sha256')
   }
-  return { modelFile }
+  return { size: expected.size, sha256: expected.sha256 }
 }
 
-async function isFile(file) {
-  return stat(file)
-    .then((value) => value.isFile())
-    .catch(() => false)
+async function resolveModels(options) {
+  const modelFile = path.join(options.modelDir, 'index-tts2_5-q8_0.gguf')
+  const expectation = resolveModelExpectation(options)
+  const details = await stat(modelFile).catch(() => null)
+  if (!details?.isFile()) {
+    throw new Error(`Required GGUF model is missing: ${modelFile}`)
+  }
+  if (details.size !== expectation.size) {
+    throw new Error(
+      `IndexTTS GGUF 模型大小不符，已中止打包：${modelFile}` +
+        `（实际 ${details.size} 字节，应为 ${expectation.size} 字节）；` +
+        '模型文件可能不完整或已损坏，请重新执行 yarn index-tts:download 修复模型'
+    )
+  }
+  try {
+    await assertAssetFile(modelFile, expectation)
+  } catch (error) {
+    throw new Error(
+      `IndexTTS GGUF 模型校验失败，已中止打包：${error.message}；` +
+        '请重新执行 yarn index-tts:download 修复模型'
+    )
+  }
+  return { modelFile, expectation }
+}
+
+// licensesDir 仅供测试注入临时目录，生产入口一律使用仓库内的规范许可文本。
+// 这里只做存在性与非空检查（与音色一致，无固定哈希清单）：manifest 里的 size/sha256
+// 是打包时从实际读到的字节现算的，导入端会逐条对账，篡改不会静默通过。
+async function resolveLicenseTexts(options) {
+  const licensesDir = options.licensesDir ?? path.join(root, 'native', 'index-tts', 'licenses')
+  return Promise.all(
+    licenseTexts.map(async (name) => {
+      const file = path.join(licensesDir, name)
+      const details = await stat(file).catch(() => null)
+      if (!details?.isFile() || details.size <= 0) {
+        throw new Error(`Required license text is missing or empty: ${file}`)
+      }
+      return { name, file, archivePath: `licenses/${name}` }
+    })
+  )
 }
 
 function createZipWriter(outputPath) {
@@ -207,6 +258,7 @@ async function addBytes(writer, bytes, archivePath) {
 export async function buildPackage(options) {
   const models = await resolveModels(options)
   const voices = await discoverVoices(options)
+  const licenses = await resolveLicenseTexts(options)
   const outputPath =
     options.output ??
     path.join(
@@ -216,7 +268,11 @@ export async function buildPackage(options) {
     )
   await mkdir(path.dirname(outputPath), { recursive: true })
 
-  const inputs = [models.modelFile, ...voices.map((voice) => voice.file)]
+  const inputs = [
+    models.modelFile,
+    ...voices.map((voice) => voice.file),
+    ...licenses.map((license) => license.file)
+  ]
   const inputBytes = (
     await Promise.all(inputs.map(async (file) => (await stat(file)).size))
   ).reduce((total, size) => total + size, 0)
@@ -227,9 +283,26 @@ export async function buildPackage(options) {
   const writer = createZipWriter(outputPath)
   try {
     const modelPath = `models/${path.basename(models.modelFile)}`
-    const assets = [await addFile(writer, models.modelFile, modelPath, 'tts-model')]
+    const modelAsset = await addFile(writer, models.modelFile, modelPath, 'tts-model')
+    // 打包读到的字节必须与打包前校验过的固定清单一致，防止模型在校验之后、写入
+    // zip 之前的窗口期内被并发修改，重新制造出"哈希自洽"的坏包。
+    if (
+      modelAsset.size !== models.expectation.size ||
+      modelAsset.sha256 !== models.expectation.sha256
+    ) {
+      throw new Error(
+        `IndexTTS GGUF 模型在打包期间发生变化，已中止打包：${models.modelFile}` +
+          `（应为 ${models.expectation.sha256}，实际打包读取到 ${modelAsset.sha256}）`
+      )
+    }
+    const assets = [modelAsset]
     for (const voice of voices) {
       assets.push(await addFile(writer, voice.file, voice.archivePath, 'speaker-reference'))
+    }
+    // 许可文本随包分发（体积可忽略），与模型/音色一样按 assets 条目记录 size/sha256，
+    // 保持 manifest 对包内每个文件的对账能力。
+    for (const license of licenses) {
+      assets.push(await addFile(writer, license.file, license.archivePath, 'license-text'))
     }
     const manifest = {
       format: 'ls101.tts-model-package',

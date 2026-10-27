@@ -6,11 +6,11 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| `scripts/index-tts/assets.json` | 唯一事实源（§3 原样照抄；`runtimeRelease.assets` bootstrap 后回填 cpu helper + manifest） |
+| `scripts/index-tts/assets.json` | 唯一事实源（§3 原样照抄；`runtimeRelease.assets` bootstrap 后回填全部运行时资产——各平台 CPU/CUDA helper、win cuBLAS DLL、`LICENSE.NVIDIA-CUDA.html`、manifest） |
 | `scripts/index-tts/build-runtime.mjs` | 构建/暂存 helper（含 §4.6 补丁应用、ggml 树哈希校验、CUDA 闭包发现与暂存——linux `ldd`/win 递归 `dumpbin`、族断言（win {cublas,cublasLt}；linux 空闭包合法，见偏离清单）、无参冒烟、cpu 静态校验） |
-| `scripts/index-tts/download-release-assets.mjs` | Release 下载 + 分片合并 + HF bootstrap + CUDA 清理（复用 `downloadVerifiedAsset`/`ensureAssetSet`/`assertAssetFile`/`isSafeAssetPath`） |
-| `scripts/index-tts/build-package.mjs` | ZIP64 流式模型包打包器（manifest + GGUF + 参考音频；不含可执行文件） |
-| `scripts/index-tts/prepare-package.mjs` | 组合根（download → build-package → `dist/`） |
+| `scripts/index-tts/download-release-assets.mjs` | Release 下载（当前平台 CPU+CUDA helper、win cuBLAS DLL、NVIDIA 许可、manifest）+ 分片合并 + HF bootstrap（复用 `downloadVerifiedAsset`/`ensureAssetSet`/`assertAssetFile`/`isSafeAssetPath`） |
+| `scripts/index-tts/build-package.mjs` | fflate 流式模型包打包器（manifest + GGUF + 参考音频 + 许可证文本；经典 ZIP、4 GiB 上限保护、不支持 ZIP64；打包前按 assets.json 校验模型哈希；不含可执行文件） |
+| `scripts/index-tts/prepare-package.mjs` | 组合根（模型 stat 就绪检查 → build-package（打包前 size/SHA-256 校验由打包器执行）→ 成功后由 `.part` 改名 `dist/`；`LS101_SKIP_INDEX_TTS_DOWNLOAD=1` 跳过） |
 | `native/index-tts/main.cpp` | helper 单文件源（CLI 契约 + JSON 载荷 + 进程协议 + C ABI 接入） |
 | `native/index-tts/audio.h` | WAV 解码/编码工具（RIFF 全块遍历、多声道混单声道、44 B–32 MiB、canonical 22050/mono/PCM16 输出） |
 | `native/index-tts/CMakeLists.txt` | 构建 `ls101-index-tts-helper`（index_tts2 定制、静态单文件、portable CPU） |

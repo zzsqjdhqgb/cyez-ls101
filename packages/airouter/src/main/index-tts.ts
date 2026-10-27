@@ -180,33 +180,36 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
   }
 
   /**
-   * Coordinates a model-package deletion with synthesis: queued requests that
-   * reference the package are cancelled, in-flight inference finishes, the
-   * helper process and its temporary directory are released, and only then does
-   * the file operation run. File operations are serialized with each other.
+   * Coordinates a model-package deletion with synthesis. Requests referencing
+   * the package that are already queued are rejected as soon as the
+   * maintenance state is set — before the queue starts draining — while
+   * in-flight inference finishes; the helper process and its temporary
+   * directory are released, and only then does the file operation run. File
+   * operations are serialized with each other.
    */
   releasePackage(id: string, version: string, remove: () => Promise<void>): Promise<void> {
     const message = new Error('IndexTTS 模型包正在删除')
-    return this.runMaintenance('package', message, async () => {
-      this.cancelQueued(
-        (entry) => entry.meta.packageId === id && entry.meta.packageVersion === version,
-        message
-      )
-      await remove()
-    })
+    return this.runMaintenance(
+      'package',
+      () =>
+        this.cancelQueued(
+          (entry) => entry.meta.packageId === id && entry.meta.packageVersion === version,
+          message
+        ),
+      remove
+    )
   }
 
   /**
-   * Coordinates an asset-level change (model-package import) with synthesis:
-   * every queued request is cancelled, in-flight inference finishes, the helper
-   * process is released, and the operation runs while new requests are refused.
+   * Coordinates an asset-level change (model-package import) with synthesis.
+   * Every queued request is rejected as soon as the maintenance state is set —
+   * before the queue starts draining — while in-flight inference finishes; the
+   * helper process is released, and the operation runs while new requests are
+   * refused.
    */
   releaseAssets<T>(operation: () => Promise<T>): Promise<T> {
     const message = new Error('IndexTTS 模型资源正在更新，请稍后重试')
-    return this.runMaintenance('assets', message, async () => {
-      this.cancelQueued(() => true, message)
-      return operation()
-    })
+    return this.runMaintenance('assets', () => this.cancelQueued(() => true, message), operation)
   }
 
   dispose(): Promise<void> {
@@ -375,9 +378,14 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     this.idleTimer.unref()
   }
 
+  /**
+   * Runs a coordinated file operation: sets the maintenance state, rejects the
+   * queued requests selected by `cancel`, waits for in-flight inference to
+   * finish, releases the helper process, then runs `operation`.
+   */
   private async runMaintenance<T>(
     kind: MaintenanceKind,
-    message: Error,
+    cancel: () => void,
     operation: () => Promise<T>
   ): Promise<T> {
     const previous = this.maintenanceTail
@@ -392,6 +400,11 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
     }
     this.maintenance = kind
     try {
+      // The cancellation must happen before the queue starts draining:
+      // rejecting queued entries only after awaiting ownerTail would let
+      // them run to completion first (up to the synthesis timeout each)
+      // before the IPC call returns.
+      cancel()
       await this.ownerTail.catch(() => undefined)
       const session = this.currentSession
       if (session) await this.terminateSession(session)
@@ -488,47 +501,72 @@ export class IndexTtsSynthesizer implements AIRouterLocalSpeechSynthesizer {
       spawned
     }
     void (async () => {
-      session.temporaryDirectory = await mkdtemp(path.join(tmpdir(), 'index-tts-'))
-      const child = this.spawnProcess(helperPath, args, {
-        env: helperEnvironment(helperPath, session.temporaryDirectory),
-        stdio: ['pipe', 'pipe', 'pipe'],
-        windowsHide: true
-      })
-      session.process = child
-      resolveSpawned()
+      // Removes the temporary directory and settles `exited`. Besides the
+      // child's exit/error events, the startup-failure handler below invokes
+      // it directly, so `exited` never depends on child events alone.
       const release = (): void => {
+        if (!session.temporaryDirectory) {
+          resolveExited()
+          return
+        }
         rm(session.temporaryDirectory, { recursive: true, force: true })
           .catch(() => undefined)
           .finally(() => resolveExited())
       }
-      child.once('exit', release)
-      child.once('error', release)
-      const fail = (error: Error): void => this.failSession(session, error)
-      const decoder = new IndexTtsProtocolDecoder(
-        (message) => this.handleMessage(session, message, resolveReady, fail),
-        fail
-      )
-      session.decoder = decoder
-      child.stdout.on('data', (chunk: Buffer) => decoder.push(chunk))
-      child.stdout.once('end', () => decoder.end())
-      child.stdout.once('close', () => {
-        if (!session.closed) {
-          fail(withStderr(session, new Error('IndexTTS helper stdout 管道已关闭')))
-        }
-      })
-      child.stderr.on('data', (chunk: Buffer) => {
-        session.stderr = `${session.stderr}${chunk.toString('utf8')}`.slice(-MAX_STDERR_BYTES)
-      })
-      child.once('error', (error) => fail(error as Error))
-      child.once('exit', (code, signal) => {
-        if (session.closed) return
-        const diagnostics = session.stderr.trim()
-        fail(
-          new Error(
-            `IndexTTS helper 退出（code=${code ?? 'null'}, signal=${signal ?? 'none'}）${diagnostics ? `：${diagnostics}` : ''}`
-          )
+      // Names the startup step that failed so the surfaced error points at
+      // the real cause instead of a generic startup timeout.
+      let stage = 'IndexTTS 临时目录创建'
+      try {
+        session.temporaryDirectory = await mkdtemp(path.join(tmpdir(), 'index-tts-'))
+        stage = 'IndexTTS helper 进程启动'
+        const child = this.spawnProcess(helperPath, args, {
+          env: helperEnvironment(helperPath, session.temporaryDirectory),
+          stdio: ['pipe', 'pipe', 'pipe'],
+          windowsHide: true
+        })
+        session.process = child
+        resolveSpawned()
+        child.once('exit', release)
+        child.once('error', release)
+        const fail = (error: Error): void => this.failSession(session, error)
+        const decoder = new IndexTtsProtocolDecoder(
+          (message) => this.handleMessage(session, message, resolveReady, fail),
+          fail
         )
-      })
+        session.decoder = decoder
+        child.stdout.on('data', (chunk: Buffer) => decoder.push(chunk))
+        child.stdout.once('end', () => decoder.end())
+        child.stdout.once('close', () => {
+          if (!session.closed) {
+            fail(withStderr(session, new Error('IndexTTS helper stdout 管道已关闭')))
+          }
+        })
+        child.stderr.on('data', (chunk: Buffer) => {
+          session.stderr = `${session.stderr}${chunk.toString('utf8')}`.slice(-MAX_STDERR_BYTES)
+        })
+        child.once('error', (error) => fail(error as Error))
+        child.once('exit', (code, signal) => {
+          if (session.closed) return
+          const diagnostics = session.stderr.trim()
+          fail(
+            new Error(
+              `IndexTTS helper 退出（code=${code ?? 'null'}, signal=${signal ?? 'none'}）${diagnostics ? `：${diagnostics}` : ''}`
+            )
+          )
+        })
+      } catch (error) {
+        // A failed mkdtemp or a synchronous spawn throw leaves the session
+        // without a child (or with a half-wired one). Unless every promise
+        // settles here, `spawned` and `exited` never resolve, so
+        // terminateSession() — and with it dispose(), releaseAssets(), and
+        // releasePackage() — hangs forever, `ready` only rejects via the
+        // startup timeout, and this IIFE's error surfaces as an unhandled
+        // rejection.
+        resolveSpawned()
+        const failure = error instanceof Error ? error : new Error(String(error))
+        this.failSession(session, new Error(`${stage}失败：${failure.message}`, { cause: failure }))
+        release()
+      }
     })()
     return session
   }

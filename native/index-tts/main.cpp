@@ -325,6 +325,16 @@ bool payload_contains_escaped_nul(const char * payload, size_t length) {
     if (length < 6) return false;
     for (size_t index = 0; index + 5 < length; ++index) {
         if (payload[index] != '\\' || payload[index + 1] != 'u') continue;
+        // A JSON text field may legitimately contain the six literal characters
+        // \u0000 (JSON itself encodes that backslash as \\u0000). Count the
+        // backslashes immediately preceding this one: an odd count means this
+        // backslash is escaped, so the sequence is literal text, not a NUL
+        // escape.
+        size_t preceding_backslashes = 0;
+        for (size_t scan = index; scan > 0 && payload[scan - 1] == '\\'; --scan) {
+            ++preceding_backslashes;
+        }
+        if (preceding_backslashes % 2 == 1) continue;
         if (std::tolower(static_cast<unsigned char>(payload[index + 2])) != '0' ||
             std::tolower(static_cast<unsigned char>(payload[index + 3])) != '0' ||
             std::tolower(static_cast<unsigned char>(payload[index + 4])) != '0' ||
@@ -530,6 +540,31 @@ bool check_status(audiocpp_status status, const char * action) {
 
 } // namespace
 
+// Reads a single request header line from stdin, buffering at most
+// kMaxHeaderBytes + 1 characters (the +1 tolerates a trailing \r which the
+// caller pops before the size check). A hostile peer cannot make the helper
+// buffer an unbounded "header" any more: once the buffer is full the rest of
+// the line is drained without being stored and too_long is set. Returns false
+// at end of input; a line truncated by EOF is returned as-is and fails header
+// parsing like before.
+bool read_header_line(std::string & line, bool & too_long) {
+    line.clear();
+    too_long = false;
+    int character = std::cin.get();
+    if (character == std::char_traits<char>::eof()) return false;
+    const size_t buffer_limit = kMaxHeaderBytes + 1;
+    while (character != '\n') {
+        if (character == std::char_traits<char>::eof()) return true;
+        if (line.size() < buffer_limit) {
+            line.push_back(static_cast<char>(character));
+        } else {
+            too_long = true;
+        }
+        character = std::cin.get();
+    }
+    return true;
+}
+
 int main(int argc, char ** argv) {
 #ifdef _WIN32
     _setmode(_fileno(stdin), _O_BINARY);
@@ -626,7 +661,12 @@ int main(int argc, char ** argv) {
     }
 
     std::string header;
-    while (std::getline(std::cin, header)) {
+    bool header_too_long = false;
+    while (read_header_line(header, header_too_long)) {
+        if (header_too_long) {
+            std::fprintf(stderr, "request header exceeds the size limit\n");
+            return 1;
+        }
         if (!header.empty() && header.back() == '\r') header.pop_back();
         if (header.size() > kMaxHeaderBytes) {
             std::fprintf(stderr, "request header exceeds the size limit\n");

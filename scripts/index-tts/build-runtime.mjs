@@ -13,11 +13,20 @@ import {
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { pathToFileURL } from 'node:url'
 
 const root = path.resolve(import.meta.dirname, '..', '..')
 const downloadDirectory = path.join(root, 'externals', 'ai', 'index-tts', 'downloads')
 const sourceDir = path.join(downloadDirectory, 'audio.cpp')
-const backend = parseBackend(process.argv.slice(2))
+// Argument validation only happens when this module runs as the CLI. When tests
+// import the module, process.argv belongs to the test runner, so the derived
+// paths below fall back to a harmless default instead.
+const invokedAsCli = Boolean(
+  process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
+)
+const { backend, nativeCpu } = invokedAsCli
+  ? parseArguments(process.argv.slice(2))
+  : { backend: 'cpu', nativeCpu: false }
 const helperBuildDir = path.join(downloadDirectory, `index-tts-helper-build-${backend}`)
 const outputDir = path.join(
   root,
@@ -40,15 +49,31 @@ const compilerLauncher =
   rawCompilerLauncher && process.platform === 'win32' && !existsSync(rawCompilerLauncher)
     ? `${rawCompilerLauncher}.exe`
     : rawCompilerLauncher
-const patchPath = path.join(root, 'native', 'index-tts', 'content-addressed-gguf.patch')
+// Patches applied to the pinned audio.cpp checkout, in order. Both are
+// idempotent (a reverse check distinguishes "already applied" from a dirty
+// tree) and must stay applicable on the pinned revision.
+const patchPaths = [
+  path.join(root, 'native', 'index-tts', 'content-addressed-gguf.patch'),
+  // UTF-8 model paths: without it audiocpp_model_load builds the model path
+  // with the ANSI code page on Windows and fails for non-ASCII user dirs.
+  path.join(root, 'native', 'index-tts', 'utf8-model-path.patch')
+]
 const jobs = String(Math.max(1, Math.min(os.availableParallelism?.() ?? os.cpus().length, 16)))
 const minimumHelperBytes = 1_000_000
 
-function parseBackend(args) {
-  if (args.length !== 2 || args[0] !== '--backend' || !['cpu', 'cuda'].includes(args[1])) {
-    throw new Error('Usage: yarn index-tts:build-runtime --backend cpu|cuda')
+// --native-cpu is the explicit development-machine opt-in for host-specific ISA
+// flags (-march=native); the default build stays on the portable baseline.
+export function parseArguments(args) {
+  const nativeCpu = args.includes('--native-cpu')
+  const backendArguments = args.filter((argument) => argument !== '--native-cpu')
+  if (
+    backendArguments.length !== 2 ||
+    backendArguments[0] !== '--backend' ||
+    !['cpu', 'cuda'].includes(backendArguments[1])
+  ) {
+    throw new Error('Usage: yarn index-tts:build-runtime --backend cpu|cuda [--native-cpu]')
   }
-  return args[1]
+  return { backend: backendArguments[1], nativeCpu }
 }
 
 function loadAssetConfig() {
@@ -104,11 +129,16 @@ function ensurePinnedSource() {
   if (output('git', ['-C', sourceDir, 'rev-parse', 'HEAD:external/ggml']) !== ggmlTree) {
     throw new Error('audio.cpp vendored GGML tree does not match the pinned tree')
   }
-  applyPatch()
+  applyPatches()
 }
 
-function applyPatch() {
+function applyPatches() {
+  for (const patchPath of patchPaths) applyPatch(patchPath)
+}
+
+function applyPatch(patchPath) {
   const patch = readFileSync(patchPath, 'utf8')
+  const patchName = path.basename(patchPath)
   try {
     execFileSync('git', ['-C', sourceDir, 'apply', '--check', '-'], {
       input: patch,
@@ -118,7 +148,7 @@ function applyPatch() {
       input: patch,
       stdio: ['pipe', 'inherit', 'inherit']
     })
-    console.log('[index-tts] applied content-addressed-gguf.patch')
+    console.log(`[index-tts] applied ${patchName}`)
   } catch {
     // Either the patch is already applied or the tree carries unrelated local
     // changes. The reverse check below tells the two apart so a dirty checkout
@@ -127,24 +157,29 @@ function applyPatch() {
       input: patch,
       stdio: ['pipe', 'ignore', 'pipe']
     })
-    console.log('[index-tts] content-addressed-gguf.patch is already applied')
+    console.log(`[index-tts] ${patchName} is already applied`)
   }
 }
 
-function configureAndBuild() {
-  rmSync(helperBuildDir, { recursive: true, force: true })
-  run('cmake', [
-    ...(cmakeGenerator ? ['-G', cmakeGenerator] : []),
+// The cmake configure contract of this script. ENGINE_ENABLE_NATIVE_CPU is the
+// ISA portability switch: the upstream audio.cpp CMakeLists FORCEs GGML_NATIVE
+// to its value (see native/index-tts/CMakeLists.txt), so OFF anchors the helper
+// to the portable x86-64 baseline while --native-cpu (ON) opts into the build
+// host ISA for development machines.
+export function cmakeConfigureArguments(build) {
+  const cuda = build.backend === 'cuda'
+  return [
+    ...(build.cmakeGenerator ? ['-G', build.cmakeGenerator] : []),
     '-S',
-    path.join(root, 'native', 'index-tts'),
+    build.projectDirectory,
     '-B',
-    helperBuildDir,
+    build.buildDirectory,
     '-DCMAKE_BUILD_TYPE=Release',
-    ...(compilerLauncher
+    ...(build.compilerLauncher
       ? [
-          `-DCMAKE_C_COMPILER_LAUNCHER=${compilerLauncher}`,
-          `-DCMAKE_CXX_COMPILER_LAUNCHER=${compilerLauncher}`,
-          ...(backend === 'cuda'
+          `-DCMAKE_C_COMPILER_LAUNCHER=${build.compilerLauncher}`,
+          `-DCMAKE_CXX_COMPILER_LAUNCHER=${build.compilerLauncher}`,
+          ...(cuda
             ? [
                 // qwen parity: CUDA compilation goes through sccache too. This
                 // requires sccache >= 0.18.0 (the workflow pins it): 0.17.0
@@ -152,16 +187,16 @@ function configureAndBuild() {
                 // files carry (-DYAML_VERSION_STRING=\"...\") and fails them
                 // with "Could not parse shell line". qwen is unaffected on
                 // 0.17.0 because its .cu set is pure ggml kernels.
-                `-DCMAKE_CUDA_COMPILER_LAUNCHER=${compilerLauncher}`
+                `-DCMAKE_CUDA_COMPILER_LAUNCHER=${build.compilerLauncher}`
               ]
             : [])
         ]
       : []),
-    `-DENGINE_ENABLE_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
-    `-DGGML_CUDA=${backend === 'cuda' ? 'ON' : 'OFF'}`,
-    ...(backend === 'cuda'
+    `-DENGINE_ENABLE_CUDA=${cuda ? 'ON' : 'OFF'}`,
+    `-DGGML_CUDA=${cuda ? 'ON' : 'OFF'}`,
+    ...(cuda
       ? [
-          `-DCMAKE_CUDA_ARCHITECTURES=${cudaArchitectures}`,
+          `-DCMAKE_CUDA_ARCHITECTURES=${build.cudaArchitectures}`,
           // Mirror qwen-tts: without NO_VMM ggml-cuda links CUDA::cuda_driver
           // (libcuda.so.1 / nvcuda.dll), which GPU-less CI runners cannot
           // resolve, so the no-argument smoke test would fail at load time.
@@ -169,8 +204,26 @@ function configureAndBuild() {
           '-DGGML_CUDA_NCCL=OFF'
         ]
       : []),
-    `-DAUDIOCPP_SOURCE_DIR=${sourceDir}`
-  ])
+    `-DENGINE_ENABLE_NATIVE_CPU=${build.nativeCpu ? 'ON' : 'OFF'}`,
+    `-DAUDIOCPP_SOURCE_DIR=${build.sourceDirectory}`
+  ]
+}
+
+function configureAndBuild() {
+  rmSync(helperBuildDir, { recursive: true, force: true })
+  run(
+    'cmake',
+    cmakeConfigureArguments({
+      backend,
+      nativeCpu,
+      cmakeGenerator,
+      compilerLauncher,
+      cudaArchitectures,
+      projectDirectory: path.join(root, 'native', 'index-tts'),
+      buildDirectory: helperBuildDir,
+      sourceDirectory: sourceDir
+    })
+  )
   run('cmake', [
     '--build',
     helperBuildDir,
@@ -476,6 +529,61 @@ function assertStaticCpuBuild() {
   console.log('[index-tts] CPU helper has no unexpected dynamic library dependencies')
 }
 
+// The distributed CPU helper must run on any x86-64 host: ymm/zmm vector
+// instructions (AVX/AVX2/FMA/AVX-512) SIGILL on machines without those
+// extensions. The baseline is asserted on the staged Linux helper after every
+// default build; --native-cpu is the explicit development-machine opt-out.
+export function requiresPortableIsaBaseline({ backend, platform, nativeCpu }) {
+  return backend === 'cpu' && platform === 'linux' && !nativeCpu
+}
+
+// Counts disassembly lines containing the needle with exactly the semantics of
+// `objdump -d <helper> | grep -c <needle>`: a line with several hits counts once.
+export function countLinesContaining(text, needle) {
+  let count = 0
+  let cursor = 0
+  while (cursor < text.length) {
+    const hit = text.indexOf(needle, cursor)
+    if (hit === -1) break
+    count += 1
+    const lineEnd = text.indexOf('\n', hit)
+    cursor = lineEnd === -1 ? text.length : lineEnd + 1
+  }
+  return count
+}
+
+function disassembleHelper(helperPath) {
+  // The full disassembly of the ~8 MB helper is ~80 MB of text: far beyond the
+  // default 1 MB execFileSync buffer, but comfortably within Node's string
+  // limit, so the counting happens in memory instead of piping through a shell.
+  return output('objdump', ['-d', helperPath], { maxBuffer: 256 * 1024 * 1024 })
+}
+
+function assertPortableCpuIsaBaseline() {
+  if (!requiresPortableIsaBaseline({ backend, platform: process.platform, nativeCpu })) {
+    if (nativeCpu) {
+      console.log('[index-tts] --native-cpu: skipping the portable ISA baseline check')
+    }
+    return
+  }
+  requireCommand('objdump')
+  const helperPath = path.join(outputDir, helperExecutableName())
+  const disassembly = disassembleHelper(helperPath)
+  const ymmLines = countLinesContaining(disassembly, 'ymm')
+  const zmmLines = countLinesContaining(disassembly, 'zmm')
+  if (ymmLines > 0 || zmmLines > 0) {
+    throw new Error(
+      `CPU helper is not ISA-portable: ${ymmLines} ymm / ${zmmLines} zmm vector ` +
+        `instructions in ${helperPath}. The default build must stay on the x86-64 ` +
+        'baseline (see ENGINE_ENABLE_NATIVE_CPU / GGML_NATIVE / GGML_AVX* in ' +
+        'native/index-tts/CMakeLists.txt); pass --native-cpu to opt out deliberately.'
+    )
+  }
+  console.log(
+    `[index-tts] portable ISA baseline verified: 0 ymm / 0 zmm instructions in ${helperPath}`
+  )
+}
+
 function verifyStagedRuntime() {
   const expected = [
     helperExecutableName(),
@@ -495,16 +603,30 @@ function verifyStagedRuntime() {
   }
 }
 
-requireCommand('git')
-requireCommand('cmake')
-const cudaRedistributable = resolveCudaRedistributable()
-ensurePinnedSource()
-configureAndBuild()
-copyResult()
-stageRuntimeMetadata()
-stageLicenses()
-stageCudaRuntimeDependencies(cudaRedistributable)
-smokeTestHelper()
-assertStaticCpuBuild()
-verifyStagedRuntime()
-console.log(`[index-tts] ${backend} runtime ready under ${outputDir}`)
+function main() {
+  requireCommand('git')
+  requireCommand('cmake')
+  if (nativeCpu) {
+    console.log(
+      '[index-tts] --native-cpu: building with host-specific CPU ISA flags (not portable)'
+    )
+  }
+  const cudaRedistributable = resolveCudaRedistributable()
+  ensurePinnedSource()
+  configureAndBuild()
+  copyResult()
+  stageRuntimeMetadata()
+  stageLicenses()
+  stageCudaRuntimeDependencies(cudaRedistributable)
+  smokeTestHelper()
+  assertStaticCpuBuild()
+  assertPortableCpuIsaBaseline()
+  verifyStagedRuntime()
+  console.log(`[index-tts] ${backend} runtime ready under ${outputDir}`)
+}
+
+// Errors intentionally stay uncaught, exactly like the previous top-level flow:
+// a failed step aborts the build with a non-zero exit status.
+if (invokedAsCli) {
+  main()
+}

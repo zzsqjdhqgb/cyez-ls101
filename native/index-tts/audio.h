@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
 #include <limits>
 #include <string>
@@ -49,7 +50,18 @@ inline bool fourcc(const uint8_t * data, const char (&tag)[5]) {
 // reported instead of trusted. Multi-channel audio is mixed down to mono and
 // the result is normalized into [-1, 1].
 inline bool decode_wav(const std::string & path, DecodedWav & out, std::string & error) {
-    std::ifstream input(path, std::ios::binary);
+    // The path arrives as UTF-8 (it originates from the JSON payload). On
+    // Windows the narrow std::string constructor of std::filesystem::path
+    // decodes it with the ANSI code page, which breaks reference audio under
+    // non-ASCII (e.g. Chinese) user directories; u8path keeps the UTF-8
+    // semantics. On POSIX the native narrow encoding already is UTF-8, so a
+    // plain path is used (u8path is deprecated from C++20 on).
+#if defined(_WIN32)
+    const std::filesystem::path file_path = std::filesystem::u8path(path);
+#else
+    const std::filesystem::path file_path(path);
+#endif
+    std::ifstream input(file_path, std::ios::binary);
     if (!input) {
         error = "cannot open reference WAV";
         return false;
@@ -77,7 +89,10 @@ inline bool decode_wav(const std::string & path, DecodedWav & out, std::string &
         return false;
     }
     const uint32_t declared_riff_size = read_u32_le(bytes.data() + 4);
-    if (declared_riff_size + 8 > bytes.size() + 1) {
+    // 64-bit arithmetic: declared_riff_size + 8 would wrap around uint32_t for
+    // a crafted size field and bypass the bound check.
+    if (static_cast<uint64_t>(declared_riff_size) + 8 >
+        static_cast<uint64_t>(bytes.size()) + 1) {
         error = "reference WAV RIFF size exceeds the file";
         return false;
     }
@@ -182,9 +197,15 @@ inline bool decode_wav(const std::string & path, DecodedWav & out, std::string &
                 const int16_t stored = static_cast<int16_t>(read_u16_le(sample));
                 value = stored / 32768.0;
             } else if (format.bits_per_sample == 24) {
-                const int32_t stored = static_cast<int32_t>(sample[0]) |
-                    (static_cast<int32_t>(sample[1]) << 8) |
-                    (static_cast<int32_t>(static_cast<int8_t>(sample[2])) << 16);
+                // Assemble the 24-bit little-endian value with unsigned shifts
+                // only, then sign-extend arithmetically: left-shifting the
+                // sign-extended int8_t high byte (a negative value) would be
+                // undefined behaviour before C++20.
+                const uint32_t magnitude = static_cast<uint32_t>(sample[0]) |
+                    (static_cast<uint32_t>(sample[1]) << 8) |
+                    (static_cast<uint32_t>(sample[2]) << 16);
+                int32_t stored = static_cast<int32_t>(magnitude);
+                if (magnitude >= 0x800000u) stored -= 0x1000000;
                 value = stored / 8388608.0;
             } else {
                 uint32_t raw = 0;

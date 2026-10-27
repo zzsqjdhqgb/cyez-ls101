@@ -7,52 +7,11 @@
   },
   "runtimeRelease": {
     "repository": "zzsqjdhqgb/cyez-ls101",
-    "version": "0.2.0",
-    "tag": "index-tts-runtime-v0.2.0",
+    "version": "0.2.1",
+    "tag": "index-tts-runtime-v0.2.1",
     "prerelease": true,
-    "published": true,
-    "assets": [
-      {
-        "name": "ls101-index-tts-helper-cpu-linux-x64",
-        "size": 8172176,
-        "sha256": "f95c58111c3c0700e9aaedf820834ff73e4fbd784abdbc1fabf2f4d59ebf4d65"
-      },
-      {
-        "name": "ls101-index-tts-helper-cpu-win32-x64.exe",
-        "size": 4790784,
-        "sha256": "69a630b9e33459736115155dcf1925595640da1836ef31013d66544771436825"
-      },
-      {
-        "name": "ls101-index-tts-helper-cuda-linux-x64",
-        "size": 915777128,
-        "sha256": "6ede307725ca99e813dd3afbe071a81d41f5d06307356938c95c48e7c73ad6b3"
-      },
-      {
-        "name": "ls101-index-tts-helper-cuda-win32-x64.exe",
-        "size": 115508224,
-        "sha256": "68457a8e0bc4b03a6bdfd72907bb24670fe582412aaf81d507eaf2179754a517"
-      },
-      {
-        "name": "cublas64_12.dll",
-        "size": 113716224,
-        "sha256": "9513540e4ec4c51ee9e7304138c2cc255c29a8c181f9e80c38efa25738becd99"
-      },
-      {
-        "name": "cublasLt64_12.dll",
-        "size": 674667520,
-        "sha256": "b199d1ff892a81b7fd3d57ba1781549609b41500b36008fef326038393ad46c7"
-      },
-      {
-        "name": "LICENSE.NVIDIA-CUDA.html",
-        "size": 103131,
-        "sha256": "f676e53acbf3f714e69e64b7e4cc6fe8b4698b7c8c4ef9577542beb7ae68ca41"
-      },
-      {
-        "name": "index-tts-runtime-manifest.json",
-        "size": 1572,
-        "sha256": "4bbe8c2f864ea22ee0e006e702f7e97b0866346f38e78cc94c7748511423e7f9"
-      }
-    ]
+    "published": false,
+    "assets": []
   },
   "modelRelease": {
     "repository": "zzsqjdhqgb/cyez-ls101",
