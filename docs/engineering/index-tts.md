@@ -195,9 +195,10 @@ executes `scripts/setup.js`; on a fresh runner setup fails while `runtimeRelease
 correct sequence is:
 
 1. From the feature branch, run this workflow with `workflow_dispatch` for each unpublished
-   Release. **The current state requires target `runtime` only**: the model Release is already
-   published, so target `both` would rebuild it and then fail the existing-tag precheck. The first
-   cuda leg may take hours; rerun it once to warm sccache if it times out.
+   Release. Use target `runtime` when only the runtime is unpublished; target `both` is reserved
+   for the initial bootstrap where neither Release exists and would otherwise fail an existing-tag
+   precheck after needlessly rebuilding published assets. The first cuda leg may take hours; rerun
+   it once to warm sccache if it times out.
 2. After publishing, backfill `scripts/index-tts/assets.json` from the actual Release assets. Set
    the `published` flag for each newly published Release, and pin every runtime asset setup
    downloads (name/size/SHA-256). The repository-backed third-party notices are already pinned;
@@ -206,12 +207,12 @@ correct sequence is:
 3. Commit the backfill. From that point full CI and `yarn test:smoke` are expected to pass. Do not
    relax a pin or hash check to make setup green before the releases exist.
 
-Current state: `runtimeRelease` is unpublished and its asset list contains only repository-backed
-third-party notices whose exact bytes can be pinned before the Release exists. The helper, DLL,
-NVIDIA license, and manifest pins are deliberately absent rather than copied from the previous
-runtime. Backfill them from the actual runtime Release before changing `published` to `true`.
-Locally staged license copies survive `exact` cleanup through the pattern-based preserve allowlist
-in `download-release-assets.mjs`.
+Current state: both Releases are published and every managed runtime asset is pinned from the
+actual Release bytes. For a later runtime change, increment `runtimeRelease.version` and its tag,
+set `published` to `false`, and keep only repository-backed license pins until the replacement
+Release exists. Then run target `runtime`, backfill the remaining assets from that Release, and
+re-enable setup. Locally staged license copies survive `exact` cleanup through the pattern-based
+preserve allowlist in `download-release-assets.mjs`.
 
 Until the runtime Release exists, only machines that ran `yarn index-tts:build-runtime` locally can
 pass setup; the local helper is validated against its `build-cpu.json` metadata (including the

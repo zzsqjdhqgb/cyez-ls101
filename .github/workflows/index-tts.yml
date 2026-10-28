@@ -10,11 +10,12 @@ name: IndexTTS Assets
 # while `scripts/index-tts/assets.json` still says `published: false`. The
 # intended sequence is:
 #   1. From this feature branch, run this workflow with `workflow_dispatch`
-#      for each unpublished Release. The current state needs target=runtime
-#      only: modelRelease.published is already true, so target=both would fail
-#      the existing model-tag precheck after needlessly rebuilding the model.
-#      The runtime leg builds all four helpers; the first cuda run can take
-#      hours and may need a rerun to warm sccache (timeout: 360 minutes).
+#      for each unpublished Release. Use target=runtime when only the runtime
+#      is unpublished; target=both is reserved for the initial bootstrap where
+#      neither Release exists and would otherwise fail an existing-tag precheck
+#      after rebuilding published assets. The runtime leg builds all four
+#      helpers; the first cuda run can take hours and may need a rerun to warm
+#      sccache (timeout: 360 minutes).
 #   2. Backfill assets.json from the actual Release assets: set the published
 #      flag for each newly published Release and pin every runtime asset setup
 #      downloads (name/size/SHA-256). The repository-backed third-party notices
