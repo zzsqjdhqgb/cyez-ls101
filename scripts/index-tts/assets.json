@@ -1,0 +1,154 @@
+{
+  "schemaVersion": 1,
+  "runtime": {
+    "repository": "https://github.com/0xShug0/audio.cpp.git",
+    "revision": "c7f5743f037d588049c63aa75e9b4fdb279cfe01",
+    "ggmlRevision": "5191d4c73bdae6762f0b8df17904c144d6525b07"
+  },
+  "runtimeRelease": {
+    "repository": "zzsqjdhqgb/cyez-ls101",
+    "version": "0.2.1",
+    "tag": "index-tts-runtime-v0.2.1",
+    "prerelease": true,
+    "published": true,
+    "assets": [
+      {
+        "name": "ls101-index-tts-helper-cpu-linux-x64",
+        "size": 7896512,
+        "sha256": "770c46914ec5dbcc49bcd0f3bf2875caa92e1928324fc019980b743a9f68278d"
+      },
+      {
+        "name": "ls101-index-tts-helper-cpu-win32-x64.exe",
+        "size": 5043712,
+        "sha256": "3c47134235e336a8f07adeb3f838cbdda4fbb0e2f8d5f3aa9ed16ce56a7c5fdc"
+      },
+      {
+        "name": "ls101-index-tts-helper-cuda-linux-x64",
+        "size": 915460496,
+        "sha256": "a8dd84bf8ea322cc0aab5192f346bf2ecbb988fc5f0a6de821d1fe3ac1a0d2f5"
+      },
+      {
+        "name": "ls101-index-tts-helper-cuda-win32-x64.exe",
+        "size": 115752448,
+        "sha256": "13fe857ccd7947667ff0014a96dc35a264ce2d180bb83ce127b0ea4e472f65c6"
+      },
+      {
+        "name": "cublas64_12.dll",
+        "size": 113716224,
+        "sha256": "9513540e4ec4c51ee9e7304138c2cc255c29a8c181f9e80c38efa25738becd99"
+      },
+      {
+        "name": "cublasLt64_12.dll",
+        "size": 674667520,
+        "sha256": "b199d1ff892a81b7fd3d57ba1781549609b41500b36008fef326038393ad46c7"
+      },
+      {
+        "name": "LICENSE.NVIDIA-CUDA.html",
+        "size": 103131,
+        "sha256": "f676e53acbf3f714e69e64b7e4cc6fe8b4698b7c8c4ef9577542beb7ae68ca41"
+      },
+      {
+        "name": "LICENSE.cJSON.txt",
+        "size": 1083,
+        "sha256": "163766832b15cc9c90d593216360c67af579b8b36932b297fca2aeb61544de2f"
+      },
+      {
+        "name": "LICENSE.sentencepiece.txt",
+        "size": 11358,
+        "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      {
+        "name": "LICENSE.absl.txt",
+        "size": 11365,
+        "sha256": "d3e2f59e1d71176dfdb555ece6a41f7a5aa0f52ff21211010ace314f57695f6b"
+      },
+      {
+        "name": "LICENSE.darts-clone.txt",
+        "size": 1481,
+        "sha256": "155f59997298ee336602c49f9c1110f268ac394ca2197eb02647a3555935ad52"
+      },
+      {
+        "name": "LICENSE.protobuf-lite.txt",
+        "size": 1732,
+        "sha256": "6e5e117324afd944dcf67f36cf329843bc1a92229a8cd9bb573d7a83130fea7d"
+      },
+      {
+        "name": "LICENSE.libyaml.txt",
+        "size": 1101,
+        "sha256": "c40112449f254b9753045925248313e9270efa36d226b22d82d4cc6c43c57f29"
+      },
+      {
+        "name": "index-tts-runtime-manifest.json",
+        "size": 2027,
+        "sha256": "799b7320ff1a3fb300ebdfe7d4ff187af072a4df122b064bff4fe521144d7ee7"
+      }
+    ]
+  },
+  "modelRelease": {
+    "repository": "zzsqjdhqgb/cyez-ls101",
+    "version": "1.0.0",
+    "tag": "index-tts-model-v1.0.0",
+    "prerelease": true,
+    "published": true,
+    "parts": [
+      {
+        "name": "index-tts2_5-q8_0.gguf.part-0001",
+        "size": 1073741824,
+        "sha256": "0368d2ff002b9ee74d13084953d567ffa5b9e4c15d9fbdd989d43f035b931d2f"
+      },
+      {
+        "name": "index-tts2_5-q8_0.gguf.part-0002",
+        "size": 1073741824,
+        "sha256": "5ff77353f7b0a7d2b6534cddb8638a5945d37fa399ff95303b8955882b40dca9"
+      },
+      {
+        "name": "index-tts2_5-q8_0.gguf.part-0003",
+        "size": 1073741824,
+        "sha256": "ae13dab612641cc346ed58d2ec85563065635a51c313383ef7376935deaae937"
+      },
+      {
+        "name": "index-tts2_5-q8_0.gguf.part-0004",
+        "size": 281729856,
+        "sha256": "347e52912a2245c8c0f37238014784622285f12574424e841c4ef93f27060749"
+      }
+    ]
+  },
+  "model": {
+    "id": "IndexTeam/IndexTTS-2.5",
+    "revision": "c39ce5ba981572cb187443877ff559dfb246ce63",
+    "ggufRepository": "audio-cpp/audio.cpp-gguf",
+    "ggufRevision": "9c78726d0d2cf7ee8511e68ef003490c1251062f",
+    "upstreamPath": "IndexTTS2.5-GGUF/index-tts2_5-q8_0.gguf",
+    "quantization": "q8_0",
+    "size": 3502955328,
+    "sha256": "5e827b2072042e4a1b21ccf24a5cb4f71cb1011403067a0a9b039311d8b38628"
+  },
+  "package": {
+    "id": "index-tts-2.5-q8_0",
+    "name": "IndexTTS 2.5 Q8_0",
+    "version": "0.1.0",
+    "minimumAppVersion": "0.4.2"
+  },
+  "voices": [
+    {
+      "id": "american-man",
+      "name": "American English Man",
+      "file": "native/qwen-tts/voice-design/american-man.wav",
+      "provenance": "native/qwen-tts/voice-design/american-man.json",
+      "license": "Apache-2.0 (Qwen VoiceDesign model); generated reference audio",
+      "languageCodes": [
+        "en"
+      ]
+    },
+    {
+      "id": "american-woman",
+      "name": "American English Woman",
+      "file": "native/qwen-tts/voice-design/american-woman.wav",
+      "provenance": "native/qwen-tts/voice-design/american-woman.json",
+      "license": "Apache-2.0 (Qwen VoiceDesign model); generated reference audio",
+      "languageCodes": [
+        "en"
+      ]
+    }
+  ]
+}

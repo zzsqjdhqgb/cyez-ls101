@@ -14,7 +14,10 @@ interface PendingPayload {
 }
 
 export class QwenTtsProtocolDecoder {
-  private buffer = Buffer.alloc(0)
+  // 未消费数据按分块累积（push 时拷贝入队），避免每个 chunk 都重新拼接整个缓冲区的 O(n²) 开销
+  private chunks: Buffer[] = []
+  private headOffset = 0
+  private bufferedBytes = 0
   private pending: PendingPayload | null = null
 
   constructor(
@@ -24,30 +27,34 @@ export class QwenTtsProtocolDecoder {
 
   push(chunk: Uint8Array): void {
     if (!chunk.byteLength) return
-    this.buffer = Buffer.concat([this.buffer, Buffer.from(chunk)])
+    this.chunks.push(Buffer.from(chunk))
+    this.bufferedBytes += chunk.byteLength
     try {
       this.drain()
     } catch (error) {
-      this.buffer = Buffer.alloc(0)
-      this.pending = null
+      this.reset()
       this.onError(error instanceof Error ? error : new Error(String(error)))
     }
   }
 
   end(): void {
-    if (this.buffer.byteLength || this.pending) {
+    if (this.bufferedBytes || this.pending) {
       this.onError(new Error('Qwen TTS helper 返回了不完整的数据'))
     }
-    this.buffer = Buffer.alloc(0)
+    this.reset()
+  }
+
+  private reset(): void {
+    this.chunks = []
+    this.headOffset = 0
+    this.bufferedBytes = 0
     this.pending = null
   }
 
   private drain(): void {
-    while (this.buffer.byteLength) {
+    while (this.bufferedBytes) {
       if (this.pending) {
-        if (this.buffer.byteLength < this.pending.size) return
-        const payload = this.buffer.subarray(0, this.pending.size)
-        this.buffer = this.buffer.subarray(this.pending.size)
+        if (this.bufferedBytes < this.pending.size) return
         const pending = this.pending
         this.pending = null
         if (pending.type === 'result') {
@@ -55,29 +62,116 @@ export class QwenTtsProtocolDecoder {
             type: 'result',
             requestId: pending.requestId,
             sampleRate: pending.sampleRate as number,
-            data: new Uint8Array(payload)
+            data: this.takePayload(pending.size)
           })
         } else {
           this.onMessage({
             type: 'error',
             requestId: pending.requestId,
-            message: payload.toString('utf8')
+            message: this.takeBytes(pending.size).toString('utf8')
           })
         }
         continue
       }
 
-      const newline = this.buffer.indexOf(0x0a)
+      const newline = this.findNewline()
       if (newline < 0) {
-        if (this.buffer.byteLength > MAX_HEADER_BYTES) {
+        if (this.bufferedBytes > MAX_HEADER_BYTES) {
           throw new Error('Qwen TTS helper 协议头超过限制')
         }
         return
       }
       if (newline > MAX_HEADER_BYTES) throw new Error('Qwen TTS helper 协议头超过限制')
-      const header = this.buffer.subarray(0, newline).toString('utf8').replace(/\r$/, '')
-      this.buffer = this.buffer.subarray(newline + 1)
+      const header = this.takeBytes(newline).toString('utf8').replace(/\r$/, '')
+      this.consume(1)
       this.parseHeader(header)
+    }
+  }
+
+  /** 在未消费数据中查找换行符，返回相对消费起点的偏移；未找到返回 -1。 */
+  private findNewline(): number {
+    let scanned = 0
+    for (let index = 0; index < this.chunks.length; index++) {
+      const chunk = this.chunks[index]
+      const start = index === 0 ? this.headOffset : 0
+      const found = chunk.indexOf(0x0a, start)
+      if (found >= 0) return scanned + found - start
+      scanned += chunk.length - start
+    }
+    return -1
+  }
+
+  /** 取出 count 字节的连续 Buffer（跨分块时按需拼接一次），并推进消费位置。 */
+  private takeBytes(count: number): Buffer {
+    if (count <= 0) return Buffer.alloc(0)
+    const head = this.chunks[0]
+    const headAvailable = head.length - this.headOffset
+    if (headAvailable >= count) {
+      const view = head.subarray(this.headOffset, this.headOffset + count)
+      this.consume(count)
+      return view
+    }
+    const parts: Buffer[] = [head.subarray(this.headOffset)]
+    let remaining = count - headAvailable
+    for (let index = 1; remaining > 0; index++) {
+      const chunk = this.chunks[index]
+      const take = Math.min(chunk.length, remaining)
+      parts.push(chunk.subarray(0, take))
+      remaining -= take
+    }
+    this.consume(count)
+    return Buffer.concat(parts)
+  }
+
+  /** 取出 count 字节并拷贝为独立 Uint8Array（跨分块时直接填充目标，避免中间拼接的额外拷贝）。 */
+  private takePayload(count: number): Uint8Array {
+    if (count <= 0) return new Uint8Array(0)
+    const head = this.chunks[0]
+    const headAvailable = head.length - this.headOffset
+    if (headAvailable >= count) {
+      const view = head.subarray(this.headOffset, this.headOffset + count)
+      this.consume(count)
+      return new Uint8Array(view)
+    }
+    const data = new Uint8Array(count)
+    data.set(head.subarray(this.headOffset), 0)
+    let written = headAvailable
+    let remaining = count - headAvailable
+    for (let index = 1; remaining > 0; index++) {
+      const chunk = this.chunks[index]
+      const take = Math.min(chunk.length, remaining)
+      data.set(chunk.subarray(0, take), written)
+      written += take
+      remaining -= take
+    }
+    this.consume(count)
+    return data
+  }
+
+  /** 丢弃已消费的分块并推进 headOffset；调用方保证未消费字节数不少于 count。 */
+  private consume(count: number): void {
+    this.bufferedBytes -= count
+    let remaining = count
+    let dropCount = 0
+    while (remaining > 0 && dropCount < this.chunks.length) {
+      const chunk = this.chunks[dropCount]
+      const offset = dropCount === 0 ? this.headOffset : 0
+      const available = chunk.length - offset
+      if (available <= remaining) {
+        remaining -= available
+        dropCount++
+      } else if (dropCount === 0) {
+        this.headOffset += remaining
+        return
+      } else {
+        this.chunks.splice(0, dropCount)
+        this.headOffset = remaining
+        return
+      }
+    }
+    if (dropCount > 0) {
+      this.chunks.splice(0, dropCount)
+      this.headOffset = 0
     }
   }
 

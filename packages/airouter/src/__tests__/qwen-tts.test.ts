@@ -155,8 +155,10 @@ describe('QwenTtsSynthesizer', () => {
     expect(helper.killed).toBe(true)
   })
 
-  it('forces a CUDA provider request through the CPU helper', async () => {
+  it('routes a CUDA provider request through the CUDA helper', async () => {
     const helper = new FakeHelper()
+    const cudaHelperPath = path.join(directory, 'helper-cuda')
+    await writeFile(cudaHelperPath, 'mock')
     const spawnProcess = vi.fn(
       (
         _command: string,
@@ -167,7 +169,7 @@ describe('QwenTtsSynthesizer', () => {
     const synthesizer = new QwenTtsSynthesizer({
       helperPaths: {
         cpu: helperPath,
-        cuda: path.join(directory, 'missing-cuda-helper')
+        cuda: cudaHelperPath
       },
       spawnProcess: spawnProcess as unknown as typeof spawn
     })
@@ -178,10 +180,27 @@ describe('QwenTtsSynthesizer', () => {
     })
 
     expect(spawnProcess).toHaveBeenCalledWith(
-      helperPath,
-      expect.arrayContaining(['--backend', 'cpu']),
+      cudaHelperPath,
+      expect.arrayContaining(['--backend', 'cuda']),
       expect.any(Object)
     )
+    synthesizer.dispose()
+  })
+
+  it('rejects a CUDA provider request when the CUDA helper is missing', async () => {
+    const synthesizer = new QwenTtsSynthesizer({
+      helperPaths: {
+        cpu: helperPath,
+        cuda: path.join(directory, 'missing-cuda-helper')
+      }
+    })
+
+    await expect(
+      synthesizer.synthesize({
+        ...request,
+        provider: { ...request.provider, backend: 'cuda' }
+      })
+    ).rejects.toThrow(/CUDA helper 不存在/)
     synthesizer.dispose()
   })
 

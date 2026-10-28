@@ -13,6 +13,7 @@ import type {
   AIRouterSpeechProviderConfigInput,
   AIRouterSpeechProviderConfigSummary,
   AIRouterSpeechProviderType,
+  AIRouterIndexTtsCudaProbeResult,
   AIRouterQwenTtsCudaProbeResult,
   AIRouterSpeechRecognitionModelOption,
   AIRouterSpeechRecognitionModelPackageImportResult,
@@ -63,6 +64,7 @@ export interface AIRouterApplication {
     request: AIRouterSpeechConnectionTestInput
   ): Promise<AIRouterSpeechTestResult>
   probeQwenTtsCuda(): Promise<AIRouterQwenTtsCudaProbeResult>
+  probeIndexTtsCuda(): Promise<AIRouterIndexTtsCudaProbeResult>
   getPronunciationExtensionStatus(): Promise<AIRouterPronunciationAssessmentExtensionStatus>
   importPronunciationExtension(): Promise<AIRouterPronunciationAssessmentExtensionImportResult | null>
   deletePronunciationExtension(): Promise<void>
@@ -109,6 +111,7 @@ export function createAIRouterApplication(
     listSpeechVoices: (request) => client.listSpeechVoices(request),
     testSpeechConnection: (request) => client.testSpeechConnection(request),
     probeQwenTtsCuda: () => client.probeQwenTtsCuda(),
+    probeIndexTtsCuda: () => client.probeIndexTtsCuda(),
     getPronunciationExtensionStatus: () => client.getPronunciationAssessmentExtensionStatus(),
     importPronunciationExtension: () => client.importPronunciationAssessmentExtension(),
     deletePronunciationExtension: () => client.deletePronunciationAssessmentExtension(),

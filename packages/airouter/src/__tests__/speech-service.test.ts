@@ -27,7 +27,7 @@ describe('AIRouterSpeechService', () => {
     await rm(baseDir, { recursive: true, force: true })
   })
 
-  it('normalizes every new Qwen provider to CPU', async () => {
+  it('persists the selected backend for local TTS providers', async () => {
     const cuda = await service.saveProviderConfig({
       id: 'qwen-cuda',
       name: 'Qwen CUDA',
@@ -45,12 +45,22 @@ describe('AIRouterSpeechService', () => {
       models: [],
       voices: []
     })
+    const indexCuda = await service.saveProviderConfig({
+      id: 'index-cuda',
+      name: 'IndexTTS CUDA',
+      kind: 'local',
+      type: 'index-tts',
+      backend: 'cuda',
+      models: [],
+      voices: []
+    })
 
-    expect(cuda.backend).toBe('cpu')
+    expect(cuda.backend).toBe('cuda')
     expect(cpu.backend).toBe('cpu')
+    expect(indexCuda.backend).toBe('cuda')
   })
 
-  it('normalizes a stored CUDA provider to CPU before returning it', async () => {
+  it('returns a stored CUDA provider unchanged', async () => {
     const configStorage = new JsonConfigStorage(baseDir)
     await configStorage.write(
       { scope: ['airouter'], key: 'speech-providers' },
@@ -74,7 +84,7 @@ describe('AIRouterSpeechService', () => {
     )
 
     await expect(service.listProviderConfigs()).resolves.toEqual([
-      expect.objectContaining({ id: 'legacy-qwen', backend: 'cpu' })
+      expect.objectContaining({ id: 'legacy-qwen', backend: 'cuda' })
     ])
   })
 

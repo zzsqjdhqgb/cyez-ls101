@@ -1,0 +1,17 @@
+diff --git a/src/capi/audiocpp.cpp b/src/capi/audiocpp.cpp
+index 15820849..3f3fe7f9 100644
+--- a/src/capi/audiocpp.cpp
++++ b/src/capi/audiocpp.cpp
+@@ -361,7 +361,11 @@ audiocpp_status audiocpp_model_load(audiocpp_registry * registry,
+     return guard([&] {
+         auto handle = std::make_unique<audiocpp_model>();
+         handle->registry = registry->registry;
+-        handle->load_request.model_path = std::filesystem::path(model_path);
++        // Model paths cross the C ABI as UTF-8. On Windows the narrow char*
++        // constructor of std::filesystem::path would decode them with the ANSI
++        // code page, breaking models under non-ASCII (e.g. Chinese) user
++        // directories, so build the path with explicit UTF-8 semantics.
++        handle->load_request.model_path = std::filesystem::u8path(model_path);
+         if (family_hint != nullptr) {
+             handle->load_request.family_hint = std::string(family_hint);
+         }

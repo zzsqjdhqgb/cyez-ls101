@@ -214,6 +214,13 @@ async function main() {
       [path.join(root, 'scripts', 'build-pronunciation-extension-package.mjs')],
       { stdio: 'inherit', cwd: root }
     )
+    // TODO(IndexTTS)：此处刻意不构建 IndexTTS 模型包（用户已决定，不接入打包流程）。
+    // Q8_0 GGUF 本体约 3.5 GB（3,502,955,328 字节），打包后的 ZIP 超过 GitHub 单个 Release 资产 2 GiB 上限，
+    // 无法像上面的 qwen/asr/pronunciation 包那样随 dist 产出并通过 Release 分发。
+    // 用户获取路径见 docs/engineering/index-tts.md 第 3 节：本地执行
+    // yarn index-tts:prepare 生成 dist/ 下的 ZIP 后在 AI Router 中导入。
+    // 将来若建立大文件分发渠道（分片发布/外部托管），再在此处补一条与上面并列的
+    // execFileSync 调用即可。
   }
 
   console.log('Build completed successfully:', result)
