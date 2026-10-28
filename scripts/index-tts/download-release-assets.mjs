@@ -29,6 +29,17 @@ const defaultStateDirectory = path.join(root, 'externals', 'ai', '.setup-verific
 export const MODEL_PART_BYTES = 1073741824
 export const MODEL_FILE_NAME = 'index-tts2_5-q8_0.gguf'
 
+const RUNTIME_LICENSE_NAMES = [
+  'LICENSE.NVIDIA-CUDA.html',
+  'LICENSE.cJSON.txt',
+  'LICENSE.sentencepiece.txt',
+  'LICENSE.absl.txt',
+  'LICENSE.darts-clone.txt',
+  'LICENSE.protobuf-lite.txt',
+  'LICENSE.libyaml.txt'
+]
+const RUNTIME_LICENSES = RUNTIME_LICENSE_NAMES.map((name) => ({ name, file: name }))
+
 // 本地构建产物不是受管资产，但必须与 Release 资产共存于同一 runtime 目录：
 // build-runtime 写入构建元数据（build-cpu.json / build-cuda.json）与随包
 // 许可证（LICENSE.* / DISCLAIMER.*，含第三方 notices），"release 未发布时用
@@ -72,7 +83,7 @@ export function runtimeTarget(platform = process.platform, architecture = proces
     return {
       directory: 'linux-x64',
       dependencies: [],
-      licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
+      licenses: RUNTIME_LICENSES,
       helpers: {
         cpu: {
           name: 'ls101-index-tts-helper-cpu-linux-x64',
@@ -92,7 +103,7 @@ export function runtimeTarget(platform = process.platform, architecture = proces
         { name: 'cublas64_12.dll', file: 'cublas64_12.dll' },
         { name: 'cublasLt64_12.dll', file: 'cublasLt64_12.dll' }
       ],
-      licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
+      licenses: RUNTIME_LICENSES,
       helpers: {
         cpu: {
           name: 'ls101-index-tts-helper-cpu-win32-x64.exe',
@@ -533,9 +544,10 @@ async function ensureRuntimePublished({
 }
 
 // Before the runtime Release exists, only a locally built helper can satisfy
-// setup. It is validated against build-cpu.json (which records the pinned
-// upstream revisions) and its hash is logged for backfilling assets.json.
-async function ensureRuntimeLocalBuild(runtimeDirectory, target) {
+// setup. It is validated against build-cpu.json (which records the application
+// runtime version and pinned upstream revisions) and its hash is logged for
+// backfilling assets.json.
+export async function ensureRuntimeLocalBuild(runtimeDirectory, target) {
   const executable = path.join(runtimeDirectory, target.helpers.cpu.executable)
   const executableStats = await stat(executable).catch(() => null)
   if (!executableStats?.isFile() || executableStats.size < 1024 * 1024) {
@@ -552,6 +564,12 @@ async function ensureRuntimeLocalBuild(runtimeDirectory, target) {
   } catch {
     throw new Error(
       `本地 IndexTTS runtime 缺少构建元数据：${metadataPath}；请重新执行 yarn index-tts:build-runtime`
+    )
+  }
+  if (metadata.runtimeVersion !== config.runtimeRelease.version) {
+    throw new Error(
+      `本地 IndexTTS runtime 版本不一致（当前 ${metadata.runtimeVersion ?? '未知'}，需要 ` +
+        `${config.runtimeRelease.version}）；请重新执行 yarn index-tts:build-runtime`
     )
   }
   if (

@@ -3,7 +3,17 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createHash } = require('node:crypto')
-const { access, chmod, mkdir, mkdtemp, readFile, readdir, rm, writeFile, stat } = require('node:fs/promises')
+const {
+  access,
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+  stat
+} = require('node:fs/promises')
 const { readFileSync } = require('node:fs')
 const { tmpdir } = require('node:os')
 const path = require('node:path')
@@ -89,9 +99,7 @@ test('merging the planned parts reproduces the original bytes and hashes', async
   const { mergeModelParts, modelPartPlan, modelPartName } = await modulePromise
   const directory = await mkdtemp(path.join(tmpdir(), 'index-tts-merge-'))
   context.after(() => rm(directory, { recursive: true, force: true }))
-  const payload = Buffer.from(
-    Array.from({ length: 1000 }, (_, index) => (index * 7 + 13) % 251)
-  )
+  const payload = Buffer.from(Array.from({ length: 1000 }, (_, index) => (index * 7 + 13) % 251))
   const model = path.join(directory, 'model.bin')
   await writeFile(model, payload)
   const partsDirectory = path.join(directory, 'parts')
@@ -162,7 +170,7 @@ test('selects the pinned platform helpers from runtime release metadata', async 
     assets: [
       ...Object.values(target.helpers).map((helper) => asset(helper.name, digest)),
       asset('index-tts-runtime-manifest.json', digest),
-      asset('LICENSE.NVIDIA-CUDA.html', digest)
+      ...target.licenses.map((license) => asset(license.name, digest))
     ]
   }
 
@@ -174,14 +182,12 @@ test('selects the pinned platform helpers from runtime release metadata', async 
       ])
     ),
     dependencies: [],
-    licenses: [
-      {
-        name: 'LICENSE.NVIDIA-CUDA.html',
-        size: 1,
-        digest,
-        url: 'https://example.test/LICENSE.NVIDIA-CUDA.html'
-      }
-    ],
+    licenses: target.licenses.map((license) => ({
+      name: license.name,
+      size: 1,
+      digest,
+      url: `https://example.test/${license.name}`
+    })),
     manifest: {
       name: 'index-tts-runtime-manifest.json',
       size: 1,
@@ -416,7 +422,15 @@ test('uses the canonical helper filenames on Windows', async () => {
       { name: 'cublas64_12.dll', file: 'cublas64_12.dll' },
       { name: 'cublasLt64_12.dll', file: 'cublasLt64_12.dll' }
     ],
-    licenses: [{ name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' }],
+    licenses: [
+      { name: 'LICENSE.NVIDIA-CUDA.html', file: 'LICENSE.NVIDIA-CUDA.html' },
+      { name: 'LICENSE.cJSON.txt', file: 'LICENSE.cJSON.txt' },
+      { name: 'LICENSE.sentencepiece.txt', file: 'LICENSE.sentencepiece.txt' },
+      { name: 'LICENSE.absl.txt', file: 'LICENSE.absl.txt' },
+      { name: 'LICENSE.darts-clone.txt', file: 'LICENSE.darts-clone.txt' },
+      { name: 'LICENSE.protobuf-lite.txt', file: 'LICENSE.protobuf-lite.txt' },
+      { name: 'LICENSE.libyaml.txt', file: 'LICENSE.libyaml.txt' }
+    ],
     helpers: {
       cpu: {
         name: 'ls101-index-tts-helper-cpu-win32-x64.exe',
@@ -428,6 +442,63 @@ test('uses the canonical helper filenames on Windows', async () => {
       }
     }
   })
+})
+
+test('requires the complete runtime license closure on every supported platform', async () => {
+  const { runtimeTarget } = await modulePromise
+  const expected = [
+    'LICENSE.NVIDIA-CUDA.html',
+    'LICENSE.cJSON.txt',
+    'LICENSE.sentencepiece.txt',
+    'LICENSE.absl.txt',
+    'LICENSE.darts-clone.txt',
+    'LICENSE.protobuf-lite.txt',
+    'LICENSE.libyaml.txt'
+  ]
+  for (const platform of ['linux', 'win32']) {
+    assert.deepEqual(
+      runtimeTarget(platform, 'x64').licenses.map((license) => license.name),
+      expected
+    )
+  }
+})
+
+test('pins the repository third-party notices to their exact bytes', async () => {
+  const { loadConfig } = await modulePromise
+  const config = loadConfig()
+  for (const name of [
+    'LICENSE.cJSON.txt',
+    'LICENSE.sentencepiece.txt',
+    'LICENSE.absl.txt',
+    'LICENSE.darts-clone.txt',
+    'LICENSE.protobuf-lite.txt',
+    'LICENSE.libyaml.txt'
+  ]) {
+    const pinned = config.runtimeRelease.assets.find((asset) => asset.name === name)
+    assert.ok(pinned, `${name} must be pinned`)
+    const bytes = readFileSync(
+      path.join(__dirname, '..', '..', 'native', 'index-tts', 'licenses', name)
+    )
+    assert.equal(pinned.size, bytes.byteLength)
+    assert.equal(pinned.sha256, createHash('sha256').update(bytes).digest('hex'))
+  }
+})
+
+test('does not carry speculative binary pins through the unpublished runtime window', async () => {
+  const { loadConfig } = await modulePromise
+  const config = loadConfig()
+  if (config.runtimeRelease.published) return
+  assert.deepEqual(
+    config.runtimeRelease.assets.map((asset) => asset.name).sort(),
+    [
+      'LICENSE.absl.txt',
+      'LICENSE.cJSON.txt',
+      'LICENSE.darts-clone.txt',
+      'LICENSE.libyaml.txt',
+      'LICENSE.protobuf-lite.txt',
+      'LICENSE.sentencepiece.txt'
+    ].sort()
+  )
 })
 
 test('rejects release assets without the GitHub API digest', async () => {
@@ -548,7 +619,39 @@ test('without the preserve patterns the exact cleanup removes the local artifact
 
   // 反向证明：没有 preserve 时 build-cpu.json 会被删（正是被修复的缺陷）。
   await assert.rejects(access(path.join(runtimeDirectory, 'build-cpu.json')))
-  assert.deepEqual(await readFile(path.join(runtimeDirectory, 'ls101-index-tts-helper-cpu')), helperContent)
+  assert.deepEqual(
+    await readFile(path.join(runtimeDirectory, 'ls101-index-tts-helper-cpu')),
+    helperContent
+  )
+})
+
+test('local bootstrap rejects stale helper metadata and accepts the current runtime version', async (context) => {
+  const { ensureRuntimeLocalBuild, loadConfig, runtimeTarget } = await modulePromise
+  const config = loadConfig()
+  const boundary = await mkdtemp(path.join(tmpdir(), 'index-tts-local-version-'))
+  context.after(() => rm(boundary, { recursive: true, force: true }))
+  const runtimeDirectory = path.join(boundary, 'runtime', 'linux-x64')
+  await mkdir(runtimeDirectory, { recursive: true })
+  const helper = path.join(runtimeDirectory, 'ls101-index-tts-helper-cpu')
+  await writeFile(helper, Buffer.alloc(1024 * 1024, 1))
+  const metadataPath = path.join(runtimeDirectory, 'build-cpu.json')
+  const metadata = {
+    runtimeVersion: '0.0.0-stale',
+    sourceCommit: config.runtime.revision,
+    ggmlRevision: config.runtime.ggmlRevision
+  }
+  await writeFile(metadataPath, JSON.stringify(metadata))
+
+  await assert.rejects(
+    ensureRuntimeLocalBuild(runtimeDirectory, runtimeTarget('linux', 'x64')),
+    /本地 IndexTTS runtime 版本不一致/
+  )
+
+  await writeFile(
+    metadataPath,
+    JSON.stringify({ ...metadata, runtimeVersion: config.runtimeRelease.version })
+  )
+  await ensureRuntimeLocalBuild(runtimeDirectory, runtimeTarget('linux', 'x64'))
 })
 
 test('the runtime staging call wires the preserve patterns', async () => {

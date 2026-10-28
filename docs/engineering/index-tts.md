@@ -32,8 +32,9 @@ hardcode a release version in docs, scripts, or workflow comments — refer to t
 ## Runtime architecture
 
 - Each supported operating-system target distributes one `cpu` and one `cuda` helper asset.
-  `assets.json` pins both helpers, the Windows cuBLAS DLLs, `LICENSE.NVIDIA-CUDA.html`, and the
-  runtime manifest, so the default `yarn install` (whose postinstall runs setup) downloads every
+  `assets.json` pins both helpers, the Windows cuBLAS DLLs, `LICENSE.NVIDIA-CUDA.html`, the
+  cJSON/sentencepiece/Abseil/Darts-clone/protobuf-lite/libyaml notices, and the runtime manifest,
+  so the default `yarn install` (whose postinstall runs setup) downloads every
   pinned artifact for the current platform — the CUDA helper included — even though installers
   stay CPU-only through the electron-builder packaging filters. TODO: this "pin and download
   everything" policy is deliberate for now and will be revisited by a follow-up plan (for example
@@ -193,38 +194,39 @@ executes `scripts/setup.js`; on a fresh runner setup fails while `runtimeRelease
 `false`, because the runtime Release does not exist yet and no helper can be downloaded. The
 correct sequence is:
 
-1. From the feature branch, run this workflow with `workflow_dispatch` (target `both`). The first
+1. From the feature branch, run this workflow with `workflow_dispatch` for each unpublished
+   Release. **The current state requires target `runtime` only**: the model Release is already
+   published, so target `both` would rebuild it and then fail the existing-tag precheck. The first
    cuda leg may take hours; rerun it once to warm sccache if it times out.
-2. Publish creates the runtime and model Releases (tags `index-tts-runtime-v<version>` and
-   `index-tts-model-v<version>`; the versions live only in `scripts/index-tts/assets.json`).
-   Backfill that file: set both `published` flags to `true`, and pin every runtime asset setup
-   downloads — both helpers for each platform, the Windows cuBLAS DLLs,
-   `LICENSE.NVIDIA-CUDA.html`, and `index-tts-runtime-manifest.json` (name/size/SHA-256) under
-   `runtimeRelease.assets`. The model part entries are already pinned.
+2. After publishing, backfill `scripts/index-tts/assets.json` from the actual Release assets. Set
+   the `published` flag for each newly published Release, and pin every runtime asset setup
+   downloads (name/size/SHA-256). The repository-backed third-party notices are already pinned;
+   refresh both helpers for each platform, the Windows cuBLAS DLLs, `LICENSE.NVIDIA-CUDA.html`, and
+   `index-tts-runtime-manifest.json`. The model part entries are already pinned.
 3. Commit the backfill. From that point full CI and `yarn test:smoke` are expected to pass. Do not
    relax a pin or hash check to make setup green before the releases exist.
 
-Current state: `runtimeRelease` is pinned at an **unpublished** version with an empty asset list —
-the v0.2.1 binaries are intentionally not pinned yet because this branch changes them (portable
-ISA baseline, static CRT, UTF-8 path handling, third-party notices). After the workflow publishes
-`index-tts-runtime-v0.2.1`, backfill the pins in a follow-up commit exactly as described above.
-The third-party license notices (`LICENSE.cJSON.txt` / `LICENSE.sentencepiece.txt` /
-`LICENSE.libyaml.txt`) are uploaded by the workflow but are not pinned assets; locally staged
-copies survive `exact` cleanup through the pattern-based preserve allowlist in
-`download-release-assets.mjs`.
+Current state: `runtimeRelease` is unpublished and its asset list contains only repository-backed
+third-party notices whose exact bytes can be pinned before the Release exists. The helper, DLL,
+NVIDIA license, and manifest pins are deliberately absent rather than copied from the previous
+runtime. Backfill them from the actual runtime Release before changing `published` to `true`.
+Locally staged license copies survive `exact` cleanup through the pattern-based preserve allowlist
+in `download-release-assets.mjs`.
 
 Until the runtime Release exists, only machines that ran `yarn index-tts:build-runtime` locally can
-pass setup; the local helper is validated against its `build-cpu.json` metadata and its hash is
-logged so it can be pinned.
+pass setup; the local helper is validated against its `build-cpu.json` metadata (including the
+application runtime version and upstream revisions) and its hash is logged so it can be pinned.
 
 ## 5. Licensing
 
 - **audio.cpp** is Apache-2.0 (`LICENSE.audio-cpp.txt`); GGML is MIT (`LICENSE.ggml.txt`). Both
   ship in `thirdparty-licenses/` and in the Releases.
-- **Statically linked helper dependencies** — cJSON (MIT), sentencepiece (Apache-2.0), and
-  libyaml (MIT) — carry their notices in `native/index-tts/licenses/` as
-  `LICENSE.cJSON.txt` / `LICENSE.sentencepiece.txt` / `LICENSE.libyaml.txt`; the release
-  workflow uploads them alongside the runtime assets.
+- **Statically linked helper dependencies** — cJSON (MIT), sentencepiece (Apache-2.0), its bundled
+  Abseil (Apache-2.0), Darts-clone (BSD-3-Clause) and protobuf-lite (BSD-3-Clause) components, and
+  libyaml (MIT) — carry their notices in `native/index-tts/licenses/`. The additional SentencePiece
+  dependency notices are `LICENSE.absl.txt`, `LICENSE.darts-clone.txt`, and
+  `LICENSE.protobuf-lite.txt`; copies also ship in `thirdparty-licenses/`. Local builds stage all
+  notices, the release workflow uploads them, and setup downloads them with the runtime assets.
 - **IndexTTS 2.5 model weights** are distributed under the bilibili Model Use License
   (`LICENSE.IndexTTS.txt` with `DISCLAIMER.IndexTTS.txt`). Commercial use requires a separate
   licence when the licensor's annual revenue exceeds 1 billion RMB or monthly active users exceed

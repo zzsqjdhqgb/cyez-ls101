@@ -11,7 +11,38 @@
     "tag": "index-tts-runtime-v0.2.1",
     "prerelease": true,
     "published": false,
-    "assets": []
+    "assets": [
+      {
+        "name": "LICENSE.cJSON.txt",
+        "size": 1083,
+        "sha256": "163766832b15cc9c90d593216360c67af579b8b36932b297fca2aeb61544de2f"
+      },
+      {
+        "name": "LICENSE.sentencepiece.txt",
+        "size": 11560,
+        "sha256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5"
+      },
+      {
+        "name": "LICENSE.absl.txt",
+        "size": 11568,
+        "sha256": "7871ddb0d7635157a82afc21720d795660a024c59652b7a5b1ed812355320fdc"
+      },
+      {
+        "name": "LICENSE.darts-clone.txt",
+        "size": 1491,
+        "sha256": "ed8437dc7358a40ef10afd3635ac1cd43c88fbaaaf6cd27c414f8ada5d68f447"
+      },
+      {
+        "name": "LICENSE.protobuf-lite.txt",
+        "size": 1764,
+        "sha256": "f4df8b2457697851385d9ebb93267832c1dfa24e0e61881952f6b0c452663dc9"
+      },
+      {
+        "name": "LICENSE.libyaml.txt",
+        "size": 1101,
+        "sha256": "c40112449f254b9753045925248313e9270efa36d226b22d82d4cc6c43c57f29"
+      }
+    ]
   },
   "modelRelease": {
     "repository": "zzsqjdhqgb/cyez-ls101",

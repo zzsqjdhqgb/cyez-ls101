@@ -89,6 +89,13 @@ endif()
 
 if(MSVC)
     target_compile_options(ls101-index-tts-helper PRIVATE /utf-8)
+    # Upstream GGUF readers convert std::filesystem::path back with .string()
+    # before passing it to ggml_fopen (which expects UTF-8). Selecting UTF-8 as
+    # the process code page keeps that round trip intact on legacy-ACP Windows;
+    # patching only the C ABI's initial path construction is not sufficient.
+    target_sources(ls101-index-tts-helper PRIVATE
+        "${AUDIOCPP_SOURCE_DIR}/tools/cmake/audiocpp_utf8.manifest"
+    )
 else()
     target_compile_options(ls101-index-tts-helper PRIVATE -Wall -Wextra)
 endif()

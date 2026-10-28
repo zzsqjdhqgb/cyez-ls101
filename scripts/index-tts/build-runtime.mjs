@@ -60,6 +60,17 @@ const patchPaths = [
 ]
 const jobs = String(Math.max(1, Math.min(os.availableParallelism?.() ?? os.cpus().length, 16)))
 const minimumHelperBytes = 1_000_000
+export const STAGED_RUNTIME_LICENSES = Object.freeze([
+  'LICENSE.IndexTTS.txt',
+  'DISCLAIMER.IndexTTS.txt',
+  'LICENSE.audio-cpp.txt',
+  'LICENSE.cJSON.txt',
+  'LICENSE.sentencepiece.txt',
+  'LICENSE.absl.txt',
+  'LICENSE.darts-clone.txt',
+  'LICENSE.protobuf-lite.txt',
+  'LICENSE.libyaml.txt'
+])
 
 // --native-cpu is the explicit development-machine opt-in for host-specific ISA
 // flags (-march=native); the default build stays on the portable baseline.
@@ -82,6 +93,7 @@ function loadAssetConfig() {
   if (
     value?.schemaVersion !== 1 ||
     typeof value.runtime?.repository !== 'string' ||
+    !/^[a-zA-Z0-9_.-]+$/.test(value.runtimeRelease?.version ?? '') ||
     !/^[a-f0-9]{40}$/.test(value.runtime?.revision ?? '') ||
     !/^[a-f0-9]{40}$/.test(value.runtime?.ggmlRevision ?? '')
   ) {
@@ -267,6 +279,7 @@ function stageRuntimeMetadata() {
     schemaVersion: 1,
     backend,
     target: `${process.platform}-${process.arch}`,
+    runtimeVersion: assetConfig.runtimeRelease.version,
     sourceCommit: commit,
     ggmlRevision: ggmlTree,
     repository,
@@ -284,7 +297,7 @@ function stageRuntimeMetadata() {
 }
 
 function stageLicenses() {
-  for (const name of ['LICENSE.IndexTTS.txt', 'DISCLAIMER.IndexTTS.txt', 'LICENSE.audio-cpp.txt']) {
+  for (const name of STAGED_RUNTIME_LICENSES) {
     const source = path.join(root, 'native', 'index-tts', 'licenses', name)
     if (!existsSync(source)) throw new Error(`missing license file: ${source}`)
     copyFileSync(source, path.join(outputDir, name))
@@ -529,27 +542,329 @@ function assertStaticCpuBuild() {
   console.log('[index-tts] CPU helper has no unexpected dynamic library dependencies')
 }
 
-// The distributed CPU helper must run on any x86-64 host: ymm/zmm vector
-// instructions (AVX/AVX2/FMA/AVX-512) SIGILL on machines without those
-// extensions. The baseline is asserted on the staged Linux helper after every
-// default build; --native-cpu is the explicit development-machine opt-out.
+// The distributed CPU helper must run on any x86-64 host. Check the actual
+// disassembled mnemonics rather than registers or arbitrary text: AVX also has
+// XMM encodings, and several post-SSE2 ISA families use only GPRs/XMM registers.
+// The baseline is asserted after every default Linux CPU build; --native-cpu is
+// the explicit development-machine opt-out.
 export function requiresPortableIsaBaseline({ backend, platform, nativeCpu }) {
   return backend === 'cpu' && platform === 'linux' && !nativeCpu
 }
 
-// Counts disassembly lines containing the needle with exactly the semantics of
-// `objdump -d <helper> | grep -c <needle>`: a line with several hits counts once.
-export function countLinesContaining(text, needle) {
-  let count = 0
-  let cursor = 0
-  while (cursor < text.length) {
-    const hit = text.indexOf(needle, cursor)
-    if (hit === -1) break
-    count += 1
-    const lineEnd = text.indexOf('\n', hit)
-    cursor = lineEnd === -1 ? text.length : lineEnd + 1
+// GNU objdump's AT&T and Intel output both start instructions with an address,
+// a colon, and their encoded bytes. Restricting detection to that field avoids
+// matching symbol names, source annotations, comments, or arbitrary input text.
+const disassembledInstruction = /^\s*[0-9a-f]+:\t[^\t]*\t\s*([a-z][a-z0-9.]*)\b/i
+const instructionPrefixes = new Set([
+  'addr32',
+  'bnd',
+  // Segment overrides precede the mnemonic in GNU objdump output (for example,
+  // `cs vaddps ...`). They do not make the following instruction baseline.
+  'cs',
+  'ds',
+  'es',
+  'fs',
+  'gs',
+  'ss',
+  'data16',
+  'lock',
+  'notrack',
+  'rep',
+  'repne',
+  'repnz',
+  'repe',
+  'repz'
+])
+
+const legacyPostSse2Instructions = new Set([
+  // SSE3 / SSSE3
+  'addsubpd',
+  'addsubps',
+  'fisttp',
+  'haddpd',
+  'haddps',
+  'hsubpd',
+  'hsubps',
+  'lddqu',
+  'movddup',
+  'movshdup',
+  'movsldup',
+  'monitor',
+  'mwait',
+  'pabsb',
+  'pabsd',
+  'pabsw',
+  'palignr',
+  'phaddd',
+  'phaddsw',
+  'phaddw',
+  'phsubd',
+  'phsubsw',
+  'phsubw',
+  'pmaddubsw',
+  'pmulhrsw',
+  'pshufb',
+  'psignb',
+  'psignd',
+  'psignw',
+  // SSE4.1 / SSE4.2 (pextrw and pinsrw themselves are SSE2 and are omitted).
+  'blendpd',
+  'blendps',
+  'blendvpd',
+  'blendvps',
+  'crc32',
+  'dppd',
+  'dpps',
+  'extractps',
+  'insertps',
+  'movntdqa',
+  'mpsadbw',
+  'packusdw',
+  'pblendvb',
+  'pblendw',
+  'pcmpeqq',
+  'pcmpestri',
+  'pcmpestrm',
+  'pcmpgtq',
+  'pcmpistri',
+  'pcmpistrm',
+  'pextrb',
+  'pextrd',
+  'pextrq',
+  'phminposuw',
+  'pinsrb',
+  'pinsrd',
+  'pinsrq',
+  'pmaxsb',
+  'pmaxsd',
+  'pmaxud',
+  'pmaxuw',
+  'pminsb',
+  'pminsd',
+  'pminud',
+  'pminuw',
+  'pmovsxbd',
+  'pmovsxbq',
+  'pmovsxbw',
+  'pmovsxdq',
+  'pmovsxwd',
+  'pmovsxwq',
+  'pmovzxbd',
+  'pmovzxbq',
+  'pmovzxbw',
+  'pmovzxdq',
+  'pmovzxwd',
+  'pmovzxwq',
+  'pmuldq',
+  'pmulld',
+  'ptest',
+  'roundpd',
+  'roundps',
+  'roundsd',
+  'roundss',
+  // GFNI (the legacy, non-VEX encodings).
+  'gf2p8affineinvqb',
+  'gf2p8affineqb',
+  'gf2p8mulb',
+  // POPCNT/LZCNT, BMI1/BMI2, MOVBE, AES/PCLMUL, SHA, ADX and RNG.
+  // TZCNT is deliberately absent: its REP BSF encoding executes as BSF on
+  // pre-BMI CPUs, and the compiler only relies on that compatible behavior
+  // here (std::gcd inputs are nonzero), so rejecting it would be a false positive.
+  'andn',
+  'bextr',
+  'blsi',
+  'blsmsk',
+  'blsr',
+  'bzhi',
+  'lzcnt',
+  'movbe',
+  'mulx',
+  'pdep',
+  'pext',
+  'popcnt',
+  'rorx',
+  'sarx',
+  'shlx',
+  'shrx',
+  'adcx',
+  'adox',
+  'rdrand',
+  'rdseed',
+  'aesdec',
+  'aesdeclast',
+  'aesenc',
+  'aesenclast',
+  'aesimc',
+  'aeskeygenassist',
+  'pclmulqdq',
+  'sha1msg1',
+  'sha1msg2',
+  'sha1nexte',
+  'sha1rnds4',
+  'sha256msg1',
+  'sha256msg2',
+  'sha256rnds2',
+  // Other non-VEX ISA extensions: cache control, timestamping, MOVDIR/ENQCMD,
+  // WAITPKG, Key Locker and AMX. None belongs to the x86-64 SSE2 baseline.
+  'cldemote',
+  'clflushopt',
+  'clwb',
+  'pcommit',
+  'prefetchwt1',
+  'rdtscp',
+  'movdiri',
+  'movdir64b',
+  'enqcmd',
+  'enqcmds',
+  'serialize',
+  'tpause',
+  'umonitor',
+  'umwait',
+  'encodekey128',
+  'encodekey256',
+  'loadiwkey',
+  'ldtilecfg',
+  'sttilecfg',
+  'tilerelease',
+  'tileloadd',
+  'tileloaddt1',
+  'tilestored',
+  'tilezero',
+  'tcmmimfp16ps',
+  'tcmmrlfp16ps',
+  'tdpbf16ps',
+  'tdpfp16ps',
+  'tdpbssd',
+  'tdpbsud',
+  'tdpbusd',
+  'tdpbuud',
+  // AMD SSE4a and other commonly encountered post-baseline system instructions.
+  'extrq',
+  'insertq',
+  'movntsd',
+  'movntss',
+  'cmpxchg16b',
+  'clzero',
+  'monitorx',
+  'mwaitx',
+  'rdpru',
+  'invpcid',
+  'invlpgb',
+  'pconfig',
+  'ptwrite',
+  'tlbsync',
+  'wbnoinvd',
+  'rdpid',
+  'rdpkru',
+  'wrpkru',
+  'rdfsbase',
+  'rdgsbase',
+  'wrfsbase',
+  'wrgsbase',
+  'xgetbv',
+  'xsetbv',
+  'xrstor',
+  'xrstor64',
+  'xrstors',
+  'xrstors64',
+  'xsave',
+  'xsave64',
+  'xsavec',
+  'xsavec64',
+  'xsaveopt',
+  'xsaveopt64',
+  'xsaves',
+  'xsaves64'
+])
+
+// AVX-512 opmask instructions do not use a v-prefixed mnemonic.
+const avxOpmaskInstructions = new Set([
+  'kaddb',
+  'kaddd',
+  'kaddq',
+  'kaddw',
+  'kandb',
+  'kandd',
+  'kandnb',
+  'kandnd',
+  'kandnq',
+  'kandnw',
+  'kandq',
+  'kandw',
+  'kmovb',
+  'kmovd',
+  'kmovq',
+  'kmovw',
+  'knotb',
+  'knotd',
+  'knotq',
+  'knotw',
+  'korb',
+  'kord',
+  'korq',
+  'kortestb',
+  'kortestd',
+  'kortestq',
+  'kortestw',
+  'korw',
+  'kshiftlb',
+  'kshiftld',
+  'kshiftlq',
+  'kshiftlw',
+  'kshiftrb',
+  'kshiftrd',
+  'kshiftrq',
+  'kshiftrw',
+  'ktestb',
+  'ktestd',
+  'ktestq',
+  'ktestw',
+  'kunpckbw',
+  'kunpckdq',
+  'kunpckwd',
+  'kxnorb',
+  'kxnord',
+  'kxnorq',
+  'kxnorw',
+  'kxorb',
+  'kxord',
+  'kxorq',
+  'kxorw'
+])
+
+function isPostSse2Instruction(mnemonic) {
+  const normalized = mnemonic.toLowerCase()
+  // verr/verw are the only legacy x86 mnemonics beginning with "v"; all other
+  // v-prefixed instructions here require VEX, EVEX, XOP, or AVX10 encodings.
+  return (
+    (/^v[a-z0-9]/.test(normalized) && normalized !== 'verr' && normalized !== 'verw') ||
+    legacyPostSse2Instructions.has(normalized) ||
+    avxOpmaskInstructions.has(normalized)
+  )
+}
+
+// Returns one entry per offending instruction, retaining line numbers and the
+// original text for actionable build errors. This pure parser is also used by
+// tests with both AT&T and Intel-style objdump snippets.
+export function findPortableIsaViolations(disassembly) {
+  const violations = []
+  const lines = disassembly.split('\n')
+  for (let index = 0; index < lines.length; index += 1) {
+    const text = lines[index]
+    const instruction = disassembledInstruction.exec(text)
+    let mnemonic = instruction?.[1]?.toLowerCase()
+    let mnemonicEnd = instruction ? instruction.index + instruction[0].length : 0
+    while (mnemonic && instructionPrefixes.has(mnemonic)) {
+      const remainder = text.slice(mnemonicEnd)
+      const next = /^\s+([a-z][a-z0-9.]*)\b/i.exec(remainder)
+      mnemonic = next?.[1]?.toLowerCase()
+      mnemonicEnd += next?.[0].length ?? 0
+    }
+    if (mnemonic && isPostSse2Instruction(mnemonic)) {
+      violations.push({ line: index + 1, mnemonic, text: text.trim() })
+    }
   }
-  return count
+  return violations
 }
 
 function disassembleHelper(helperPath) {
@@ -569,35 +884,36 @@ function assertPortableCpuIsaBaseline() {
   requireCommand('objdump')
   const helperPath = path.join(outputDir, helperExecutableName())
   const disassembly = disassembleHelper(helperPath)
-  const ymmLines = countLinesContaining(disassembly, 'ymm')
-  const zmmLines = countLinesContaining(disassembly, 'zmm')
-  if (ymmLines > 0 || zmmLines > 0) {
+  const violations = findPortableIsaViolations(disassembly)
+  if (violations.length > 0) {
+    const examples = violations
+      .slice(0, 20)
+      .map(({ line, mnemonic }) => `line ${line}: ${mnemonic}`)
+      .join(', ')
     throw new Error(
-      `CPU helper is not ISA-portable: ${ymmLines} ymm / ${zmmLines} zmm vector ` +
-        `instructions in ${helperPath}. The default build must stay on the x86-64 ` +
-        'baseline (see ENGINE_ENABLE_NATIVE_CPU / GGML_NATIVE / GGML_AVX* in ' +
-        'native/index-tts/CMakeLists.txt); pass --native-cpu to opt out deliberately.'
+      `CPU helper is not ISA-portable: ${violations.length} post-SSE2 instructions in ` +
+        `${helperPath} (${examples}${violations.length > 20 ? ', ...' : ''}). The default ` +
+        'build must stay on the x86-64 baseline (see ENGINE_ENABLE_NATIVE_CPU / GGML_NATIVE ' +
+        '/ GGML_AVX* in native/index-tts/CMakeLists.txt); pass --native-cpu to opt out ' +
+        'deliberately.'
     )
   }
   console.log(
-    `[index-tts] portable ISA baseline verified: 0 ymm / 0 zmm instructions in ${helperPath}`
+    `[index-tts] portable ISA baseline verified: 0 post-SSE2 instructions in ${helperPath}`
   )
 }
 
 function verifyStagedRuntime() {
-  const expected = [
-    helperExecutableName(),
-    `build-${backend}.json`,
-    'LICENSE.IndexTTS.txt',
-    'DISCLAIMER.IndexTTS.txt',
-    'LICENSE.audio-cpp.txt'
-  ]
+  const expected = [helperExecutableName(), `build-${backend}.json`, ...STAGED_RUNTIME_LICENSES]
   for (const name of expected) {
     if (!existsSync(path.join(outputDir, name))) {
       throw new Error(`staged runtime is missing ${name}`)
     }
   }
   const metadata = JSON.parse(readFileSync(path.join(outputDir, `build-${backend}.json`), 'utf8'))
+  if (metadata.runtimeVersion !== assetConfig.runtimeRelease.version) {
+    throw new Error('staged runtime metadata does not match the application runtime version')
+  }
   if (metadata.sourceCommit !== commit || metadata.ggmlRevision !== ggmlTree) {
     throw new Error('staged runtime metadata does not match the pinned revisions')
   }

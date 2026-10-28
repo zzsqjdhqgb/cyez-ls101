@@ -10,22 +10,19 @@ name: IndexTTS Assets
 # while `scripts/index-tts/assets.json` still says `published: false`. The
 # intended sequence is:
 #   1. From this feature branch, run this workflow with `workflow_dispatch`
-#      (target=both) to build the four helpers, split the model, and publish
-#      the runtime and model Releases (tags `index-tts-runtime-v<version>` and
-#      `index-tts-model-v<version>` from assets.json). The first cuda run can
-#      take hours; rerun it once to warm the sccache cache if it times out
-#      (the timeout is 360 minutes for cuda legs).
-#   2. Backfill assets.json: set `runtimeRelease.published: true` plus pinned
-#      entries (name/size/SHA-256) for both helpers on each platform, the
-#      Windows cuBLAS DLLs, LICENSE.NVIDIA-CUDA.html, and
-#      index-tts-runtime-manifest.json, and `modelRelease.published: true`
-#      (the part entries are already pinned). Setup downloads every pinned
-#      runtime asset for the current platform, CUDA helpers included, while
-#      installers stay CPU-only through the electron-builder filters. The
-#      third-party license notices (LICENSE.cJSON/sentencepiece/libyaml.txt)
-#      are uploaded by this workflow but are not pinned assets; they are kept
-#      locally by the pattern-based preserve allowlist in
-#      download-release-assets.mjs instead.
+#      for each unpublished Release. The current state needs target=runtime
+#      only: modelRelease.published is already true, so target=both would fail
+#      the existing model-tag precheck after needlessly rebuilding the model.
+#      The runtime leg builds all four helpers; the first cuda run can take
+#      hours and may need a rerun to warm sccache (timeout: 360 minutes).
+#   2. Backfill assets.json from the actual Release assets: set the published
+#      flag for each newly published Release and pin every runtime asset setup
+#      downloads (name/size/SHA-256). The repository-backed third-party notices
+#      are already pinned; refresh the helpers, Windows cuBLAS DLLs,
+#      LICENSE.NVIDIA-CUDA.html, and index-tts-runtime-manifest.json. Setup
+#      downloads every pinned runtime asset for the current platform, CUDA
+#      helpers included, while installers stay CPU-only through the
+#      electron-builder filters.
 #   3. Commit the backfill. Full CI and `yarn test:smoke` only become
 #      meaningful from that point on. Do not relax any pin to make setup green
 #      before the releases exist.
@@ -355,29 +352,50 @@ jobs:
           }
           console.log(`Validated ${helper} (${stats.size} bytes)`)
 
-          // 非 ASCII 模型路径回归门禁：helper 内部全程按 UTF-8 语义处理路径
-          // （u8path 补丁 + audio.h），中文名目录必须能一路走到模型加载失败，
-          // 而不是被 ANSI 代码页错误解码。空文件 + 中文目录的组合让"路径
-          // 解析正确（打开了一个存在但非法的模型）"与"路径被错误解码（打开
-          // 了不存在的路径）"产生可区分的报错。
+          // 非 ASCII 模型路径回归门禁：helper 进程和上游 GGUF 读取路径必须
+          // 全程按 UTF-8 处理（activeCodePage manifest + audio.h）。最小合法
+          // GGUF（v3、零 tensor、零 metadata）足以穿过 sidecar 探测；缺少后续
+          // IndexTTS 资源的错误证明中文绝对路径已被正确打开，而路径解码错误
+          // 会停在 model path does not exist / failed to read GGUF metadata。
           const nonAsciiDirectory = '构建产物-模型目录'
-          const nonAsciiModel = `${nonAsciiDirectory}/模型.gguf`
-          spawnSync('mkdir', ['-p', nonAsciiDirectory])
-          require('node:fs').writeFileSync(nonAsciiModel, Buffer.alloc(0))
+          const nonAsciiModel = require('node:path').resolve(
+            `${nonAsciiDirectory}/模型.gguf`
+          )
+          require('node:fs').mkdirSync(nonAsciiDirectory, { recursive: true })
+          const minimalGguf = Buffer.alloc(24)
+          minimalGguf.write('GGUF', 0)
+          minimalGguf.writeUInt32LE(3, 4)
+          minimalGguf.writeBigUInt64LE(0n, 8)
+          minimalGguf.writeBigUInt64LE(0n, 16)
+          require('node:fs').writeFileSync(nonAsciiModel, minimalGguf)
           const nonAscii = spawnSync(helper, ['--model', nonAsciiModel], {
             encoding: 'utf8'
           })
           const nonAsciiError = `${nonAscii.stderr || ''}${nonAscii.stdout || ''}`
           if (nonAscii.status !== 1) {
             throw new Error(
-              `Helper must fail (exit 1) for a non-ASCII empty model, got ` +
+              `Helper must fail (exit 1) for the minimal non-ASCII model, got ` +
                 `status=${nonAscii.status}, signal=${nonAscii.signal ?? 'none'}: ${nonAsciiError}`
             )
           }
-          if (nonAsciiError.includes('An absolute --model path is required')) {
-            throw new Error('Helper rejected a valid absolute non-ASCII model path')
+          for (const pathFailure of [
+            'An absolute --model path is required',
+            'model path does not exist',
+            'failed to read GGUF metadata',
+            'failed to read GGUF tensor source'
+          ]) {
+            if (nonAsciiError.includes(pathFailure)) {
+              throw new Error(
+                `Non-ASCII model path did not reach resource loading: ${nonAsciiError}`
+              )
+            }
           }
-          console.log('Non-ASCII model path reached model loading as expected')
+          if (!nonAsciiError.includes('missing model package file')) {
+            throw new Error(
+              `Minimal non-ASCII GGUF did not reach IndexTTS resource loading: ${nonAsciiError}`
+            )
+          }
+          console.log('Non-ASCII model path reached IndexTTS resource loading as expected')
           NODE
 
       # Windows 交付门禁：CPU helper 链接静态 CRT（/MT，见
@@ -400,7 +418,7 @@ jobs:
           Write-Output 'Static CRT verified: no VC++ runtime imports'
 
       # ISA 可移植门禁已内建于构建脚本：默认 CPU 构建后
-      # scripts/index-tts/build-runtime.mjs 会反汇编并断言 0 ymm / 0 zmm
+      # scripts/index-tts/build-runtime.mjs 会反汇编并断言无 post-SSE2 指令
       # （assertPortableCpuIsaBaseline），Linux 构建腿无需重复实现。
 
       - name: Stage runtime asset
@@ -724,6 +742,9 @@ jobs:
           cp native/index-tts/licenses/LICENSE.audio-cpp.txt release-assets/
           cp native/index-tts/licenses/LICENSE.cJSON.txt release-assets/
           cp native/index-tts/licenses/LICENSE.sentencepiece.txt release-assets/
+          cp native/index-tts/licenses/LICENSE.absl.txt release-assets/
+          cp native/index-tts/licenses/LICENSE.darts-clone.txt release-assets/
+          cp native/index-tts/licenses/LICENSE.protobuf-lite.txt release-assets/
           cp native/index-tts/licenses/LICENSE.libyaml.txt release-assets/
           curl --fail --location --silent --show-error \
             https://docs.nvidia.com/cuda/eula/index.html \
@@ -810,6 +831,9 @@ jobs:
             'LICENSE.audio-cpp.txt',
             'LICENSE.cJSON.txt',
             'LICENSE.sentencepiece.txt',
+            'LICENSE.absl.txt',
+            'LICENSE.darts-clone.txt',
+            'LICENSE.protobuf-lite.txt',
             'LICENSE.libyaml.txt'
           ]
           const assets = runtimeFiles.map((name) => ({
@@ -874,6 +898,9 @@ jobs:
             release-assets/LICENSE.audio-cpp.txt
             release-assets/LICENSE.cJSON.txt
             release-assets/LICENSE.sentencepiece.txt
+            release-assets/LICENSE.absl.txt
+            release-assets/LICENSE.darts-clone.txt
+            release-assets/LICENSE.protobuf-lite.txt
             release-assets/LICENSE.libyaml.txt
             release-assets/index-tts-runtime-manifest.json
           fail_on_unmatched_files: true

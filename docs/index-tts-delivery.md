@@ -6,16 +6,16 @@
 
 | 文件 | 说明 |
 | --- | --- |
-| `scripts/index-tts/assets.json` | 唯一事实源（§3 原样照抄；`runtimeRelease.assets` bootstrap 后回填全部运行时资产——各平台 CPU/CUDA helper、win cuBLAS DLL、`LICENSE.NVIDIA-CUDA.html`、manifest） |
-| `scripts/index-tts/build-runtime.mjs` | 构建/暂存 helper（含 §4.6 补丁应用、ggml 树哈希校验、CUDA 闭包发现与暂存——linux `ldd`/win 递归 `dumpbin`、族断言（win {cublas,cublasLt}；linux 空闭包合法，见偏离清单）、无参冒烟、cpu 静态校验） |
-| `scripts/index-tts/download-release-assets.mjs` | Release 下载（当前平台 CPU+CUDA helper、win cuBLAS DLL、NVIDIA 许可、manifest）+ 分片合并 + HF bootstrap（复用 `downloadVerifiedAsset`/`ensureAssetSet`/`assertAssetFile`/`isSafeAssetPath`） |
+| `scripts/index-tts/assets.json` | 唯一事实源（§3 原样照抄；`runtimeRelease.assets` bootstrap 后回填全部运行时资产——各平台 CPU/CUDA helper、win cuBLAS DLL、NVIDIA/cJSON/sentencepiece/Abseil/Darts-clone/protobuf-lite/libyaml 许可、manifest） |
+| `scripts/index-tts/build-runtime.mjs` | 构建/暂存 helper（含 §4.6 补丁应用、ggml 树哈希校验、CUDA 闭包发现与暂存——linux `ldd`/win 递归 `dumpbin`、族断言（win {cublas,cublasLt}；linux 空闭包合法，见偏离清单）、无参冒烟、cpu 静态/ISA 校验、runtime 版本元数据与完整许可暂存） |
+| `scripts/index-tts/download-release-assets.mjs` | Release 下载（当前平台 CPU+CUDA helper、win cuBLAS DLL、NVIDIA/cJSON/sentencepiece/Abseil/Darts-clone/protobuf-lite/libyaml 许可、manifest）+ 分片合并 + HF bootstrap（复用 `downloadVerifiedAsset`/`ensureAssetSet`/`assertAssetFile`/`isSafeAssetPath`；本地回退校验 runtime 版本） |
 | `scripts/index-tts/build-package.mjs` | fflate 流式模型包打包器（manifest + GGUF + 参考音频 + 许可证文本；经典 ZIP、4 GiB 上限保护、不支持 ZIP64；打包前按 assets.json 校验模型哈希；不含可执行文件） |
 | `scripts/index-tts/prepare-package.mjs` | 组合根（模型 stat 就绪检查 → build-package（打包前 size/SHA-256 校验由打包器执行）→ 成功后由 `.part` 改名 `dist/`；`LS101_SKIP_INDEX_TTS_DOWNLOAD=1` 跳过） |
 | `native/index-tts/main.cpp` | helper 单文件源（CLI 契约 + JSON 载荷 + 进程协议 + C ABI 接入） |
 | `native/index-tts/audio.h` | WAV 解码/编码工具（RIFF 全块遍历、多声道混单声道、44 B–32 MiB、canonical 22050/mono/PCM16 输出） |
 | `native/index-tts/CMakeLists.txt` | 构建 `ls101-index-tts-helper`（index_tts2 定制、静态单文件、portable CPU） |
 | `native/index-tts/content-addressed-gguf.patch` | 上游三处扩展名判定 → GGUF 魔数判定 |
-| `native/index-tts/licenses/{LICENSE.IndexTTS.txt, DISCLAIMER.IndexTTS.txt, LICENSE.audio-cpp.txt}` | 上游许可 |
+| `native/index-tts/licenses/` | 上游及静态链接依赖许可（含 SentencePiece 内置 Abseil、Darts-clone、protobuf-lite notices） |
 | `packages/airouter/src/main/index-tts-model.ts` | `INDEX_TTS_LANGUAGES` / `IndexTtsParameters` / `indexTtsParameters` / `assertIndexTtsManifest` |
 | `packages/airouter/src/main/index-tts-protocol.ts` | `IndexTtsProtocolDecoder` + `INDEX_TTS_MAX_TEXT_BYTES` / `INDEX_TTS_MAX_REQUEST_BYTES` |
 | `packages/airouter/src/main/index-tts.ts` | `IndexTtsSynthesizer`（§6.4 十二条不变量） |
@@ -25,7 +25,7 @@
 | `scripts/__tests__/download-index-tts.test.js` | 下载脚本测试（含分片切分/合并确定性） |
 | `scripts/__tests__/build-index-tts-package.test.js` | 打包器测试 |
 | `docs/engineering/index-tts.md` | 工程文档（结构对齐 qwen-tts.md） |
-| `thirdparty-licenses/{LICENSE.IndexTTS.txt, DISCLAIMER.IndexTTS.txt, LICENSE.audio-cpp.txt, NOTICE.nvidia-cuda.txt}` | 第三方许可 |
+| `thirdparty-licenses/{LICENSE.IndexTTS.txt, DISCLAIMER.IndexTTS.txt, LICENSE.audio-cpp.txt, NOTICE.nvidia-cuda.txt, LICENSE.absl.txt, LICENSE.darts-clone.txt, LICENSE.protobuf-lite.txt}` | 第三方许可 |
 
 ### 修改
 

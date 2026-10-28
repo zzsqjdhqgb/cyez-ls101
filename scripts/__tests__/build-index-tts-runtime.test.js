@@ -7,7 +7,7 @@
  * 覆盖 IndexTTS CPU helper 的 ISA 可移植契约：
  * - 默认构建不绑定构建机 ISA（ENGINE_ENABLE_NATIVE_CPU=OFF）
  * - --native-cpu 显式 opt-in 才允许 -march=native
- * - Linux CPU 产物落地后的 ymm/zmm 基线断言判定与计数语义
+ * - Linux CPU 产物落地后的 post-SSE2 静态反汇编门禁（含 XMM VEX/EVEX）
  * - native/index-tts/CMakeLists.txt 的可移植默认值锚点
  */
 
@@ -125,21 +125,168 @@ test('guards the ISA baseline assertion to default Linux CPU builds', async () =
   )
 })
 
-test('counts disassembly lines with grep -c semantics', async () => {
-  const { countLinesContaining } = await modulePromise
-  assert.equal(countLinesContaining('ymm ymm\nymm\nplain\n', 'ymm'), 2)
-  assert.equal(countLinesContaining('ymm\nymm\nymm\n', 'ymm'), 3)
-  assert.equal(countLinesContaining('no vectors here\n', 'ymm'), 0)
-  assert.equal(countLinesContaining('', 'ymm'), 0)
-  assert.equal(countLinesContaining('tail ymm', 'ymm'), 1)
+function instruction(mnemonic, operands = '') {
+  return `  401000:\t c5 f8 58 c1          \t ${mnemonic} ${operands}`
+}
 
+test('detects VEX/EVEX regardless of vector width and AVX-512 opmask instructions', async () => {
+  const { findPortableIsaViolations } = await modulePromise
+  const cases = [
+    ['vmovdqa', '%xmm0,%xmm1'],
+    ['vaddps', '%xmm0,%xmm1,%xmm2'],
+    ['vmovdqa64', '%zmm0,%zmm1'],
+    ['vfmadd132ps', '%xmm0,%xmm1,%xmm2'],
+    ['vcvtph2ps', '%xmm0,%xmm1'],
+    ['vzeroupper'],
+    ['kmovw', '%k1,%k2'],
+    ['kortestq', '%k1,%k2']
+  ]
+  for (const [mnemonic, operands] of cases) {
+    const violations = findPortableIsaViolations(instruction(mnemonic, operands))
+    assert.equal(violations.length, 1, mnemonic)
+    assert.equal(violations[0].mnemonic, mnemonic)
+    assert.equal(violations[0].line, 1)
+  }
+})
+
+test('detects legacy post-SSE2 SIMD, BMI, crypto and other common ISA extensions', async () => {
+  const { findPortableIsaViolations } = await modulePromise
+  const cases = [
+    'addsubpd', // SSE3
+    'monitor',
+    'mwait',
+    'pshufb', // SSSE3
+    'roundss', // SSE4.1
+    'pcmpestri', // SSE4.2
+    'gf2p8affineinvqb', // GFNI
+    'gf2p8mulb',
+    'popcnt',
+    'lzcnt',
+    'andn', // BMI1
+    'blsr',
+    'bzhi', // BMI2
+    'pext',
+    'rorx',
+    'movbe',
+    'aesenc',
+    'pclmulqdq',
+    'sha256rnds2',
+    'adcx',
+    'rdrand',
+    'rdtscp',
+    'clflushopt',
+    'movdiri',
+    'enqcmd',
+    'tpause',
+    'encodekey128',
+    'ldtilecfg',
+    'tdpbf16ps',
+    'monitorx',
+    'rdpkru',
+    'xsave'
+  ]
+  const disassembly = cases.map((mnemonic) => instruction(mnemonic)).join('\n')
+  const violations = findPortableIsaViolations(disassembly)
+  assert.deepEqual(
+    violations.map(({ mnemonic }) => mnemonic),
+    cases
+  )
+  assert.equal(violations.at(-1).line, cases.length)
+})
+
+test('parses Intel syntax and instruction prefixes without inspecting operands', async () => {
+  const { findPortableIsaViolations } = await modulePromise
   const disassembly = [
-    '  401000:\t c5 fd 6f 05 ...\t vmovdqa %ymm0,%ymm0',
-    '  40100a:\t 48 89 e5       \t mov %rsp,%rbp',
-    '  40100d:\t 62 f1 7d 48 ...\t vmovdqa64 %zmm0,%zmm1'
+    '  401000:\t c5 f9 6f c1          \t vmovdqa xmm1,xmm0',
+    '  401005:\t f3 0f 1e fa          \t rep movbe eax,DWORD PTR [rdx]',
+    '  40100a:\t f0 0f 01 c1          \t lock xsave BYTE PTR [rcx]',
+    '  40100f:\t 0f 05                \t syscall # <vaddps@plt>'
   ].join('\n')
-  assert.equal(countLinesContaining(disassembly, 'ymm'), 1)
-  assert.equal(countLinesContaining(disassembly, 'zmm'), 1)
+  assert.deepEqual(
+    findPortableIsaViolations(disassembly).map(({ mnemonic }) => mnemonic),
+    ['vmovdqa', 'movbe', 'xsave']
+  )
+})
+
+test('skips segment override prefixes before checking the real instruction', async () => {
+  const { findPortableIsaViolations } = await modulePromise
+  const disassembly = [
+    // Exact GNU objdump output for bytes 2e c5 f8 58 c1.
+    '   0:\t2e c5 f8 58 c1       \tcs vaddps %xmm1,%xmm0,%xmm0',
+    '   5:\t64 c5 f9 6f c1       \tfs vmovdqa xmm0,xmm1',
+    '   a:\t65 c5 f9 6f c1       \tgs vmovdqa xmm0,xmm1',
+    '   f:\t3e c5 f9 6f c1       \tds vmovdqa xmm0,xmm1',
+    '  14:\t26 c5 f9 6f c1       \tes vmovdqa xmm0,xmm1',
+    '  19:\t36 c5 f9 6f c1       \tss vmovdqa xmm0,xmm1'
+  ].join('\n')
+  assert.deepEqual(
+    findPortableIsaViolations(disassembly).map(({ mnemonic }) => mnemonic),
+    ['vaddps', 'vmovdqa', 'vmovdqa', 'vmovdqa', 'vmovdqa', 'vmovdqa']
+  )
+})
+
+test('accepts SSE2 baseline and ignores comments, symbols, labels and malformed lines', async () => {
+  const { findPortableIsaViolations } = await modulePromise
+  const baseline = [
+    'Disassembly of section .text:',
+    '0000000000401000 <vaddps@plt>:',
+    '0000000000401020 <aesenc_helper>:',
+    'vaddps %ymm0,%ymm1',
+    'note: vmovdqa %xmm0,%xmm1 and popcnt %eax',
+    '  401000:\t 48 89 e5             \t mov %rsp,%rbp # vaddps %xmm0,%xmm1',
+    '  401003:\t 0f 6f c1             \t movq %mm0,%mm1',
+    '  401007:\t 66 0f 6f c1          \t movdqa %xmm0,%xmm1',
+    '  40100c:\t 0f 58 c1             \t addps %xmm0,%xmm1',
+    '  40100f:\t f3 0f 10 00          \t movss (%rax),%xmm0',
+    '  401014:\t f2 0f 5e c1          \t divsd %xmm1,%xmm0',
+    '  401018:\t 90                   \t nop # palignr %xmm1,%xmm0',
+    // REP BSF remains backward compatible on pre-BMI CPUs; the compiler only
+    // emits it here for nonzero std::gcd inputs where BSF/TZCNT results agree.
+    '  401019:\t f3 48 0f bc fa       \t tzcnt %rdx,%rdi',
+    '  40101e:\t 66 0f c5 c0 00       \t pextrw $0x0,%xmm0,%eax',
+    '  401024:\t 66 0f c4 c1 00       \t pinsrw $0x0,%ecx,%xmm0',
+    '  40102a:\t 0f 00 e0             \t verr %ax',
+    '  40102d:\t 0f 00 e8             \t verw %ax',
+    '  401030:\t c3                   \t ret',
+    ''
+  ].join('\n')
+  // Annotations alone must not trigger; the real SSSE3 mnemonic is covered by
+  // the negative test above.
+  assert.deepEqual(findPortableIsaViolations(baseline), [])
+  assert.deepEqual(findPortableIsaViolations(''), [])
+})
+
+test('stages the complete third-party license closure and records the runtime version', async () => {
+  const { STAGED_RUNTIME_LICENSES } = await modulePromise
+  assert.deepEqual(STAGED_RUNTIME_LICENSES, [
+    'LICENSE.IndexTTS.txt',
+    'DISCLAIMER.IndexTTS.txt',
+    'LICENSE.audio-cpp.txt',
+    'LICENSE.cJSON.txt',
+    'LICENSE.sentencepiece.txt',
+    'LICENSE.absl.txt',
+    'LICENSE.darts-clone.txt',
+    'LICENSE.protobuf-lite.txt',
+    'LICENSE.libyaml.txt'
+  ])
+  for (const name of STAGED_RUNTIME_LICENSES) {
+    assert.ok(
+      readFileSync(path.join(__dirname, '..', '..', 'native', 'index-tts', 'licenses', name)).length
+    )
+  }
+  const source = readFileSync(path.join(__dirname, '..', 'index-tts', 'build-runtime.mjs'), 'utf8')
+  assert.match(source, /runtimeVersion:\s*assetConfig\.runtimeRelease\.version/)
+})
+
+test('embeds the upstream UTF-8 process code page manifest on Windows', () => {
+  const cmakeLists = readFileSync(
+    path.join(__dirname, '..', '..', 'native', 'index-tts', 'CMakeLists.txt'),
+    'utf8'
+  )
+  assert.match(
+    cmakeLists,
+    /target_sources\(ls101-index-tts-helper PRIVATE\s+"\$\{AUDIOCPP_SOURCE_DIR\}\/tools\/cmake\/audiocpp_utf8\.manifest"/
+  )
 })
 
 test('anchors the portable baseline in the helper CMakeLists', async () => {

@@ -892,7 +892,7 @@ describe('AIRouterSettingsPage', () => {
     expect(probeIndexTtsCuda).not.toHaveBeenCalled()
   })
 
-  it('shows engine-normalized IndexTTS parameters for the enabled model', async () => {
+  it('shows IndexTTS parameters for the selected enabled test model', async () => {
     const modelPackage = {
       package: { id: 'index-tts-zh', version: '1.0.0', name: 'IndexTTS 中文' },
       runtime: { engine: 'index-tts' as const, engineApiVersion: 1 },
@@ -939,18 +939,30 @@ describe('AIRouterSettingsPage', () => {
       target: { value: 'index-tts-zh@1.0.0' }
     })
 
-    // 包内第一个模型启用时展示其归一化后的参数，而不是原始 manifest 值
+    // 两个模型同时启用时先展示第一个模型的归一化参数，而不是原始 manifest 值
+    expect(within(dialog).getByRole('checkbox', { name: '默认模型 (index-default)' })).toBeChecked()
+    expect(within(dialog).getByRole('checkbox', { name: '调优模型 (index-tuned)' })).toBeChecked()
     expect(settingsRowValue(dialog, '推理线程')).toBe('4')
     expect(settingsRowValue(dialog, '合成语言')).toBe('自动')
     expect(settingsRowValue(dialog, '最大音频 Token')).toBe('1500')
     expect(settingsRowValue(dialog, '随机种子')).toBe('随机')
 
-    // 多模型包里跟随当前启用的模型，而不是包内第一个
-    fireEvent.click(within(dialog).getByRole('checkbox', { name: '默认模型 (index-default)' }))
+    // 参数跟随连接测试选择的模型，而不是固定跟随第一个启用模型
+    fireEvent.change(within(dialog).getByLabelText('测试语音模型'), {
+      target: { value: 'index-tuned' }
+    })
     expect(settingsRowValue(dialog, '推理线程')).toBe('8')
     expect(settingsRowValue(dialog, '合成语言')).toBe('中文')
     expect(settingsRowValue(dialog, '最大音频 Token')).toBe('2000')
     expect(settingsRowValue(dialog, '随机种子')).toBe('7')
+
+    // 禁用当前测试模型后回退到仍启用的模型
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: '调优模型 (index-tuned)' }))
+    expect(within(dialog).getByLabelText('测试语音模型')).toHaveValue('index-default')
+    expect(settingsRowValue(dialog, '推理线程')).toBe('4')
+    expect(settingsRowValue(dialog, '合成语言')).toBe('自动')
+    expect(settingsRowValue(dialog, '最大音频 Token')).toBe('1500')
+    expect(settingsRowValue(dialog, '随机种子')).toBe('随机')
   })
 
   it('manages image Providers without a default Provider control', async () => {

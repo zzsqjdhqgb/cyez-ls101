@@ -722,6 +722,7 @@ export function AIRouterSpeechSettingsPage({
                       <ModelVoiceSections
                         draft={draft}
                         modelPackage={selectedPackage}
+                        selectedTestModel={selectedTestModel}
                         setDraft={setDraft}
                       />
                     ) : (
@@ -1119,10 +1120,12 @@ export function AIRouterSpeechSettingsPage({
 function ModelVoiceSections({
   draft,
   modelPackage,
+  selectedTestModel,
   setDraft
 }: {
   draft: SpeechProviderDraft
   modelPackage: AIRouterSpeechModelPackageSummary
+  selectedTestModel: string
   setDraft: (draft: SpeechProviderDraft) => void
 }): JSX.Element {
   return (
@@ -1136,7 +1139,11 @@ function ModelVoiceSections({
         />
       </SettingsSection>
       {draft.type === 'index-tts' ? (
-        <IndexTtsParametersSection draft={draft} modelPackage={modelPackage} />
+        <IndexTtsParametersSection
+          draft={draft}
+          modelPackage={modelPackage}
+          selectedTestModel={selectedTestModel}
+        />
       ) : null}
       <SettingsSection title="启用音色" description="模型包中的音色适用于包内全部模型。">
         <ToggleList
@@ -1157,17 +1164,23 @@ function ModelVoiceSections({
 // 依赖 Node/Electron 运行时，renderer 无法直接导入，故在此等价复刻归一化规则。
 function IndexTtsParametersSection({
   draft,
-  modelPackage
+  modelPackage,
+  selectedTestModel
 }: {
   draft: SpeechProviderDraft
   modelPackage: AIRouterSpeechModelPackageSummary
+  selectedTestModel: string
 }): JSX.Element {
   const enabledModelIds = new Set(
     draft.models.filter((model) => model.enabled).map((model) => model.id)
   )
-  // 引擎按请求的 modelId 取参数；多模型包里跟随当前启用的模型，而不是包内第一个
+  // 引擎按请求的 modelId 取参数；多模型包里优先跟随当前测试模型。
   const model =
-    modelPackage.models.find((item) => enabledModelIds.has(item.id)) ?? modelPackage.models[0]
+    modelPackage.models.find(
+      (item) => item.id === selectedTestModel && enabledModelIds.has(item.id)
+    ) ??
+    modelPackage.models.find((item) => enabledModelIds.has(item.id)) ??
+    modelPackage.models[0]
   const parameters = normalizeIndexTtsParameters(model?.parameters)
   return (
     <SettingsSection
