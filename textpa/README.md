@@ -84,6 +84,10 @@ TextPA 的直接后续论文、Whisper/CTC/发音属性/韵律改进、指标口
 当前暂停点、诊断模块拆分方案和需要保留的实验边界见
 [`RESEARCH_PAUSE.md`](RESEARCH_PAUSE.md)。单条文字诊断冒烟的原始输入和 Sol
 medium 输出见 [`benchmark-data/diagnostic-smoke/`](benchmark-data/diagnostic-smoke)。
+面向工程选型的三份汇总文档见 [`reports/`](reports/)：
+[`01-existing-solutions.md`](reports/01-existing-solutions.md) 收集候选方案，
+[`02-technical-survey.md`](reports/02-technical-survey.md) 记录对照实验与取舍，
+[`03-final-report.md`](reports/03-final-report.md) 说明最终采用的产品方案。
 本仓库固定作者代码 commit `e429201f2f8a7dbdb594e637bf0139c458256aad`
 及 MultiPA revision `ff1e3c79bfb1d113d887a0b7b05fe2900c095264`。
 
