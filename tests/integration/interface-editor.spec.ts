@@ -1265,24 +1265,25 @@ test('IE-16 installs all bundled Shanghai Interfaces on first launch', async () 
   await expect(builtin).toBeVisible()
   await expect(page.getByRole('button', { name: '上海中考英语口语', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: '上海高考英语听力', exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: '上海中考英语听力', exact: true })).toBeVisible()
-  await expect(page.getByText('内置', { exact: true })).toHaveCount(4)
+  await expect(page.getByText('内置', { exact: true })).toHaveCount(3)
   await builtin.click()
   await expect(page.getByText('内置题型')).toBeVisible()
   await expect(page.getByRole('button', { name: '新建题组' })).toBeVisible()
   await page.getByRole('tab', { name: '题型定义' }).click()
   await expect(page.getByText('sentence1', { exact: true })).toBeVisible()
 
-  for (const [name, levels] of [
-    ['上海高考英语听力', ['低（B2）', '中（B2+～C1）', '高（C1～C2）']],
-    ['上海中考英语听力', ['A1', 'A2', 'B1']]
-  ] as const) {
-    await page.getByRole('link', { name: '题型库' }).click()
-    await page.getByRole('button', { name, exact: true }).click()
-    await page.getByRole('tab', { name: '题型定义' }).click()
-    for (const level of levels) {
-      await expect(page.getByText(level, { exact: true })).toBeVisible()
-    }
+  await page.getByRole('link', { name: '题型库' }).click()
+  await page.getByRole('button', { name: '上海高考英语听力', exact: true }).click()
+  await page.getByRole('tab', { name: '题型定义' }).click()
+  for (const level of [
+    'A1（中考难度）',
+    'A2（中考难度）',
+    'B1（中考难度）',
+    '低（B2）',
+    '中（B2+～C1）',
+    '高（C1～C2）'
+  ]) {
+    await expect(page.getByText(level, { exact: true })).toBeVisible()
   }
 })
 
@@ -1644,7 +1645,7 @@ test('IE-21 can keep the previous bundled version as a published Interface', asy
 
   await page.getByRole('link', { name: '题型库' }).click()
   await expect(page.getByRole('button', { name: '上海高考英语口语', exact: true })).toHaveCount(2)
-  await expect(page.getByText('内置', { exact: true })).toHaveCount(4)
+  await expect(page.getByText('内置', { exact: true })).toHaveCount(3)
 })
 
 test('IE-22 refuses a bundled update that changes its variable contract', async () => {

@@ -80,7 +80,6 @@ describe('builtin content contract', () => {
     expect(bundledInterfaces.map(({ builtinKey }) => builtinKey)).toEqual([
       'shanghai-gaokao-listening',
       'shanghai-gaokao-speaking',
-      'shanghai-zhongkao-listening',
       'shanghai-zhongkao-speaking'
     ])
     const templateSummaries = await application.browser.listBuiltinTemplates()

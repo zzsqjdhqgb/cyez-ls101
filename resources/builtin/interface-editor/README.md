@@ -14,20 +14,18 @@ Current builtins:
 - `shanghai-gaokao-speaking`: Shanghai Gaokao English speaking content, consolidated from the 27 `editableData` fields in the legacy `templates/SH-gaokao-speaking/chunk` files. Legacy file fields are represented as Interface image fields.
 - `shanghai-zhongkao-speaking`: Shanghai Zhongkao English speaking content, consolidated from the 16 `editableData` fields in the legacy `templates/SH-zhongkao-speaking/chunk` files. Legacy file fields are represented as Interface image fields.
 - `shanghai-gaokao-listening`: Shanghai Gaokao English listening content, covering all 133 `editableData` fields in the legacy `templates/gaokao-listening/template.json` file.
-- `shanghai-zhongkao-listening`: Independent A1/A2/B1 listening prompt Interface for Zhongkao learners, using the same 133-field listening contract. It has no bundled exam template until the question format is confirmed.
 
 ## Teacher listening prompts
 
-The teacher-supplied prompts map to two listening Interfaces. They do not belong to the speaking Interfaces:
+The teacher-supplied prompts belong to the Shanghai Gaokao English listening Interface. The A1/A2/B1 prompts use the same listening question format at lower teaching difficulty; they do not belong to the Zhongkao speaking Interface:
 
-| Interface        | Difficulty prompts                    | Default when only the base prompt is selected |
-| ---------------- | ------------------------------------- | --------------------------------------------- |
-| 上海高考英语听力 | 低（B2）, 中（B2+～C1）, 高（C1～C2） | 低（B2）                                      |
-| 上海中考英语听力 | A1, A2, B1                            | A1                                            |
+| Interface        | Difficulty prompts                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------- |
+| 上海高考英语听力 | A1（中考难度）, A2（中考难度）, B1（中考难度）, 低（B2）, 中（B2+～C1）, 高（C1～C2） |
 
-Select one difficulty prompt and provide the topic or source material in the generation dialog's additional requirements. Each difficulty prompt includes the common requirements and can be used independently. Generate three separate instances with the same topic for a three-level set. The application still generates one structured instance per request. Field examples illustrate the data format; they are not calibrated CEFR examples.
+Select one difficulty prompt and provide the topic or source material in the generation dialog's additional requirements. Each difficulty prompt includes the common requirements and can be used independently; there is no separate base prompt. Generate three separate instances with the same topic for a three-level set. The application still generates one structured instance per request. Field examples illustrate the data format; they are not calibrated CEFR examples.
 
-Both prompts preserve the teacher's 20-question, 25-point structure: ten short dialogues played once, two passages with three questions each and one long conversation with four questions played twice. The Zhongkao Interface currently has no bundled exam template. Its 20-question, 25-point format is retained only inside the teacher prompt as an unconfirmed practice proposal; it must not be presented as an official Zhongkao paper.
+All six difficulty prompts preserve the existing Gaokao listening Interface's 20-question, 25-point structure: ten short dialogues played once, two passages with three questions each and one long conversation with four questions played twice. The A1/A2/B1 labels indicate difficulty only; no separate Zhongkao listening Interface or exam template is bundled.
 
 The adapted prompts include sample-based calibration, per-level ASL/ASW/RE ranges, GL as a report-only value, vocabulary and syntax, speech rate targets, phonetic phenomena, information density, oral strategies, cognitive distributions, and distractor strength. They also require option-only review, truncated-evidence review, answer evidence/uniqueness checks, and cross-question disclosure checks. All are model instructions, not a claim of automated measurement or validation against real students.
 
