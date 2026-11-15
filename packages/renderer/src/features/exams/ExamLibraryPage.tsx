@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type JSX } from 'react'
 import { fileDialog } from '@ls101/file-dialog/renderer'
 import type { ExamLibraryRecord } from '@ls101/exam-library'
-import { AlertCircle, ClipboardCheck, Play, Trash2, Upload } from 'lucide-react'
+import { AlertCircle, ClipboardCheck, Download, Play, Trash2, Upload } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { ConfirmModal } from '../../components/ui/ConfirmModal'
@@ -10,10 +10,8 @@ import { IconButton } from '../../components/ui/IconButton'
 import { Page, PageHeader } from '../../components/ui/Page'
 import { toast } from '../../components/ui/toast'
 import { useExamLibrary } from './ExamLibraryContext'
-import { examErrorMessage } from './examUi'
+import { EXAM_ARCHIVE_FILTER, examErrorMessage, exportExamArchive } from './examUi'
 import styles from './ExamLibraryPage.module.css'
-
-const EXAM_FILTER = [{ name: 'LS101 试卷包', extensions: ['lsexam', 'zip'] }]
 
 export function ExamLibraryPage(): JSX.Element {
   const repository = useExamLibrary()
@@ -21,6 +19,7 @@ export function ExamLibraryPage(): JSX.Element {
   const [records, setRecords] = useState<ExamLibraryRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
+  const [exportingId, setExportingId] = useState<string | null>(null)
   const [pendingDelete, setPendingDelete] = useState<ExamLibraryRecord | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -60,7 +59,7 @@ export function ExamLibraryPage(): JSX.Element {
     try {
       const selected = await fileDialog.readBinary({
         title: '导入试卷包',
-        filters: EXAM_FILTER
+        filters: [EXAM_ARCHIVE_FILTER]
       })
       if (!selected) return
       const result = await repository.importArchive(selected.data)
@@ -74,6 +73,22 @@ export function ExamLibraryPage(): JSX.Element {
       setError(examErrorMessage(reason))
     } finally {
       setImporting(false)
+    }
+  }
+
+  const exportExam = async (record: ExamLibraryRecord): Promise<void> => {
+    if (exportingId !== null) return
+    setExportingId(record.packageId)
+    setError(null)
+    try {
+      const archive = await repository.exportArchive(record.packageId)
+      if (await exportExamArchive(archive, record.title)) {
+        toast.success(`已导出试卷“${record.title}”`)
+      }
+    } catch (reason) {
+      setError(examErrorMessage(reason))
+    } finally {
+      setExportingId(null)
     }
   }
 
@@ -103,7 +118,7 @@ export function ExamLibraryPage(): JSX.Element {
           <Button
             icon={Upload}
             variant="primary"
-            disabled={importing}
+            disabled={importing || exportingId !== null}
             onClick={() => void importExam()}
           >
             {importing ? '正在导入' : '导入试卷包'}
@@ -154,9 +169,15 @@ export function ExamLibraryPage(): JSX.Element {
                         开始考试
                       </Button>
                       <IconButton
+                        icon={Download}
+                        label="导出试卷"
+                        disabled={importing || exportingId !== null}
+                        onClick={() => void exportExam(record)}
+                      />
+                      <IconButton
                         icon={Trash2}
                         label="删除试卷"
-                        disabled={importing}
+                        disabled={importing || exportingId !== null}
                         variant="danger"
                         onClick={() => setPendingDelete(record)}
                       />

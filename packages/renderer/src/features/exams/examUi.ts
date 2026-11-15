@@ -1,4 +1,11 @@
+import type { FileDialog } from '@ls101/file-dialog/renderer'
+import { fileDialog } from '@ls101/file-dialog/renderer'
 import { ExamLibraryError } from '@ls101/exam-library'
+
+export const EXAM_ARCHIVE_FILTER = {
+  name: 'LS101 试卷包',
+  extensions: ['lsexam', 'zip']
+} as const
 
 export function examErrorMessage(reason: unknown): string {
   if (reason instanceof ExamLibraryError) {
@@ -14,4 +21,24 @@ export function examErrorMessage(reason: unknown): string {
     }
   }
   return reason instanceof Error ? reason.message : '操作失败，请重试。'
+}
+
+export async function exportExamArchive(
+  archive: Uint8Array,
+  examTitle: string,
+  dialog: Pick<FileDialog, 'writeBinary'> = fileDialog
+): Promise<boolean> {
+  return dialog.writeBinary(archive, {
+    title: '导出试卷',
+    defaultName: `${safeFilename(examTitle)}.lsexam`,
+    filters: [EXAM_ARCHIVE_FILTER]
+  })
+}
+
+function safeFilename(value: string): string {
+  const withoutControls = [...value.trim()]
+    .map((character) => (character.charCodeAt(0) < 32 ? '-' : character))
+    .join('')
+  const safe = withoutControls.replace(/[\\/:*?"<>|]+/g, '-').replace(/[. ]+$/g, '')
+  return safe || '未命名试卷'
 }
