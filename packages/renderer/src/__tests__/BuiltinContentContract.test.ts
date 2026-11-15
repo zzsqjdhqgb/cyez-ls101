@@ -97,12 +97,6 @@ describe('builtin content contract', () => {
           name: '上海中考口语标准题型',
           available: true,
           errors: []
-        }),
-        expect.objectContaining({
-          templateId: '9f7e6d5c-4b3a-4910-8f7e-6d5c4b3a2910',
-          name: '上海中考英语听力分层训练',
-          available: true,
-          errors: []
         })
       ])
     )

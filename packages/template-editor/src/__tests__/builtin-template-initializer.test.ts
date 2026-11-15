@@ -85,8 +85,7 @@ describe('内置 Template 启动初始化', () => {
         LISTENING_TEMPLATE.templateId,
         ...LISTENING_BLOCK_TEMPLATES.map(({ templateId }) => templateId),
         ...SECTION_TEMPLATES.map(({ templateId }) => templateId),
-        ZHONGKAO_TEMPLATE_ID,
-        '9f7e6d5c-4b3a-4910-8f7e-6d5c4b3a2910'
+        ZHONGKAO_TEMPLATE_ID
       ].sort()
     )
     expect(await repository.getActiveBuiltinTemplate(TEMPLATE_ID)).toMatchObject({
