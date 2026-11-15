@@ -20,19 +20,19 @@ const LISTENING_BLOCK_TEMPLATES = [
   {
     templateId: '5c2f1d4e-6a7b-4c8d-9e0f-1234567890ab',
     name: '上海高考英语听力 - 短对话专项训练',
-    version: 4,
+    version: 5,
     questionCounts: [5, 5]
   },
   {
     templateId: '6d3e2f5a-7b8c-4d9e-a0f1-2345678901bc',
     name: '上海高考英语听力 - 短文专项训练',
-    version: 5,
+    version: 6,
     questionCounts: [3, 3]
   },
   {
     templateId: '7e4f3a6b-8c9d-4e0f-a1b2-3456789012cd',
     name: '上海高考英语听力 - 长对话专项训练',
-    version: 5,
+    version: 6,
     questionCounts: [4]
   }
 ] as const
@@ -85,7 +85,8 @@ describe('内置 Template 启动初始化', () => {
         LISTENING_TEMPLATE.templateId,
         ...LISTENING_BLOCK_TEMPLATES.map(({ templateId }) => templateId),
         ...SECTION_TEMPLATES.map(({ templateId }) => templateId),
-        ZHONGKAO_TEMPLATE_ID
+        ZHONGKAO_TEMPLATE_ID,
+        '9f7e6d5c-4b3a-4910-8f7e-6d5c4b3a2910'
       ].sort()
     )
     expect(await repository.getActiveBuiltinTemplate(TEMPLATE_ID)).toMatchObject({
@@ -167,8 +168,8 @@ describe('内置 Template 启动初始化', () => {
 
     expect(await repository.getActiveBuiltinTemplate(LISTENING_TEMPLATE.templateId)).toMatchObject({
       templateId: LISTENING_TEMPLATE.templateId,
-      version: 6,
-      releaseHash: 'sha256:29f532a3d7afecb4bf26c813511d4a9c8dba8e41aa6135d56efc5c5a292baa2f',
+      version: 7,
+      releaseHash: 'sha256:f7d4ad9f303849409dce94aed66639c179c7cca81e419be4e1a87af405f6be1d',
       document: {
         content: {
           name: LISTENING_TEMPLATE.name,
@@ -177,7 +178,7 @@ describe('内置 Template 启动初始化', () => {
             {
               alias: 'data',
               interfaceId:
-                'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
+                'sha256:83077d910f42005912f58f94c305deace600f4763f09f82b1cfcf6bb83e279a2',
               acceptedVars: expect.arrayContaining([
                 'dialogue_text_1',
                 'passage_text_1',
@@ -228,7 +229,7 @@ describe('内置 Template 启动初始化', () => {
               {
                 alias: 'data',
                 interfaceId:
-                  'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
+                  'sha256:83077d910f42005912f58f94c305deace600f4763f09f82b1cfcf6bb83e279a2',
                 acceptedVars: expect.any(Array)
               }
             ],

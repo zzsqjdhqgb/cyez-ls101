@@ -166,7 +166,7 @@ describe('bundled Interface repository', () => {
     const entries = await repository.loadAll()
     const entry = entries.find(({ builtinKey }) => builtinKey === 'shanghai-gaokao-listening')
     expect(entry?.currentInterface).toMatchObject({
-      id: 'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
+      id: 'sha256:83077d910f42005912f58f94c305deace600f4763f09f82b1cfcf6bb83e279a2',
       name: '上海高考英语听力'
     })
     if (!entry) throw new Error('expected Shanghai Gaokao listening builtin')
@@ -175,9 +175,9 @@ describe('bundled Interface repository', () => {
     expect(entry.currentInterface.prompts[0].content).toContain('“[Man]:”或“[Woman]:”')
     expect(entry.currentInterface.prompts.map(({ name }) => name)).toEqual([
       '基础出题要求',
-      'B2',
-      'C1',
-      'C2'
+      '低（B2）',
+      '中（B2+～C1）',
+      '高（C1～C2）'
     ])
     expect(entry.currentInterface.fields.order).toEqual([
       'shortDialogues',
@@ -196,6 +196,20 @@ describe('bundled Interface repository', () => {
     const answers = leaves.filter(({ leaf }) => leaf.varName.startsWith('answer_'))
     expect(answers).toHaveLength(20)
     expect(new Set(answers.map(({ leaf }) => leaf.example))).toEqual(new Set(['A', 'B', 'C', 'D']))
+  })
+
+  it('中考听力独立发布并复用完整的20题字段契约', async () => {
+    const entries = await new FileBundledInterfaceRepository(
+      new DiskReadonlyStore('resources/builtin/interface-editor')
+    ).loadAll()
+    const definition = entries.find(
+      ({ builtinKey }) => builtinKey === 'shanghai-zhongkao-listening'
+    )?.currentInterface
+    expect(definition?.name).toBe('上海中考英语听力')
+    if (!definition) throw new Error('expected Shanghai Zhongkao listening builtin')
+    expectVarNames(flattenFields(definition.fields), EXPECTED_GAOKAO_LISTENING_VAR_NAMES)
+    expect(definition.prompts.map(({ name }) => name)).toEqual(['基础出题要求', 'A1', 'A2', 'B1'])
+    expect(definition.description).toContain('未核验为现行官方卷面')
   })
 
   it('按 builtinKey 和内容摘要读取独立 Interface 文件', async () => {

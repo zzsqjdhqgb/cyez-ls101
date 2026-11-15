@@ -80,6 +80,7 @@ describe('builtin content contract', () => {
     expect(bundledInterfaces.map(({ builtinKey }) => builtinKey)).toEqual([
       'shanghai-gaokao-listening',
       'shanghai-gaokao-speaking',
+      'shanghai-zhongkao-listening',
       'shanghai-zhongkao-speaking'
     ])
     const templateSummaries = await application.browser.listBuiltinTemplates()
@@ -94,6 +95,12 @@ describe('builtin content contract', () => {
         expect.objectContaining({
           templateId: ZHONGKAO_TEMPLATE_ID,
           name: '上海中考口语标准题型',
+          available: true,
+          errors: []
+        }),
+        expect.objectContaining({
+          templateId: '9f7e6d5c-4b3a-4910-8f7e-6d5c4b3a2910',
+          name: '上海中考英语听力分层训练',
           available: true,
           errors: []
         })
@@ -270,7 +277,7 @@ describe('builtin content contract', () => {
         )
       }
       expect(preview.preview.pages.length).toBeGreaterThan(0)
-      if (summary.name.startsWith('上海高考英语听力')) {
+      if (summary.name.includes('英语听力')) {
         expect(preview.preview.recordingIndices).toEqual([])
       } else {
         expect(preview.preview.recordingIndices.length).toBeGreaterThan(0)
@@ -304,7 +311,7 @@ describe('builtin content contract', () => {
         )
       }
       expect(compiled.examPackage.examData.player.pages.length).toBeGreaterThan(0)
-      if (summary.name.startsWith('上海高考英语听力')) {
+      if (summary.name.includes('英语听力')) {
         expect(compiled.examPackage.examData.player.recordingIndices).toEqual([])
       } else {
         expect(compiled.examPackage.examData.player.recordingIndices.length).toBeGreaterThan(0)
@@ -313,12 +320,27 @@ describe('builtin content contract', () => {
       if (summary.templateId === ZHONGKAO_TEMPLATE_ID) {
         expect(compiled.examPackage.submissionTemplate.schemaUses).toHaveLength(5)
       }
-      if (summary.name.startsWith('上海高考英语听力')) {
+      if (summary.name.includes('英语听力')) {
         const acceptedVars = release.document.content.interfaces.flatMap(
           (requirement) => requirement.acceptedVars
         )
         const located = locatedByInstance.get(bindings[0]?.instanceId ?? '')
         if (!located) throw new Error(`Missing Interface instance for ${summary.name}`)
+        const playTexts = preview.preview.pages.flatMap((page) =>
+          page.timeline.flatMap((step) => (step.type === 'play' ? [step.text] : []))
+        )
+        for (const varName of acceptedVars.filter((name) => /^dialogue_text_\d+$/.test(name))) {
+          const material = located.instance.values[varName]
+          expect(
+            playTexts.filter((text) => text.startsWith(`${material}\nQuestion: `))
+          ).toHaveLength(1)
+        }
+        if (acceptedVars.includes('answer_1') && acceptedVars.includes('answer_20')) {
+          const uses = compiled.examPackage.submissionTemplate.schemaUses
+          expect(uses).toHaveLength(20)
+          expect(uses.reduce((total, use) => total + use.schema.data.maxScore, 0)).toBe(25)
+          expect(preview.preview.choiceMeta?.questions).toHaveLength(20)
+        }
         const materials = ['passage_text_1', 'passage_text_2', 'dialogue_long_text']
           .filter((varName) => acceptedVars.includes(varName))
           .map((varName) => located.instance.values[varName])
@@ -333,11 +355,6 @@ describe('builtin content contract', () => {
             expect(materials.some((material) => analysis.includes(material))).toBe(true)
           }
           // 材料仍只在材料页播放两遍，不会在每道题页面重复播放
-          const playTexts = preview.preview.pages.flatMap((page) =>
-            page.timeline
-              .filter((step) => step.type === 'play')
-              .map((step) => (step.type === 'play' ? step.text : ''))
-          )
           for (const material of materials) {
             expect(playTexts.filter((text) => text === material)).toHaveLength(2)
           }
