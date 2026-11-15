@@ -17,6 +17,7 @@ import {
   Inbox,
   Play,
   RotateCcw,
+  SearchX,
   Trash2,
   Upload,
   X
@@ -29,10 +30,29 @@ import { IconButton } from '../../components/ui/IconButton'
 import { Modal, ModalClose, ModalTitle } from '../../components/ui/Modal'
 import { Page, PageHeader } from '../../components/ui/Page'
 import { toast } from '../../components/ui/toast'
+import { SettledRecordFilterBar, type SettledViewMode } from './SettledRecordFilterBar'
 import { useSubmissionLibrary } from './SubmissionLibraryContext'
 import { SubmissionMarkdown } from './SubmissionMarkdown'
 import { buildSubmissionReportDocument, submissionReportFileName } from './submissionReportDocument'
 import { submissionErrorMessage, submissionExportName } from './submissionUi'
+import {
+  DEFAULT_SETTLED_FILTERS,
+  buildSettledRecords,
+  filterSettledRecords,
+  formatSettledScore,
+  groupSettledRecords,
+  hasActiveSettledFilters,
+  removeSettledFilterChip,
+  settledBatchOptions,
+  settledExamOptions,
+  settledFilterChips,
+  sortSettledRecords,
+  summarizeSettledRecords,
+  type SettledBatchGroup,
+  type SettledFilterChipKey,
+  type SettledFilters,
+  type SettledRecord
+} from './settledRecords'
 import styles from './SubmissionLibraryPage.module.css'
 
 const SUBMISSION_FILTER = [{ name: 'LS101 作答包', extensions: ['lssubmission', 'zip'] }]
@@ -51,6 +71,7 @@ export function SubmissionLibraryPage(): JSX.Element {
   const [expandedBatchIds, setExpandedBatchIds] = useState<Set<string>>(
     () => new Set(highlightedBatchId ? [highlightedBatchId] : [])
   )
+  const [collapsedBatchIds, setCollapsedBatchIds] = useState<Set<string>>(() => new Set())
   const [loading, setLoading] = useState(true)
   const [importing, setImporting] = useState(false)
   const [exportingId, setExportingId] = useState<string | null>(null)
@@ -63,30 +84,47 @@ export function SubmissionLibraryPage(): JSX.Element {
   const [report, setReport] = useState<SubmissionReport | null>(null)
   const [reportError, setReportError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [filters, setFilters] = useState<SettledFilters>(DEFAULT_SETTLED_FILTERS)
+  const [settledView, setSettledView] = useState<SettledViewMode>('grouped')
+  const [exportingFiltered, setExportingFiltered] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const reportRequestId = useRef(0)
 
-  const load = useCallback(async (): Promise<void> => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [nextEntries, nextBatches] = await Promise.all([
-        repository.listEntries(),
-        repository.listSettlementBatches()
-      ])
-      setEntries(nextEntries)
-      setBatches(nextBatches)
-      setSelectedIds((current) => {
-        const available = new Set(
-          nextEntries.filter((entry) => !entry.settlement).map((entry) => entry.record.submissionId)
-        )
-        return new Set([...current].filter((submissionId) => available.has(submissionId)))
-      })
-    } catch (reason) {
-      setError(submissionErrorMessage(reason))
-    } finally {
-      setLoading(false)
-    }
-  }, [repository])
+  const load = useCallback(
+    async (silent = false): Promise<void> => {
+      if (silent) setRefreshing(true)
+      else setLoading(true)
+      setError(null)
+      try {
+        const [nextEntries, nextBatches] = await Promise.all([
+          repository.listEntries(),
+          repository.listSettlementBatches()
+        ])
+        setEntries(nextEntries)
+        setBatches(nextBatches)
+        setSelectedIds((current) => {
+          const available = new Set(
+            nextEntries
+              .filter((entry) => !entry.settlement)
+              .map((entry) => entry.record.submissionId)
+          )
+          return new Set([...current].filter((submissionId) => available.has(submissionId)))
+        })
+        setFilters((current) => {
+          if (current.batchIds.length === 0) return current
+          const available = new Set(nextBatches.map((batch) => batch.batchId))
+          const kept = current.batchIds.filter((batchId) => available.has(batchId))
+          return kept.length === current.batchIds.length ? current : { ...current, batchIds: kept }
+        })
+      } catch (reason) {
+        setError(submissionErrorMessage(reason))
+      } finally {
+        if (silent) setRefreshing(false)
+        else setLoading(false)
+      }
+    },
+    [repository]
+  )
 
   useEffect(() => {
     const timeout = window.setTimeout(() => void load(), 0)
@@ -98,6 +136,48 @@ export function SubmissionLibraryPage(): JSX.Element {
     () => new Map(entries.map((entry) => [entry.record.submissionId, entry])),
     [entries]
   )
+  const settledRecords = useMemo(() => buildSettledRecords(entries, batches), [entries, batches])
+  const filteredRecords = useMemo(
+    () => filterSettledRecords(settledRecords, filters),
+    [settledRecords, filters]
+  )
+  const settledSummary = useMemo(() => summarizeSettledRecords(filteredRecords), [filteredRecords])
+  const settledBatchOptionsValue = useMemo(
+    () => settledBatchOptions(settledRecords),
+    [settledRecords]
+  )
+  const settledExamOptionsValue = useMemo(
+    () => settledExamOptions(settledRecords),
+    [settledRecords]
+  )
+  const settledChips = useMemo(
+    () => settledFilterChips(settledRecords, filters),
+    [settledRecords, filters]
+  )
+  const filteringSettled = hasActiveSettledFilters(filters)
+  const settledGroups = useMemo(
+    () => groupSettledRecords(filteredRecords, filters.sort),
+    [filteredRecords, filters.sort]
+  )
+  const flatSettledRecords = useMemo(
+    () => sortSettledRecords(filteredRecords, filters.sort),
+    [filteredRecords, filters.sort]
+  )
+  const filteredBatchIds = useMemo(
+    () => settledGroups.map((group) => group.batch.batchId),
+    [settledGroups]
+  )
+  /**
+   * 筛选激活时命中的批次默认展开；用户仍可逐批收起。
+   * 用渲染期派生的集合代替 effect 里 setState，避免级联渲染。
+   */
+  const visibleExpandedBatchIds = useMemo(() => {
+    if (!filteringSettled) return expandedBatchIds
+    return new Set(filteredBatchIds.filter((batchId) => !collapsedBatchIds.has(batchId)))
+  }, [collapsedBatchIds, expandedBatchIds, filteredBatchIds, filteringSettled])
+  const allGroupsExpanded =
+    filteredBatchIds.length > 0 &&
+    filteredBatchIds.every((batchId) => visibleExpandedBatchIds.has(batchId))
 
   const importSubmission = async (): Promise<void> => {
     setImporting(true)
@@ -195,6 +275,47 @@ export function SubmissionLibraryPage(): JSX.Element {
     }
   }
 
+  const exportFilteredReports = async (): Promise<void> => {
+    const bridge = window.reportExport
+    if (!bridge) {
+      setError('报告导出不可用，请重启应用后重试。')
+      return
+    }
+    if (filteredRecords.length === 0) return
+    setError(null)
+    setExportingFiltered(true)
+    setExportProgress(null)
+    const unsubscribe = bridge.onProgress(setExportProgress)
+    try {
+      const items: ReportExportItem[] = []
+      for (const settledRecord of sortSettledRecords(filteredRecords, filters.sort)) {
+        const report = await repository.getReport(settledRecord.submissionId)
+        items.push({
+          filename: submissionReportFileName(settledRecord.entry.record),
+          html: buildSubmissionReportDocument(report)
+        })
+      }
+      const result = await bridge.exportBatch({ items })
+      if (result.status === 'cancelled') return
+      if (result.failures.length > 0) {
+        toast.error(`已导出 ${result.exportedCount} 份，${result.failures.length} 份失败`)
+        setError(
+          `以下报告导出失败：${result.failures
+            .map((failure) => `${failure.filename}（${failure.reason}）`)
+            .join('；')}`
+        )
+      } else {
+        toast.success(`已导出 ${result.exportedCount} 份作答报告`)
+      }
+    } catch (reason) {
+      setError(submissionErrorMessage(reason))
+    } finally {
+      unsubscribe()
+      setExportingFiltered(false)
+      setExportProgress(null)
+    }
+  }
+
   const exportEntryReport = async (entry: SubmissionLibraryEntry): Promise<void> => {
     const bridge = window.reportExport
     if (!bridge) {
@@ -275,6 +396,54 @@ export function SubmissionLibraryPage(): JSX.Element {
     setSearchParams({ view: next })
   }
 
+  const resetCollapsedBatches = (): void => {
+    setCollapsedBatchIds((current) => (current.size === 0 ? current : new Set()))
+  }
+
+  const changeFilters = (next: Partial<SettledFilters>): void => {
+    resetCollapsedBatches()
+    setFilters((current) => ({ ...current, ...next }))
+  }
+
+  const removeChip = (key: SettledFilterChipKey): void => {
+    resetCollapsedBatches()
+    setFilters((current) => removeSettledFilterChip(current, key))
+  }
+
+  const clearFilters = (): void => {
+    resetCollapsedBatches()
+    setFilters(DEFAULT_SETTLED_FILTERS)
+  }
+
+  const toggleExpandAll = (): void => {
+    if (allGroupsExpanded) {
+      if (filteringSettled) setCollapsedBatchIds(new Set(filteredBatchIds))
+      else setExpandedBatchIds(new Set())
+      return
+    }
+    setCollapsedBatchIds(new Set())
+    if (!filteringSettled) setExpandedBatchIds(new Set(filteredBatchIds))
+  }
+
+  const toggleExpandedBatch = (batchId: string): void => {
+    if (filteringSettled) {
+      const currentlyExpanded = visibleExpandedBatchIds.has(batchId)
+      setCollapsedBatchIds((current) => {
+        const next = new Set(current)
+        if (currentlyExpanded) next.add(batchId)
+        else next.delete(batchId)
+        return next
+      })
+      return
+    }
+    setExpandedBatchIds((current) => {
+      const next = new Set(current)
+      if (next.has(batchId)) next.delete(batchId)
+      else next.add(batchId)
+      return next
+    })
+  }
+
   const toggleSelected = (submissionId: string): void => {
     setSelectedIds((current) => {
       const next = new Set(current)
@@ -353,29 +522,69 @@ export function SubmissionLibraryPage(): JSX.Element {
         />
       ) : null}
       {!loading && view === 'settled' ? (
-        <SettledBatches
-          batches={batches}
-          entriesById={entriesById}
-          expandedBatchIds={expandedBatchIds}
-          exportingId={exportingId}
-          exportingBatchId={exportingBatchId}
-          exportingReportId={exportingReportId}
-          exportProgress={exportProgress}
-          onDelete={setPendingDelete}
-          onExport={(record) => void exportSubmission(record)}
-          onExportBatch={(batch) => void exportBatchReports(batch)}
-          onExportReport={(entry) => void exportEntryReport(entry)}
-          onReport={(entry) => void viewReport(entry)}
-          onReset={setPendingReset}
-          onToggle={(batchId) =>
-            setExpandedBatchIds((current) => {
-              const next = new Set(current)
-              if (next.has(batchId)) next.delete(batchId)
-              else next.add(batchId)
-              return next
-            })
-          }
-        />
+        settledRecords.length === 0 ? (
+          <EmptyState icon={Inbox} title="还没有已结算作答" />
+        ) : (
+          <>
+            <SettledRecordFilterBar
+              allExpanded={allGroupsExpanded}
+              batches={settledBatchOptionsValue}
+              chips={settledChips}
+              exams={settledExamOptionsValue}
+              exportProgress={exportProgress}
+              exporting={exportingFiltered}
+              filters={filters}
+              refreshing={refreshing}
+              summary={settledSummary}
+              totalCount={settledRecords.length}
+              viewMode={settledView}
+              onChange={changeFilters}
+              onClearFilters={clearFilters}
+              onExportFiltered={() => void exportFilteredReports()}
+              onRefresh={() => void load(true)}
+              onRemoveChip={removeChip}
+              onToggleExpandAll={toggleExpandAll}
+              onViewModeChange={setSettledView}
+            />
+            {filteringSettled && filteredRecords.length === 0 ? (
+              <div className={styles.filterEmpty} aria-label="筛选结果为空">
+                <SearchX aria-hidden="true" />
+                <p>没有符合条件的已结算作答。</p>
+                <Button icon={X} size="small" variant="secondary" onClick={clearFilters}>
+                  清除全部筛选
+                </Button>
+              </div>
+            ) : settledView === 'flat' ? (
+              <SettledRecordTable
+                entries={flatSettledRecords}
+                exportingId={exportingId}
+                exportingReportId={exportingReportId}
+                onDelete={setPendingDelete}
+                onExport={(record) => void exportSubmission(record)}
+                onExportReport={(entry) => void exportEntryReport(entry)}
+                onReport={(entry) => void viewReport(entry)}
+                onReset={setPendingReset}
+              />
+            ) : (
+              <SettledBatches
+                expandedBatchIds={visibleExpandedBatchIds}
+                exportingId={exportingId}
+                exportingBatchId={exportingBatchId}
+                exportingReportId={exportingReportId}
+                exportProgress={exportProgress}
+                filtering={filteringSettled}
+                groups={settledGroups}
+                onDelete={setPendingDelete}
+                onExport={(record) => void exportSubmission(record)}
+                onExportBatch={(batch) => void exportBatchReports(batch)}
+                onExportReport={(entry) => void exportEntryReport(entry)}
+                onReport={(entry) => void viewReport(entry)}
+                onReset={setPendingReset}
+                onToggle={toggleExpandedBatch}
+              />
+            )}
+          </>
+        )
       ) : null}
 
       <ConfirmModal
@@ -565,13 +774,13 @@ function UnsettledList({
 }
 
 function SettledBatches({
-  batches,
-  entriesById,
+  groups,
   expandedBatchIds,
   exportingId,
   exportingBatchId,
   exportingReportId,
   exportProgress,
+  filtering,
   onToggle,
   onReport,
   onReset,
@@ -580,13 +789,13 @@ function SettledBatches({
   onExportReport,
   onDelete
 }: {
-  batches: SubmissionSettlementBatch[]
-  entriesById: Map<string, SubmissionLibraryEntry>
+  groups: readonly SettledBatchGroup[]
   expandedBatchIds: Set<string>
   exportingId: string | null
   exportingBatchId: string | null
   exportingReportId: string | null
   exportProgress: ReportExportProgress | null
+  filtering: boolean
   onToggle(batchId: string): void
   onReport(entry: SubmissionLibraryEntry): void
   onReset(entry: SubmissionLibraryEntry): void
@@ -595,33 +804,33 @@ function SettledBatches({
   onExportReport(entry: SubmissionLibraryEntry): void
   onDelete(entry: SubmissionLibraryEntry): void
 }): JSX.Element {
-  if (batches.length === 0) return <EmptyState icon={Inbox} title="还没有已结算作答" />
   return (
     <div className={styles.batchList}>
-      {batches.map((batch, index) => {
-        const expanded = expandedBatchIds.has(batch.batchId)
-        const batchEntries = batch.records.flatMap((record) => {
-          const entry = entriesById.get(record.submissionId)
-          return entry ? [entry] : []
-        })
+      {groups.map((group) => {
+        const expanded = expandedBatchIds.has(group.batch.batchId)
+        const hiddenCount = group.batch.records.length - group.records.length
         return (
           <section
             className={styles.batch}
-            key={batch.batchId}
+            key={group.batch.batchId}
             data-expanded={expanded || undefined}
           >
             <button
               aria-expanded={expanded}
               className={styles.batchHeader}
               type="button"
-              onClick={() => onToggle(batch.batchId)}
+              onClick={() => onToggle(group.batch.batchId)}
             >
               {expanded ? <ChevronDown aria-hidden="true" /> : <ChevronRight aria-hidden="true" />}
               <span>
-                <strong>结算于 {formatDateTime(batch.settledAt)}</strong>
-                <small>{batch.records.length} 条作答</small>
+                <strong>结算于 {formatDateTime(group.batch.settledAt)}</strong>
+                <small>
+                  {filtering && hiddenCount > 0
+                    ? `命中 ${group.records.length}/${group.batch.records.length} 条作答`
+                    : `${group.batch.records.length} 条作答`}
+                </small>
               </span>
-              <span className={styles.batchNumber}>批次 {batches.length - index}</span>
+              <span className={styles.batchNumber}>批次 {group.batchNumber}</span>
             </button>
             {expanded ? (
               <div className={styles.batchBody}>
@@ -631,18 +840,20 @@ function SettledBatches({
                     icon={FileDown}
                     size="small"
                     variant="secondary"
-                    onClick={() => onExportBatch(batch)}
+                    onClick={() => onExportBatch(group.batch)}
                   >
-                    {exportingBatchId === batch.batchId ? '正在生成报告' : '导出批次报告'}
+                    {exportingBatchId === group.batch.batchId ? '正在生成报告' : '导出批次报告'}
                   </Button>
                   <span className={styles.batchHint}>
-                    {exportingBatchId === batch.batchId
+                    {exportingBatchId === group.batch.batchId
                       ? exportProgress
                         ? `${exportProgress.completed}/${exportProgress.total}${
                             exportProgress.current ? ` · ${exportProgress.current}` : ''
                           }`
                         : '正在准备报告...'
-                      : 'ZIP，每份作答一个 PDF'}
+                      : filtering
+                        ? `筛选命中本批次 ${group.records.length} 份，整批导出`
+                        : 'ZIP，每份作答一个 PDF'}
                   </span>
                 </div>
                 <table className={styles.batchTable}>
@@ -656,55 +867,28 @@ function SettledBatches({
                     </tr>
                   </thead>
                   <tbody>
-                    {batchEntries.map((entry) => (
-                      <tr key={entry.record.submissionId}>
+                    {group.records.map((record) => (
+                      <tr key={record.submissionId}>
                         <td>
-                          <strong>{entry.record.candidateName}</strong>
-                          <span>{displayCandidateId(entry.record.candidateId)}</span>
+                          <strong>{record.entry.record.candidateName}</strong>
+                          <span>{displayCandidateId(record.entry.record.candidateId)}</span>
                         </td>
-                        <td>{entry.record.examTitle}</td>
+                        <td>{record.entry.record.examTitle}</td>
                         <td>
-                          <strong>
-                            {entry.grading
-                              ? `${entry.grading.totalScore}/${entry.grading.maxScore}`
-                              : '-'}
-                          </strong>
+                          <strong>{formatSettledScore(record)}</strong>
                         </td>
-                        <td>{formatDateTime(entry.record.submittedAt)}</td>
+                        <td>{formatDateTime(record.entry.record.submittedAt)}</td>
                         <td>
-                          <div className={styles.actions}>
-                            <Button
-                              icon={Eye}
-                              size="small"
-                              variant="secondary"
-                              onClick={() => onReport(entry)}
-                            >
-                              查看报告
-                            </Button>
-                            <IconButton
-                              icon={RotateCcw}
-                              label="重新评分"
-                              onClick={() => onReset(entry)}
-                            />
-                            <IconButton
-                              disabled={exportingReportId !== null}
-                              icon={FileDown}
-                              label="导出报告"
-                              onClick={() => onExportReport(entry)}
-                            />
-                            <IconButton
-                              disabled={exportingId !== null}
-                              icon={Download}
-                              label="导出作答包"
-                              onClick={() => onExport(entry.record)}
-                            />
-                            <IconButton
-                              icon={Trash2}
-                              label="删除作答记录"
-                              variant="danger"
-                              onClick={() => onDelete(entry)}
-                            />
-                          </div>
+                          <SettledEntryActions
+                            entry={record.entry}
+                            exportingId={exportingId}
+                            exportingReportId={exportingReportId}
+                            onDelete={onDelete}
+                            onExport={onExport}
+                            onExportReport={onExportReport}
+                            onReport={onReport}
+                            onReset={onReset}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -715,6 +899,121 @@ function SettledBatches({
           </section>
         )
       })}
+    </div>
+  )
+}
+
+function SettledRecordTable({
+  entries,
+  exportingId,
+  exportingReportId,
+  onReport,
+  onReset,
+  onExport,
+  onExportReport,
+  onDelete
+}: {
+  entries: readonly SettledRecord[]
+  exportingId: string | null
+  exportingReportId: string | null
+  onReport(entry: SubmissionLibraryEntry): void
+  onReset(entry: SubmissionLibraryEntry): void
+  onExport(record: SubmissionLibraryRecord): void
+  onExportReport(entry: SubmissionLibraryEntry): void
+  onDelete(entry: SubmissionLibraryEntry): void
+}): JSX.Element {
+  return (
+    <div className={`${styles.tableFrame} ${styles.settledTableFrame}`}>
+      <table className={`${styles.batchTable} ${styles.flatTable}`}>
+        <thead>
+          <tr>
+            <th>作答人</th>
+            <th>试卷</th>
+            <th>结算时间</th>
+            <th>得分</th>
+            <th>作答时间</th>
+            <th aria-label="操作" />
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((record) => (
+            <tr key={record.submissionId}>
+              <td>
+                <strong>{record.entry.record.candidateName}</strong>
+                <span>{displayCandidateId(record.entry.record.candidateId)}</span>
+              </td>
+              <td>{record.entry.record.examTitle}</td>
+              <td>
+                <strong>批次 {record.batchNumber}</strong>
+                <span>结算于 {formatDateTime(record.batch.settledAt)}</span>
+              </td>
+              <td>
+                <strong>{formatSettledScore(record)}</strong>
+              </td>
+              <td>{formatDateTime(record.entry.record.submittedAt)}</td>
+              <td>
+                <SettledEntryActions
+                  entry={record.entry}
+                  exportingId={exportingId}
+                  exportingReportId={exportingReportId}
+                  onDelete={onDelete}
+                  onExport={onExport}
+                  onExportReport={onExportReport}
+                  onReport={onReport}
+                  onReset={onReset}
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function SettledEntryActions({
+  entry,
+  exportingId,
+  exportingReportId,
+  onReport,
+  onReset,
+  onExport,
+  onExportReport,
+  onDelete
+}: {
+  entry: SubmissionLibraryEntry
+  exportingId: string | null
+  exportingReportId: string | null
+  onReport(entry: SubmissionLibraryEntry): void
+  onReset(entry: SubmissionLibraryEntry): void
+  onExport(record: SubmissionLibraryRecord): void
+  onExportReport(entry: SubmissionLibraryEntry): void
+  onDelete(entry: SubmissionLibraryEntry): void
+}): JSX.Element {
+  return (
+    <div className={styles.actions}>
+      <Button icon={Eye} size="small" variant="secondary" onClick={() => onReport(entry)}>
+        查看报告
+      </Button>
+      <IconButton icon={RotateCcw} label="重新评分" onClick={() => onReset(entry)} />
+      <IconButton
+        disabled={exportingReportId !== null}
+        icon={FileDown}
+        label="导出报告"
+        onClick={() => onExportReport(entry)}
+      />
+      <IconButton
+        disabled={exportingId !== null}
+        icon={Download}
+        label="导出作答包"
+        onClick={() => onExport(entry.record)}
+      />
+      <IconButton
+        icon={Trash2}
+        label="删除作答记录"
+        variant="danger"
+        onClick={() => onDelete(entry)}
+      />
     </div>
   )
 }

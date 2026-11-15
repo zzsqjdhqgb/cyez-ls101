@@ -24,6 +24,7 @@ export default defineConfig(
       '**/test-results/**',
       '.gop-research/{model,site,hf,venv,venv2,pip-cache,tmp}/**',
       'resources/tts',
+      'video-intro/work/**',
       '**/__tests__/**'
     ]
   },

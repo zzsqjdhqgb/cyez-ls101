@@ -276,6 +276,10 @@
   white-space: nowrap;
 }
 
+.batchTable {
+  min-width: 900px;
+}
+
 .batchTable th:first-child {
   width: 17%;
 }
@@ -378,5 +382,504 @@
 
   .reportBody {
     padding: 22px;
+  }
+}
+
+.filterPanel {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.filterPrimary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.searchField {
+  display: flex;
+  flex: 1 1 240px;
+  min-width: 200px;
+  height: 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.searchField:focus-within {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 0;
+}
+
+.searchField > svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+  color: var(--color-text-faint);
+}
+
+.searchField input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: none;
+  color: var(--color-text-strong);
+  background: transparent;
+  font: 12px/1.4 var(--font-ui);
+}
+
+.searchField input::placeholder {
+  color: var(--color-text-faint);
+}
+
+.searchField input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.searchClear {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  place-items: center;
+  color: var(--color-text-faint);
+  background: transparent;
+  cursor: pointer;
+}
+
+.searchClear:hover {
+  color: var(--color-text-strong);
+  background: var(--color-surface-hover);
+}
+
+.searchClear svg {
+  width: 13px;
+  height: 13px;
+}
+
+.filterField,
+.batchFilter {
+  display: flex;
+  height: 34px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+}
+
+.filterLabel {
+  flex: 0 0 auto;
+  color: var(--color-text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.filterField select,
+.sortField select {
+  min-height: 30px;
+  max-width: 170px;
+  border: 0;
+  color: var(--color-text-strong);
+  background: transparent;
+  font: 12px/1.4 var(--font-ui);
+  outline: none;
+  cursor: pointer;
+}
+
+.advancedToggle {
+  margin-left: auto;
+}
+
+.filterAdvanced {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+}
+
+.advancedGroup {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.advancedGroup legend {
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--color-text-faint);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.dateRange {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.dateRange input {
+  min-width: 0;
+  height: 30px;
+  flex: 1;
+  padding: 0 8px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-strong);
+  background: var(--color-surface);
+  font: 12px/1.4 var(--font-ui);
+}
+
+.dateRange input:focus {
+  border-color: var(--color-accent);
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 0;
+}
+
+.batchFilter {
+  position: relative;
+}
+
+.batchTrigger {
+  display: flex;
+  max-width: 230px;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  color: var(--color-text-strong);
+  background: transparent;
+  font: 12px/1.4 var(--font-ui);
+  cursor: pointer;
+}
+
+.batchTrigger svg {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  color: var(--color-text-faint);
+}
+
+.batchTriggerLabel {
+  color: var(--color-text-faint);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.batchTriggerValue {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batchPanel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  display: grid;
+  width: min(330px, 82vw);
+  max-height: 300px;
+  gap: 2px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.batchOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: var(--radius-xs);
+  color: var(--color-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.batchOption:hover {
+  background: var(--color-surface-hover);
+}
+
+.batchOption input {
+  margin: 2px 0 0;
+}
+
+.batchOption span {
+  display: block;
+  min-width: 0;
+}
+
+.batchOption strong {
+  display: block;
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.batchOption small {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-text-faint);
+  font-size: 10px;
+}
+
+.batchClear {
+  margin-top: 4px;
+  padding: 8px;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+  border-radius: 0 0 var(--radius-xs) var(--radius-xs);
+  color: var(--color-accent);
+  background: transparent;
+  font: 12px/1.4 var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.batchClear:hover {
+  background: var(--color-surface-hover);
+}
+
+.filterChips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.filterChip {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 9px;
+  border: 1px solid color-mix(in srgb, var(--color-accent) 26%, var(--color-border));
+  border-radius: 999px;
+  color: var(--color-text-strong);
+  background: var(--color-accent-soft);
+  font-size: 11px;
+}
+
+.filterChipRemove {
+  display: grid;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  place-items: center;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.filterChipRemove:hover {
+  color: var(--color-text-strong);
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+}
+
+.filterChipRemove svg {
+  width: 11px;
+  height: 11px;
+}
+
+.clearFilters {
+  padding: 2px 4px;
+  border: 0;
+  color: var(--color-accent);
+  background: transparent;
+  font: 11px/1.4 var(--font-ui);
+  cursor: pointer;
+}
+
+.clearFilters:hover {
+  text-decoration: underline;
+}
+
+.resultBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+}
+
+.resultSummary {
+  min-width: 0;
+  flex: 1 1 260px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.sortField {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-faint);
+  font-size: 11px;
+}
+
+.sortField select {
+  min-height: 30px;
+  padding: 0 4px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+}
+
+.viewToggle {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+}
+
+.viewToggle button {
+  height: 30px;
+  padding: 0 10px;
+  border: 0;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  font: 11px/1.4 var(--font-ui);
+  cursor: pointer;
+}
+
+.viewToggle button + button {
+  border-left: 1px solid var(--color-border-strong);
+}
+
+.viewToggle button[aria-pressed='true'] {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  font-weight: 650;
+}
+
+.exportHint {
+  flex-basis: 100%;
+  color: var(--color-text-muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.filterEmpty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  gap: 10px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 13px;
+}
+
+.filterEmpty svg {
+  width: 26px;
+  height: 26px;
+  color: var(--color-text-faint);
+}
+
+.filterEmpty p {
+  margin: 0;
+}
+
+.batchList {
+  margin-top: 14px;
+}
+
+.settledTableFrame {
+  border-radius: var(--radius-sm);
+}
+
+.flatTable {
+  min-width: 920px;
+}
+
+.flatTable th:nth-child(1) {
+  width: 14%;
+}
+
+.flatTable th:nth-child(2) {
+  width: 17%;
+}
+
+.flatTable th:nth-child(3) {
+  width: 16%;
+}
+
+.flatTable th:nth-child(4) {
+  width: 7%;
+}
+
+.flatTable th:nth-child(5) {
+  width: 14%;
+}
+
+.flatTable th:last-child {
+  width: 264px;
+}
+
+@media (max-width: 880px) {
+  .filterPrimary > .filterField,
+  .filterPrimary > .batchFilter {
+    flex: 1 1 180px;
+  }
+
+  .advancedToggle {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 720px) {
+  .filterPrimary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .searchField {
+    flex-basis: auto;
+  }
+
+  .resultActions {
+    margin-left: 0;
   }
 }
