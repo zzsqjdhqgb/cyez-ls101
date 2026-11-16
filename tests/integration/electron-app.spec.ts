@@ -502,6 +502,36 @@ test('exports a submission containing a large resource through the renderer ZIP 
   })
 })
 
+test('exports an exam package from the exam library through the file dialog', async () => {
+  const examPath = path.join(userDataDir, 'library-source.lsexam')
+  const examBytes = zipSync({
+    'manifest.json': strToU8(JSON.stringify(microphoneCheckExamManifest()))
+  })
+  await writeFile(examPath, examBytes)
+
+  await page.getByRole('link', { name: '试卷库' }).click()
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showOpenDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePaths: [filePath] })
+    })
+  }, examPath)
+  await page.getByRole('button', { name: '导入试卷包' }).click()
+  await expect(page.getByRole('cell', { name: /麦克风检查测试/ })).toBeVisible()
+
+  const exportPath = path.join(userDataDir, 'library-export.lsexam')
+  await electronApp.evaluate(({ dialog }, filePath) => {
+    Object.defineProperty(dialog, 'showSaveDialog', {
+      configurable: true,
+      value: async () => ({ canceled: false, filePath })
+    })
+  }, exportPath)
+  await page.getByRole('button', { name: '导出试卷' }).click()
+
+  await expect(page.getByText('已导出试卷“麦克风检查测试”')).toBeVisible()
+  expect(await readFile(exportPath)).toEqual(examBytes)
+})
+
 test('exports report PDFs through the report-export bridge', async () => {
   const exportPath = path.join(userDataDir, 'reports.zip')
   await electronApp.evaluate(({ dialog }, filePath) => {

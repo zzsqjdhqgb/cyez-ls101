@@ -5,6 +5,7 @@ import type {
   ExamLibraryRecord,
   ExamLibraryRepository
 } from '@ls101/exam-library'
+import { ExamLibraryError } from '@ls101/exam-library'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { ExamLibraryPage } from '../features/exams/ExamLibraryPage'
@@ -71,6 +72,57 @@ describe('ExamLibraryPage', () => {
     fireEvent.click(await screen.findByRole('button', { name: '开始考试' }))
 
     expect(screen.getByTestId('player-route')).toHaveTextContent(`packageId=${record.packageId}`)
+  })
+
+  it('导出试卷包并写入系统保存对话框', async () => {
+    const repository = mockRepository()
+    const exportable = { ...record, title: '英语/听说测试' }
+    const archive = new Uint8Array([9, 8, 7])
+    vi.mocked(repository.listRecords).mockResolvedValue([exportable])
+    vi.mocked(repository.exportArchive).mockResolvedValue(archive)
+    dialogMocks.writeBinary.mockResolvedValue(true)
+    renderPage(repository)
+
+    fireEvent.click(await screen.findByRole('button', { name: '导出试卷' }))
+
+    await waitFor(() => expect(repository.exportArchive).toHaveBeenCalledWith(record.packageId))
+    expect(dialogMocks.writeBinary).toHaveBeenCalledTimes(1)
+    expect(dialogMocks.writeBinary).toHaveBeenCalledWith(archive, {
+      title: '导出试卷',
+      defaultName: '英语-听说测试.lsexam',
+      filters: [{ name: 'LS101 试卷包', extensions: ['lsexam', 'zip'] }]
+    })
+    await waitFor(() => expect(screen.getByRole('button', { name: '导出试卷' })).toBeEnabled())
+  })
+
+  it('取消保存对话框时不提示错误并恢复导出操作', async () => {
+    const repository = mockRepository()
+    vi.mocked(repository.listRecords).mockResolvedValue([record])
+    vi.mocked(repository.exportArchive).mockResolvedValue(new Uint8Array([1, 2, 3]))
+    dialogMocks.writeBinary.mockResolvedValue(false)
+    renderPage(repository)
+
+    fireEvent.click(await screen.findByRole('button', { name: '导出试卷' }))
+
+    await waitFor(() => expect(dialogMocks.writeBinary).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.getByRole('button', { name: '导出试卷' })).toBeEnabled())
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByText(record.title)).toBeInTheDocument()
+  })
+
+  it('导出失败时显示错误并恢复导出操作', async () => {
+    const repository = mockRepository()
+    vi.mocked(repository.listRecords).mockResolvedValue([record])
+    vi.mocked(repository.exportArchive).mockRejectedValue(
+      new ExamLibraryError('NOT_FOUND', 'missing exam')
+    )
+    renderPage(repository)
+
+    fireEvent.click(await screen.findByRole('button', { name: '导出试卷' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('试卷包不存在或已经被删除。')
+    expect(dialogMocks.writeBinary).not.toHaveBeenCalled()
+    await waitFor(() => expect(screen.getByRole('button', { name: '导出试卷' })).toBeEnabled())
   })
 })
 
