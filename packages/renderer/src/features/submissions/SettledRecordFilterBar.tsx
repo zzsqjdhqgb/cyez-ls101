@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type JSX } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type JSX } from 'react'
 import type { ReportExportProgress } from '@ls101/core-types'
 import { ChevronDown, FileDown, RefreshCw, Search, SlidersHorizontal, X } from 'lucide-react'
 import { Button } from '../../components/ui/Button'
@@ -12,7 +12,11 @@ import {
   type SettlementDatePreset,
   type SettledFilters,
   type SettledSort,
-  type SettledSummary
+  type SettledSummary,
+  normalizeDateInput,
+  orderedDateRange,
+  orderedScoreRange,
+  parseScoreInput
 } from './settledRecords'
 import styles from './SubmissionLibraryPage.module.css'
 
@@ -27,7 +31,10 @@ interface SettledRecordFilterBarProps {
   totalCount: number
   viewMode: SettledViewMode
   allExpanded: boolean
+  /** 任一导出（筛选/批次/单份报告/作答包）进行中，用于禁用全部导出入口。 */
   exporting: boolean
+  /** 只有“导出筛选报告”自身进行中，才在本条工具条展示进度文案。 */
+  exportingFiltered: boolean
   exportProgress: ReportExportProgress | null
   refreshing: boolean
   onChange(next: Partial<SettledFilters>): void
@@ -49,6 +56,7 @@ export function SettledRecordFilterBar({
   viewMode,
   allExpanded,
   exporting,
+  exportingFiltered,
   exportProgress,
   refreshing,
   onChange,
@@ -61,6 +69,34 @@ export function SettledRecordFilterBar({
 }: SettledRecordFilterBarProps): JSX.Element {
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const keyword = filters.keyword
+  /**
+   * 起止顺序填反时，引擎按交换后的区间生效；这里给出同样的可见提示。
+   * 仅当两端都合法且确实倒置时才渲染，避免输入过程中产生无意义的 alert。
+   */
+  const rangeWarnings = useMemo((): RangeWarnings => {
+    const warnings: RangeWarnings = { settlement: null, submitted: null, score: null }
+    if (filters.settlementPreset === 'custom') {
+      const from = normalizeDateInput(filters.settlementFrom)
+      const to = normalizeDateInput(filters.settlementTo)
+      if (from !== null && to !== null && from > to) {
+        const range = orderedDateRange(from, to)
+        warnings.settlement = `开始日期晚于结束日期，已自动按 ${range.from} 至 ${range.to} 筛选`
+      }
+    }
+    const submittedFrom = normalizeDateInput(filters.submittedFrom)
+    const submittedTo = normalizeDateInput(filters.submittedTo)
+    if (submittedFrom !== null && submittedTo !== null && submittedFrom > submittedTo) {
+      const range = orderedDateRange(submittedFrom, submittedTo)
+      warnings.submitted = `作答开始日期晚于作答结束日期，已自动按 ${range.from} 至 ${range.to} 筛选`
+    }
+    const minScore = parseScoreInput(filters.minScore)
+    const maxScore = parseScoreInput(filters.maxScore)
+    if (minScore !== null && maxScore !== null && minScore > maxScore) {
+      const range = orderedScoreRange(minScore, maxScore)
+      warnings.score = `最低分高于最高分，已自动按 ${range.min}–${range.max} 分筛选`
+    }
+    return warnings
+  }, [filters])
 
   const changeSettlementPreset = (preset: SettlementDatePreset): void => {
     if (preset === 'custom') {
@@ -171,6 +207,11 @@ export function SettledRecordFilterBar({
                 onChange={(event) => changeSettlementTo(event.target.value)}
               />
             </div>
+            {rangeWarnings.settlement ? (
+              <p className={styles.filterWarning} role="alert">
+                {rangeWarnings.settlement}
+              </p>
+            ) : null}
           </fieldset>
           <fieldset className={styles.advancedGroup}>
             <legend>作答日期范围</legend>
@@ -189,6 +230,11 @@ export function SettledRecordFilterBar({
                 onChange={(event) => onChange({ submittedTo: event.target.value })}
               />
             </div>
+            {rangeWarnings.submitted ? (
+              <p className={styles.filterWarning} role="alert">
+                {rangeWarnings.submitted}
+              </p>
+            ) : null}
           </fieldset>
           <fieldset className={styles.advancedGroup}>
             <legend>分数区间</legend>
@@ -213,6 +259,11 @@ export function SettledRecordFilterBar({
                 onChange={(event) => onChange({ maxScore: event.target.value })}
               />
             </div>
+            {rangeWarnings.score ? (
+              <p className={styles.filterWarning} role="alert">
+                {rangeWarnings.score}
+              </p>
+            ) : null}
           </fieldset>
         </div>
       ) : null}
@@ -285,11 +336,16 @@ export function SettledRecordFilterBar({
             variant="secondary"
             onClick={onExportFiltered}
           >
-            {exporting ? '正在生成报告' : `导出筛选报告（${summary.count}）`}
+            {exportingFiltered ? '正在生成报告' : `导出筛选报告（${summary.count}）`}
           </Button>
-          <IconButton disabled={exporting} icon={RefreshCw} label="刷新列表" onClick={onRefresh} />
+          <IconButton
+            disabled={exporting || refreshing}
+            icon={RefreshCw}
+            label="刷新列表"
+            onClick={onRefresh}
+          />
         </div>
-        {exporting ? (
+        {exportingFiltered ? (
           <span className={styles.exportHint}>
             {exportProgress
               ? `${exportProgress.completed}/${exportProgress.total}${
@@ -314,6 +370,8 @@ function BatchFilter({
 }): JSX.Element {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
+  const panelId = useId()
 
   useEffect(() => {
     if (!open) return
@@ -321,7 +379,10 @@ function BatchFilter({
       if (!root.current?.contains(event.target as Node)) setOpen(false)
     }
     const closeOnEscape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key !== 'Escape') return
+      setOpen(false)
+      // 面板关闭后焦点归还打开它的 trigger，避免落回 body。
+      trigger.current?.focus()
     }
     document.addEventListener('pointerdown', closeOutside)
     document.addEventListener('keydown', closeOnEscape)
@@ -344,8 +405,9 @@ function BatchFilter({
   return (
     <div className={styles.batchFilter} ref={root}>
       <button
+        ref={trigger}
+        aria-controls={panelId}
         aria-expanded={open}
-        aria-haspopup="listbox"
         aria-label="批次筛选"
         className={styles.batchTrigger}
         type="button"
@@ -356,12 +418,7 @@ function BatchFilter({
         <ChevronDown aria-hidden="true" />
       </button>
       {open ? (
-        <div
-          aria-label="批次选项"
-          aria-multiselectable="true"
-          className={styles.batchPanel}
-          role="listbox"
-        >
+        <div aria-label="批次选项" className={styles.batchPanel} id={panelId} role="group">
           {batches.map((batch) => (
             <label className={styles.batchOption} key={batch.batchId}>
               <input
@@ -386,6 +443,12 @@ function BatchFilter({
       ) : null}
     </div>
   )
+}
+
+interface RangeWarnings {
+  settlement: string | null
+  submitted: string | null
+  score: string | null
 }
 
 function resultSummaryText(totalCount: number, summary: SettledSummary): string {

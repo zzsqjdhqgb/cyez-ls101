@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest'
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReportExportBridge, ReportExportResult } from '@ls101/core-types'
 import type {
   SubmissionLibraryEntry,
@@ -181,6 +181,14 @@ const ENTRIES: SubmissionLibraryEntry[] = CANDIDATES.map((candidate) => ({
 
 const FULL_SUMMARY = '已结算 8 份 · 筛选结果 8 份 · 平均 7.3 分 · 最高 10 分'
 
+function deferred<T>(): { promise: Promise<T>; resolve(value: T): void } {
+  let resolvePromise: (value: T) => void = () => undefined
+  const promise = new Promise<T>((resolve) => {
+    resolvePromise = resolve
+  })
+  return { promise, resolve: resolvePromise }
+}
+
 function mockRepository(): SubmissionLibraryRepository {
   return {
     listRecords: vi.fn().mockResolvedValue([]),
@@ -267,7 +275,8 @@ describe('已结算视图：初始状态与统计', () => {
     expect(screen.getByLabelText('试卷筛选')).toHaveValue('')
     const batchTrigger = screen.getByRole('button', { name: '批次筛选' })
     expect(batchTrigger).toHaveTextContent('全部批次')
-    expect(batchTrigger).toHaveAttribute('aria-haspopup', 'listbox')
+    expect(batchTrigger).toHaveAttribute('aria-expanded', 'false')
+    expect(batchTrigger).not.toHaveAttribute('aria-haspopup')
     expect(screen.getByRole('button', { name: '更多筛选' })).toHaveAttribute(
       'aria-expanded',
       'false'
@@ -383,13 +392,16 @@ describe('已结算视图：批次多选与试卷筛选', () => {
   it('批次面板只按需渲染，多选即时过滤并支持清除选择', async () => {
     await renderSettledView()
 
-    expect(screen.queryByRole('listbox', { name: '批次选项' })).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '批次筛选' }))
-    const listbox = await screen.findByRole('listbox', { name: '批次选项' })
-    expect(listbox).toHaveAttribute('aria-multiselectable', 'true')
-    expect(within(listbox).getAllByRole('checkbox')).toHaveLength(3)
+    expect(screen.queryByRole('group', { name: '批次选项' })).not.toBeInTheDocument()
+    const trigger = screen.getByRole('button', { name: '批次筛选' })
+    fireEvent.click(trigger)
+    const group = await screen.findByRole('group', { name: '批次选项' })
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+    expect(group).toHaveAttribute('id', trigger.getAttribute('aria-controls') ?? '')
+    expect(group).not.toHaveAttribute('aria-multiselectable')
+    expect(within(group).getAllByRole('checkbox')).toHaveLength(3)
 
-    fireEvent.click(within(listbox).getByRole('checkbox', { name: /批次 2/ }))
+    fireEvent.click(within(group).getByRole('checkbox', { name: /批次 2/ }))
     expect(
       await screen.findByText('已结算 8 份 · 筛选结果 2 份 · 平均 6.8 分 · 最高 7.5 分')
     ).toBeInTheDocument()
@@ -402,7 +414,7 @@ describe('已结算视图：批次多选与试卷筛选', () => {
     expect(screen.queryByText('张三')).not.toBeInTheDocument()
 
     fireEvent.click(
-      within(screen.getByRole('listbox', { name: '批次选项' })).getByRole('checkbox', {
+      within(screen.getByRole('group', { name: '批次选项' })).getByRole('checkbox', {
         name: /批次 1/
       })
     )
@@ -415,11 +427,46 @@ describe('已结算视图：批次多选与试卷筛选', () => {
     fireEvent.click(screen.getByRole('button', { name: '清除批次选择' }))
     expect(await screen.findByText(FULL_SUMMARY)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '批次筛选' })).toHaveTextContent('全部批次')
+    // 清除选择不会关闭面板，方便继续调整批次。
+    expect(screen.getByRole('group', { name: '批次选项' })).toBeInTheDocument()
 
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() =>
-      expect(screen.queryByRole('listbox', { name: '批次选项' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('group', { name: '批次选项' })).not.toBeInTheDocument()
     )
+  })
+
+  it('Escape 关闭批次面板并把焦点归还 trigger，原生复选框可聚焦操作', async () => {
+    await renderSettledView()
+
+    const trigger = screen.getByRole('button', { name: '批次筛选' })
+    trigger.focus()
+    fireEvent.click(trigger)
+    const group = await screen.findByRole('group', { name: '批次选项' })
+    expect(group.getAttribute('id')).toBe(trigger.getAttribute('aria-controls'))
+    const checkboxes = within(group).getAllByRole('checkbox')
+    expect(checkboxes).toHaveLength(3)
+
+    // 焦点先进入面板，再从面板内按 Escape：关闭后必须把焦点归还 trigger，而不是落回 body。
+    const firstCheckbox = checkboxes[0] as HTMLInputElement
+    firstCheckbox.focus()
+    expect(document.activeElement).toBe(firstCheckbox)
+    fireEvent.keyDown(firstCheckbox, { key: 'Escape' })
+    await waitFor(() =>
+      expect(screen.queryByRole('group', { name: '批次选项' })).not.toBeInTheDocument()
+    )
+    expect(document.activeElement).toBe(trigger)
+
+    // 原生 checkbox 保持默认 tabIndex，聚焦后空格（键盘触发 click）即可勾选。
+    fireEvent.click(trigger)
+    const reopened = await screen.findByRole('group', { name: '批次选项' })
+    const reopenedCheckbox = within(reopened).getAllByRole('checkbox')[0] as HTMLInputElement
+    expect(reopenedCheckbox.tabIndex).toBe(0)
+    reopenedCheckbox.focus()
+    expect(document.activeElement).toBe(reopenedCheckbox)
+    fireEvent.click(reopenedCheckbox)
+    expect(reopenedCheckbox).toBeChecked()
+    expect(await screen.findByText('批次：批次 3')).toBeInTheDocument()
   })
 
   it('试卷下拉列出全部试卷选项并按试卷全等过滤', async () => {
@@ -643,6 +690,268 @@ describe('已结算视图：批次展开与筛选联动', () => {
     for (const actionName of ['查看报告', '重新评分', '导出报告', '导出作答包', '删除作答记录']) {
       expect(screen.getByRole('button', { name: actionName })).toBeInTheDocument()
     }
+  })
+})
+
+describe('已结算视图：区间倒置自动规范化', () => {
+  it('自定义结算日期倒置时按交换后的区间筛选并提示，修正后提示消失', async () => {
+    await renderSettledView()
+
+    fireEvent.change(screen.getByLabelText('结算日期筛选'), { target: { value: 'custom' } })
+    const panel = await screen.findByLabelText('更多筛选条件')
+    fireEvent.change(within(panel).getByLabelText('结算开始日期'), {
+      target: { value: localDateKey(0) }
+    })
+    fireEvent.change(within(panel).getByLabelText('结算结束日期'), {
+      target: { value: localDateKey(3) }
+    })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      `开始日期晚于结束日期，已自动按 ${localDateKey(3)} 至 ${localDateKey(0)} 筛选`
+    )
+    expect(
+      await screen.findByText('已结算 8 份 · 筛选结果 5 份 · 平均 7.1 分 · 最高 9 分')
+    ).toBeInTheDocument()
+    // chip 展示规范化后的区间，不出现倒置文案。
+    expect(
+      screen.getByText(`结算日期：${localDateKey(3)} 至 ${localDateKey(0)}`)
+    ).toBeInTheDocument()
+
+    fireEvent.change(within(panel).getByLabelText('结算结束日期'), {
+      target: { value: localDateKey(0) }
+    })
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+    expect(
+      screen.getByText(`结算日期：${localDateKey(0)} 至 ${localDateKey(0)}`)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('已结算 8 份 · 筛选结果 3 份 · 平均 7.3 分 · 最高 9 分')
+    ).toBeInTheDocument()
+  })
+
+  it('作答日期倒置时按交换后的区间筛选并提示', async () => {
+    await renderSettledView()
+    const panel = openAdvancedFilters()
+
+    fireEvent.change(within(panel).getByLabelText('作答开始日期'), {
+      target: { value: localDateKey(0) }
+    })
+    fireEvent.change(within(panel).getByLabelText('作答结束日期'), {
+      target: { value: localDateKey(4) }
+    })
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      `作答开始日期晚于作答结束日期，已自动按 ${localDateKey(4)} 至 ${localDateKey(0)} 筛选`
+    )
+    expect(
+      await screen.findByText('已结算 8 份 · 筛选结果 5 份 · 平均 7.1 分 · 最高 9 分')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(`作答日期：${localDateKey(4)} 至 ${localDateKey(0)}`)
+    ).toBeInTheDocument()
+
+    fireEvent.change(within(panel).getByLabelText('作答开始日期'), {
+      target: { value: localDateKey(4) }
+    })
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+  })
+
+  it('分数区间倒置时按交换后的区间筛选，chip 展示规范顺序', async () => {
+    await renderSettledView()
+    const panel = openAdvancedFilters()
+
+    fireEvent.change(within(panel).getByLabelText('最低分'), { target: { value: '9' } })
+    fireEvent.change(within(panel).getByLabelText('最高分'), { target: { value: '5' } })
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('最低分高于最高分，已自动按 5–9 分筛选')
+    expect(
+      await screen.findByText('已结算 8 份 · 筛选结果 6 份 · 平均 7.4 分 · 最高 9 分')
+    ).toBeInTheDocument()
+    expect(screen.getByText('分数：5–9')).toBeInTheDocument()
+
+    // 修正为 9–10 后提示消失，chip 展示规范顺序。
+    fireEvent.change(within(panel).getByLabelText('最高分'), { target: { value: '10' } })
+    await waitFor(() => expect(screen.queryByRole('alert')).not.toBeInTheDocument())
+    expect(
+      screen.getByText('已结算 8 份 · 筛选结果 3 份 · 平均 9.3 分 · 最高 10 分')
+    ).toBeInTheDocument()
+    expect(screen.getByText('分数：9–10')).toBeInTheDocument()
+  })
+})
+
+describe('已结算视图：导出门禁与刷新竞态', () => {
+  it('任一导出进行中禁用其它导出入口与刷新，结束后恢复', async () => {
+    const pendingExport = deferred<ReportExportResult>()
+    const exportBatch = vi.fn().mockReturnValue(pendingExport.promise)
+    window.reportExport = bridgeWith(exportBatch)
+    await renderSettledView()
+
+    fireEvent.click(screen.getByRole('button', { name: '展开全部' }))
+    expect(screen.getByRole('button', { name: '导出筛选报告（8）' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: '导出筛选报告（8）' }))
+    await waitFor(() => expect(exportBatch).toHaveBeenCalledOnce())
+
+    // 筛选导出进行中：其它导出入口与刷新全部禁用，筛选/排序交互保持可用。
+    expect(screen.getByRole('button', { name: '刷新列表' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '正在生成报告' })).toBeDisabled()
+    for (const name of ['导出批次报告', '导出报告', '导出作答包']) {
+      for (const button of screen.getAllByRole('button', { name })) {
+        expect(button).toBeDisabled()
+      }
+    }
+    expect(screen.getAllByRole('button', { name: '查看报告' })[0]).toBeEnabled()
+    expect(screen.getByLabelText('排序方式')).toBeEnabled()
+    expect(searchInput()).toBeEnabled()
+
+    await act(async () => {
+      pendingExport.resolve({ status: 'exported', exportedCount: 8, failures: [] })
+      await pendingExport.promise
+    })
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '导出筛选报告（8）' })).toBeEnabled()
+    )
+    expect(screen.getByRole('button', { name: '刷新列表' })).toBeEnabled()
+    for (const name of ['导出批次报告', '导出报告', '导出作答包']) {
+      for (const button of screen.getAllByRole('button', { name })) {
+        expect(button).toBeEnabled()
+      }
+    }
+  })
+
+  it('批次导出进行中禁用筛选导出、刷新与行内导出，结束后恢复', async () => {
+    const pendingExport = deferred<ReportExportResult>()
+    const exportBatch = vi.fn().mockReturnValue(pendingExport.promise)
+    window.reportExport = bridgeWith(exportBatch)
+    await renderSettledView()
+
+    fireEvent.click(screen.getByRole('button', { name: '展开全部' }))
+    fireEvent.click(screen.getAllByRole('button', { name: '导出批次报告' })[0])
+    await waitFor(() => expect(exportBatch).toHaveBeenCalledOnce())
+
+    // 批次导出在途：筛选导出、刷新与行内导出入口全部禁用（覆盖 exportingBatchId 分支）。
+    expect(screen.getByRole('button', { name: /^导出筛选报告/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '刷新列表' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '正在生成报告' })).toBeDisabled()
+    for (const name of ['导出批次报告', '导出报告', '导出作答包']) {
+      for (const button of screen.getAllByRole('button', { name })) {
+        expect(button).toBeDisabled()
+      }
+    }
+    expect(screen.getByLabelText('排序方式')).toBeEnabled()
+
+    await act(async () => {
+      pendingExport.resolve({ status: 'exported', exportedCount: 3, failures: [] })
+      await pendingExport.promise
+    })
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /^导出筛选报告/ })).toBeEnabled())
+    expect(screen.getByRole('button', { name: '刷新列表' })).toBeEnabled()
+    for (const name of ['导出批次报告', '导出报告', '导出作答包']) {
+      for (const button of screen.getAllByRole('button', { name })) {
+        expect(button).toBeEnabled()
+      }
+    }
+  })
+
+  it('刷新进行中禁用刷新按钮，完成后恢复', async () => {
+    const repository = mockRepository()
+    const pendingEntries = deferred<SubmissionLibraryEntry[]>()
+    const pendingBatches = deferred<SubmissionSettlementBatch[]>()
+    vi.mocked(repository.listEntries)
+      .mockResolvedValueOnce(ENTRIES)
+      .mockImplementationOnce(() => pendingEntries.promise)
+    vi.mocked(repository.listSettlementBatches)
+      .mockResolvedValueOnce(BATCHES)
+      .mockImplementationOnce(() => pendingBatches.promise)
+    await renderSettledView(repository)
+
+    fireEvent.click(screen.getByRole('button', { name: '刷新列表' }))
+    expect(screen.getByRole('button', { name: '刷新列表' })).toBeDisabled()
+
+    await act(async () => {
+      pendingEntries.resolve(ENTRIES)
+      pendingBatches.resolve(BATCHES)
+      await Promise.all([pendingEntries.promise, pendingBatches.promise])
+    })
+    await waitFor(() => expect(screen.getByRole('button', { name: '刷新列表' })).toBeEnabled())
+  })
+
+  it('刷新进行中再触发一次完整加载后，refreshing 仍能正确复位', async () => {
+    const repository = mockRepository()
+    const pendingEntries = deferred<SubmissionLibraryEntry[]>()
+    const pendingBatches = deferred<SubmissionSettlementBatch[]>()
+    vi.mocked(repository.listEntries)
+      .mockResolvedValueOnce(ENTRIES)
+      .mockImplementationOnce(() => pendingEntries.promise)
+    vi.mocked(repository.listSettlementBatches)
+      .mockResolvedValueOnce(BATCHES)
+      .mockImplementationOnce(() => pendingBatches.promise)
+    await renderSettledView(repository)
+
+    fireEvent.click(batchHeaderButtons()[0])
+    fireEvent.click(screen.getByRole('button', { name: '刷新列表' }))
+    expect(screen.getByRole('button', { name: '刷新列表' })).toBeDisabled()
+
+    // 删除确认后的非 silent load 会覆盖请求令牌；旧刷新请求随后返回并被丢弃时，
+    // 仍必须归还 refreshing 计数，否则刷新按钮会永久禁用。
+    fireEvent.click(screen.getAllByRole('button', { name: '删除作答记录' })[0])
+    const dialog = await screen.findByRole('alertdialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: '删除' }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '刷新列表' })).toBeInTheDocument()
+    )
+    expect(screen.getByRole('button', { name: '刷新列表' })).toBeDisabled()
+
+    await act(async () => {
+      pendingEntries.resolve(ENTRIES)
+      pendingBatches.resolve(BATCHES)
+      await Promise.all([pendingEntries.promise, pendingBatches.promise])
+    })
+    await waitFor(() => expect(screen.getByRole('button', { name: '刷新列表' })).toBeEnabled())
+    expect(summaryText()).toBe(FULL_SUMMARY)
+  })
+
+  it('并发刷新丢弃旧响应，最后发起的请求生效', async () => {
+    const repository = mockRepository()
+    const staleEntries = deferred<SubmissionLibraryEntry[]>()
+    const staleBatches = deferred<SubmissionSettlementBatch[]>()
+    const latestEntries = deferred<SubmissionLibraryEntry[]>()
+    const latestBatches = deferred<SubmissionSettlementBatch[]>()
+    vi.mocked(repository.listEntries)
+      .mockResolvedValueOnce(ENTRIES)
+      .mockImplementationOnce(() => staleEntries.promise)
+      .mockImplementationOnce(() => latestEntries.promise)
+    vi.mocked(repository.listSettlementBatches)
+      .mockResolvedValueOnce(BATCHES)
+      .mockImplementationOnce(() => staleBatches.promise)
+      .mockImplementationOnce(() => latestBatches.promise)
+    await renderSettledView(repository)
+    expect(summaryText()).toBe(FULL_SUMMARY)
+
+    // 同一 act 内连点两次刷新：第二次点击发生在按钮禁用渲染之前，模拟并发加载。
+    const refreshButton = screen.getByRole('button', { name: '刷新列表' })
+    await act(async () => {
+      refreshButton.click()
+      refreshButton.click()
+    })
+
+    await act(async () => {
+      latestEntries.resolve(ENTRIES.slice(0, 3))
+      latestBatches.resolve(BATCHES)
+      await Promise.all([latestEntries.promise, latestBatches.promise])
+    })
+    expect(summaryText()).toBe('已结算 3 份 · 筛选结果 3 份 · 平均 7.3 分 · 最高 9 分')
+
+    // 先发起的刷新后返回：整个响应被丢弃，不覆盖最新数据。
+    await act(async () => {
+      staleEntries.resolve(ENTRIES)
+      staleBatches.resolve(BATCHES)
+      await Promise.all([staleEntries.promise, staleBatches.promise])
+    })
+    expect(summaryText()).toBe('已结算 3 份 · 筛选结果 3 份 · 平均 7.3 分 · 最高 9 分')
+    expect(screen.getByRole('button', { name: '刷新列表' })).toBeEnabled()
   })
 })
 

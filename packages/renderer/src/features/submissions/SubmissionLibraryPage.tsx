@@ -89,17 +89,35 @@ export function SubmissionLibraryPage(): JSX.Element {
   const [exportingFiltered, setExportingFiltered] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const reportRequestId = useRef(0)
+  const loadRequestId = useRef(0)
+  // loading/refreshing 按“在途请求数”收敛，避免旧请求 finally 被跳过导致标志永久卡住。
+  const pendingFullLoads = useRef(0)
+  const pendingSilentLoads = useRef(0)
+  // 任一导出进行中都禁用其它导出入口与刷新，避免共享的导出进度/保存对话框叠加。
+  const exportingAny =
+    exportingFiltered ||
+    exportingBatchId !== null ||
+    exportingReportId !== null ||
+    exportingId !== null
 
   const load = useCallback(
     async (silent = false): Promise<void> => {
-      if (silent) setRefreshing(true)
-      else setLoading(true)
+      const requestId = ++loadRequestId.current
+      if (silent) {
+        pendingSilentLoads.current += 1
+        setRefreshing(true)
+      } else {
+        pendingFullLoads.current += 1
+        setLoading(true)
+      }
       setError(null)
       try {
         const [nextEntries, nextBatches] = await Promise.all([
           repository.listEntries(),
           repository.listSettlementBatches()
         ])
+        // 后发起的加载（如刷新）可能先返回；旧响应必须整体丢弃，不能覆盖最新状态。
+        if (loadRequestId.current !== requestId) return
         setEntries(nextEntries)
         setBatches(nextBatches)
         setSelectedIds((current) => {
@@ -117,10 +135,16 @@ export function SubmissionLibraryPage(): JSX.Element {
           return kept.length === current.batchIds.length ? current : { ...current, batchIds: kept }
         })
       } catch (reason) {
-        setError(submissionErrorMessage(reason))
+        if (loadRequestId.current === requestId) setError(submissionErrorMessage(reason))
       } finally {
-        if (silent) setRefreshing(false)
-        else setLoading(false)
+        // 无论请求是否已过期（数据被丢弃），都必须归还自己占用的在途计数。
+        if (silent) {
+          pendingSilentLoads.current -= 1
+          setRefreshing(pendingSilentLoads.current > 0)
+        } else {
+          pendingFullLoads.current -= 1
+          setLoading(pendingFullLoads.current > 0)
+        }
       }
     },
     [repository]
@@ -532,7 +556,8 @@ export function SubmissionLibraryPage(): JSX.Element {
               chips={settledChips}
               exams={settledExamOptionsValue}
               exportProgress={exportProgress}
-              exporting={exportingFiltered}
+              exporting={exportingAny}
+              exportingFiltered={exportingFiltered}
               filters={filters}
               refreshing={refreshing}
               summary={settledSummary}
@@ -557,8 +582,7 @@ export function SubmissionLibraryPage(): JSX.Element {
             ) : settledView === 'flat' ? (
               <SettledRecordTable
                 entries={flatSettledRecords}
-                exportingId={exportingId}
-                exportingReportId={exportingReportId}
+                exporting={exportingAny}
                 onDelete={setPendingDelete}
                 onExport={(record) => void exportSubmission(record)}
                 onExportReport={(entry) => void exportEntryReport(entry)}
@@ -568,9 +592,8 @@ export function SubmissionLibraryPage(): JSX.Element {
             ) : (
               <SettledBatches
                 expandedBatchIds={visibleExpandedBatchIds}
-                exportingId={exportingId}
+                exporting={exportingAny}
                 exportingBatchId={exportingBatchId}
-                exportingReportId={exportingReportId}
                 exportProgress={exportProgress}
                 filtering={filteringSettled}
                 groups={settledGroups}
@@ -776,9 +799,8 @@ function UnsettledList({
 function SettledBatches({
   groups,
   expandedBatchIds,
-  exportingId,
+  exporting,
   exportingBatchId,
-  exportingReportId,
   exportProgress,
   filtering,
   onToggle,
@@ -791,9 +813,8 @@ function SettledBatches({
 }: {
   groups: readonly SettledBatchGroup[]
   expandedBatchIds: Set<string>
-  exportingId: string | null
+  exporting: boolean
   exportingBatchId: string | null
-  exportingReportId: string | null
   exportProgress: ReportExportProgress | null
   filtering: boolean
   onToggle(batchId: string): void
@@ -836,7 +857,7 @@ function SettledBatches({
               <div className={styles.batchBody}>
                 <div className={styles.batchToolbar}>
                   <Button
-                    disabled={exportingBatchId !== null}
+                    disabled={exporting}
                     icon={FileDown}
                     size="small"
                     variant="secondary"
@@ -881,8 +902,7 @@ function SettledBatches({
                         <td>
                           <SettledEntryActions
                             entry={record.entry}
-                            exportingId={exportingId}
-                            exportingReportId={exportingReportId}
+                            exporting={exporting}
                             onDelete={onDelete}
                             onExport={onExport}
                             onExportReport={onExportReport}
@@ -905,8 +925,7 @@ function SettledBatches({
 
 function SettledRecordTable({
   entries,
-  exportingId,
-  exportingReportId,
+  exporting,
   onReport,
   onReset,
   onExport,
@@ -914,8 +933,7 @@ function SettledRecordTable({
   onDelete
 }: {
   entries: readonly SettledRecord[]
-  exportingId: string | null
-  exportingReportId: string | null
+  exporting: boolean
   onReport(entry: SubmissionLibraryEntry): void
   onReset(entry: SubmissionLibraryEntry): void
   onExport(record: SubmissionLibraryRecord): void
@@ -954,8 +972,7 @@ function SettledRecordTable({
               <td>
                 <SettledEntryActions
                   entry={record.entry}
-                  exportingId={exportingId}
-                  exportingReportId={exportingReportId}
+                  exporting={exporting}
                   onDelete={onDelete}
                   onExport={onExport}
                   onExportReport={onExportReport}
@@ -973,8 +990,7 @@ function SettledRecordTable({
 
 function SettledEntryActions({
   entry,
-  exportingId,
-  exportingReportId,
+  exporting,
   onReport,
   onReset,
   onExport,
@@ -982,8 +998,7 @@ function SettledEntryActions({
   onDelete
 }: {
   entry: SubmissionLibraryEntry
-  exportingId: string | null
-  exportingReportId: string | null
+  exporting: boolean
   onReport(entry: SubmissionLibraryEntry): void
   onReset(entry: SubmissionLibraryEntry): void
   onExport(record: SubmissionLibraryRecord): void
@@ -997,13 +1012,13 @@ function SettledEntryActions({
       </Button>
       <IconButton icon={RotateCcw} label="重新评分" onClick={() => onReset(entry)} />
       <IconButton
-        disabled={exportingReportId !== null}
+        disabled={exporting}
         icon={FileDown}
         label="导出报告"
         onClick={() => onExportReport(entry)}
       />
       <IconButton
-        disabled={exportingId !== null}
+        disabled={exporting}
         icon={Download}
         label="导出作答包"
         onClick={() => onExport(entry.record)}

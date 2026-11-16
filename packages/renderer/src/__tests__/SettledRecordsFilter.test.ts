@@ -14,6 +14,9 @@ import {
   groupSettledRecords,
   hasActiveSettledFilters,
   normalizeDateInput,
+  orderedDateRange,
+  orderedScoreRange,
+  parseScoreInput,
   removeSettledFilterChip,
   settlementDateRange,
   settledBatchOptions,
@@ -369,6 +372,58 @@ describe('settlementDateRange', () => {
       to: null
     })
   })
+
+  it('custom 两端倒置时交换为正确顺序', () => {
+    expect(settlementDateRange('custom', NOW, '2026-02-01', '2026-01-01')).toEqual({
+      from: '2026-01-01',
+      to: '2026-02-01'
+    })
+    expect(settlementDateRange('custom', NOW, '2026-01-01', '2026-01-01')).toEqual({
+      from: '2026-01-01',
+      to: '2026-01-01'
+    })
+  })
+})
+
+describe('orderedDateRange / orderedScoreRange / parseScoreInput', () => {
+  it('orderedDateRange 仅在两端都存在且倒置时交换', () => {
+    expect(orderedDateRange('2026-02-01', '2026-01-01')).toEqual({
+      from: '2026-01-01',
+      to: '2026-02-01'
+    })
+    expect(orderedDateRange('2026-01-01', '2026-02-01')).toEqual({
+      from: '2026-01-01',
+      to: '2026-02-01'
+    })
+    expect(orderedDateRange('2026-01-01', '2026-01-01')).toEqual({
+      from: '2026-01-01',
+      to: '2026-01-01'
+    })
+    expect(orderedDateRange(null, '2026-01-01')).toEqual({ from: null, to: '2026-01-01' })
+    expect(orderedDateRange('2026-01-01', null)).toEqual({ from: '2026-01-01', to: null })
+    expect(orderedDateRange(null, null)).toEqual({ from: null, to: null })
+  })
+
+  it('orderedScoreRange 仅在两端都存在且下限高于上限时交换', () => {
+    expect(orderedScoreRange(9, 6)).toEqual({ min: 6, max: 9 })
+    expect(orderedScoreRange(6, 9)).toEqual({ min: 6, max: 9 })
+    expect(orderedScoreRange(6, 6)).toEqual({ min: 6, max: 6 })
+    expect(orderedScoreRange(null, 6)).toEqual({ min: null, max: 6 })
+    expect(orderedScoreRange(6, null)).toEqual({ min: 6, max: null })
+    expect(orderedScoreRange(null, null)).toEqual({ min: null, max: null })
+    // 0 是有效下限，负分同样参与交换。
+    expect(orderedScoreRange(0, -1)).toEqual({ min: -1, max: 0 })
+  })
+
+  it('parseScoreInput 空/非法返回 null，0 与小数是有效值', () => {
+    expect(parseScoreInput('')).toBeNull()
+    expect(parseScoreInput('   ')).toBeNull()
+    expect(parseScoreInput('abc')).toBeNull()
+    expect(parseScoreInput('Infinity')).toBeNull()
+    expect(parseScoreInput('0')).toBe(0)
+    expect(parseScoreInput(' 7.5 ')).toBe(7.5)
+    expect(parseScoreInput('-1')).toBe(-1)
+  })
 })
 
 describe('filterSettledRecords：关键词', () => {
@@ -572,6 +627,55 @@ describe('filterSettledRecords：批次 / 试卷 / 分数', () => {
     expect(filteredIds({ keyword: '李四', batchIds: [BATCH_B1.batchId], minScore: '9' })).toEqual([
       's2'
     ])
+  })
+})
+
+describe('filterSettledRecords：区间倒置自动按正确顺序生效', () => {
+  it('custom 结算日期倒置与正序结果一致', () => {
+    const reversed = filteredIds({
+      settlementPreset: 'custom',
+      settlementFrom: '2026-02-14',
+      settlementTo: '2026-01-10'
+    })
+    expect(reversed).toEqual(
+      filteredIds({
+        settlementPreset: 'custom',
+        settlementFrom: '2026-01-10',
+        settlementTo: '2026-02-14'
+      })
+    )
+    expect(reversed).toEqual(['s4', 's5', 's6', 's1', 's2', 's3'])
+  })
+
+  it('作答日期倒置与正序结果一致', () => {
+    const reversed = filteredIds({ submittedFrom: '2026-03-15', submittedTo: '2026-01-05' })
+    expect(reversed).toEqual(
+      filteredIds({ submittedFrom: '2026-01-05', submittedTo: '2026-03-15' })
+    )
+    expect(reversed).toEqual(['s9', 's4', 's5', 's6', 's1', 's2', 's3'])
+  })
+
+  it('分数倒置与正序结果一致', () => {
+    const reversed = filteredIds({ minScore: '9', maxScore: '6' })
+    expect(reversed).toEqual(filteredIds({ minScore: '6', maxScore: '9' }))
+    expect(reversed).toEqual(['s7', 's4', 's5', 's6', 's1', 's2'])
+  })
+
+  it('单端有效或另一端非法时保持原行为（不交换、不钳制）', () => {
+    expect(
+      filteredIds({ settlementPreset: 'custom', settlementFrom: '2026-02-14', settlementTo: 'abc' })
+    ).toEqual(['s7', 's8', 's9', 's4', 's5', 's6'])
+    expect(filteredIds({ submittedFrom: '2026-03-15', submittedTo: 'abc' })).toEqual([
+      's7',
+      's8',
+      's9'
+    ])
+    expect(filteredIds({ minScore: '9', maxScore: 'abc' })).toEqual(['s7', 's9', 's2'])
+    expect(filteredIds({ minScore: 'abc', maxScore: '5' })).toEqual(['s8', 's3'])
+    // 非法日期仍视为不限，倒置判断不会把它们当作有效端点。
+    expect(
+      filteredIds({ settlementPreset: 'custom', settlementFrom: '2026-13-01', settlementTo: 'abc' })
+    ).toEqual(DEFAULT_ORDER)
   })
 })
 
@@ -922,6 +1026,28 @@ describe('settledFilterChips', () => {
       { key: 'score', label: '分数：≤ 9' }
     ])
     expect(settledFilterChips(RECORDS, filters({ minScore: '5', maxScore: '9' }))).toEqual([
+      { key: 'score', label: '分数：5–9' }
+    ])
+  })
+
+  it('倒置区间在 chip 中按规范顺序展示', () => {
+    expect(
+      settledFilterChips(
+        RECORDS,
+        filters({
+          settlementPreset: 'custom',
+          settlementFrom: '2026-02-01',
+          settlementTo: '2026-01-01'
+        })
+      )
+    ).toEqual([{ key: 'settlement-date', label: '结算日期：2026-01-01 至 2026-02-01' }])
+    expect(
+      settledFilterChips(
+        RECORDS,
+        filters({ submittedFrom: '2026-01-31', submittedTo: '2026-01-01' })
+      )
+    ).toEqual([{ key: 'submitted-date', label: '作答日期：2026-01-01 至 2026-01-31' }])
+    expect(settledFilterChips(RECORDS, filters({ minScore: '9', maxScore: '5' }))).toEqual([
       { key: 'score', label: '分数：5–9' }
     ])
   })

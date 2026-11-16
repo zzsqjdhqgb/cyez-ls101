@@ -557,6 +557,13 @@
   outline-offset: 0;
 }
 
+.filterWarning {
+  margin: 6px 0 0;
+  color: var(--color-danger);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .batchFilter {
   position: relative;
 }

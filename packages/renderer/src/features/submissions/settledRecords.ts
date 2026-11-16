@@ -209,10 +209,28 @@ export function settlementDateRange(
     case 'this-month':
       return { from: firstDayOfMonthKey(now), to: localDateKeyOf(now) }
     case 'custom':
-      return { from: normalizeDateInput(from), to: normalizeDateInput(to) }
+      return orderedDateRange(normalizeDateInput(from), normalizeDateInput(to))
     default:
       return { from: null, to: null }
   }
+}
+
+/**
+ * 把已归一化的日期区间按先后顺序规范化：两端都存在且起点晚于终点时交换。
+ * 引擎筛选与 chips 展示都使用规范化后的区间，保证“填反了”也能按正确顺序生效。
+ */
+export function orderedDateRange(from: string | null, to: string | null): SettledDateRange {
+  if (from !== null && to !== null && from > to) return { from: to, to: from }
+  return { from, to }
+}
+
+/** 把已解析的分数区间按大小规范化：两端都存在且下限高于上限时交换。 */
+export function orderedScoreRange(
+  min: number | null,
+  max: number | null
+): { min: number | null; max: number | null } {
+  if (min !== null && max !== null && min > max) return { min: max, max: min }
+  return { min, max }
 }
 
 export function filterSettledRecords(
@@ -227,12 +245,16 @@ export function filterSettledRecords(
     filters.settlementFrom,
     filters.settlementTo
   )
-  const submittedFrom = normalizeDateInput(filters.submittedFrom)
-  const submittedTo = normalizeDateInput(filters.submittedTo)
+  const submittedRange = orderedDateRange(
+    normalizeDateInput(filters.submittedFrom),
+    normalizeDateInput(filters.submittedTo)
+  )
   const batchIds = new Set(filters.batchIds)
   const examTitle = filters.examTitle.trim()
-  const minScore = parseScore(filters.minScore)
-  const maxScore = parseScore(filters.maxScore)
+  const scoreRange = orderedScoreRange(
+    parseScoreInput(filters.minScore),
+    parseScoreInput(filters.maxScore)
+  )
   return records.filter((record) => {
     if (
       keywordTokens.length > 0 &&
@@ -246,16 +268,16 @@ export function filterSettledRecords(
       if (settledRange.from && settledKey < settledRange.from) return false
       if (settledRange.to && settledKey > settledRange.to) return false
     }
-    if (submittedFrom || submittedTo) {
+    if (submittedRange.from || submittedRange.to) {
       const submittedKey = localDateKey(record.entry.record.submittedAt)
       if (!submittedKey) return false
-      if (submittedFrom && submittedKey < submittedFrom) return false
-      if (submittedTo && submittedKey > submittedTo) return false
+      if (submittedRange.from && submittedKey < submittedRange.from) return false
+      if (submittedRange.to && submittedKey > submittedRange.to) return false
     }
     if (batchIds.size > 0 && !batchIds.has(record.batch.batchId)) return false
     if (examTitle !== '' && record.entry.record.examTitle.trim() !== examTitle) return false
-    if (minScore !== null && record.totalScore < minScore) return false
-    if (maxScore !== null && record.totalScore > maxScore) return false
+    if (scoreRange.min !== null && record.totalScore < scoreRange.min) return false
+    if (scoreRange.max !== null && record.totalScore > scoreRange.max) return false
     return true
   })
 }
@@ -321,8 +343,8 @@ export function hasActiveSettledFilters(filters: SettledFilters): boolean {
     filters.examTitle.trim() !== '' ||
     normalizeDateInput(filters.submittedFrom) !== null ||
     normalizeDateInput(filters.submittedTo) !== null ||
-    parseScore(filters.minScore) !== null ||
-    parseScore(filters.maxScore) !== null
+    parseScoreInput(filters.minScore) !== null ||
+    parseScoreInput(filters.maxScore) !== null
   )
 }
 
@@ -342,11 +364,11 @@ export function settledFilterChips(
   const settledChip = settlementDateChipLabel(filters)
   if (settledChip !== null) chips.push({ key: 'settlement-date', label: settledChip })
 
-  const submittedChip = dateRangeChipLabel(
-    '作答日期',
+  const submittedRange = orderedDateRange(
     normalizeDateInput(filters.submittedFrom),
     normalizeDateInput(filters.submittedTo)
   )
+  const submittedChip = dateRangeChipLabel('作答日期', submittedRange.from, submittedRange.to)
   if (submittedChip !== null) chips.push({ key: 'submitted-date', label: submittedChip })
 
   if (filters.batchIds.length > 0) {
@@ -370,14 +392,16 @@ export function settledFilterChips(
   const examTitle = filters.examTitle.trim()
   if (examTitle !== '') chips.push({ key: 'exam', label: `试卷：${examTitle}` })
 
-  const minScore = parseScore(filters.minScore)
-  const maxScore = parseScore(filters.maxScore)
-  if (minScore !== null && maxScore !== null) {
-    chips.push({ key: 'score', label: `分数：${minScore}–${maxScore}` })
-  } else if (minScore !== null) {
-    chips.push({ key: 'score', label: `分数：≥ ${minScore}` })
-  } else if (maxScore !== null) {
-    chips.push({ key: 'score', label: `分数：≤ ${maxScore}` })
+  const scoreRange = orderedScoreRange(
+    parseScoreInput(filters.minScore),
+    parseScoreInput(filters.maxScore)
+  )
+  if (scoreRange.min !== null && scoreRange.max !== null) {
+    chips.push({ key: 'score', label: `分数：${scoreRange.min}–${scoreRange.max}` })
+  } else if (scoreRange.min !== null) {
+    chips.push({ key: 'score', label: `分数：≥ ${scoreRange.min}` })
+  } else if (scoreRange.max !== null) {
+    chips.push({ key: 'score', label: `分数：≤ ${scoreRange.max}` })
   }
   return chips
 }
@@ -404,12 +428,11 @@ export function removeSettledFilterChip(
 
 function settlementDateChipLabel(filters: SettledFilters): string | null {
   if (filters.settlementPreset === 'custom') {
-    const range = dateRangeChipLabel(
-      '结算日期',
+    const range = orderedDateRange(
       normalizeDateInput(filters.settlementFrom),
       normalizeDateInput(filters.settlementTo)
     )
-    return range ?? '结算日期：自定义区间'
+    return dateRangeChipLabel('结算日期', range.from, range.to) ?? '结算日期：自定义区间'
   }
   if (filters.settlementPreset === 'all') return null
   const option = SETTLEMENT_DATE_PRESET_OPTIONS.find(
@@ -449,7 +472,8 @@ function normalizedKeywordTokens(keyword: string): string[] {
     .filter((token) => token !== '')
 }
 
-function parseScore(value: string): number | null {
+/** 解析数字输入框原值：空/非法返回 null，0 是有效值。 */
+export function parseScoreInput(value: string): number | null {
   const trimmed = value.trim()
   if (trimmed === '') return null
   const parsed = Number(trimmed)

@@ -364,23 +364,22 @@ test('已结算视图：导入 9 份客观题、结算三个批次并验证筛�
 
   // 批次多选：批次 2 → 3 份；再加批次 1 → 6 份
   await page.getByRole('button', { name: '批次筛选' }).click()
-  const batchListbox = page.getByRole('listbox', { name: '批次选项' })
-  await expect(batchListbox).toBeVisible()
-  await expect(batchListbox).toHaveAttribute('aria-multiselectable', 'true')
-  await expect(batchListbox.getByRole('checkbox')).toHaveCount(3)
+  const batchGroup = page.getByRole('group', { name: '批次选项' })
+  await expect(batchGroup).toBeVisible()
+  await expect(batchGroup.getByRole('checkbox')).toHaveCount(3)
   await expect(
-    batchListbox.getByRole('checkbox', {
+    batchGroup.getByRole('checkbox', {
       name: /批次 3.*结算于 2026\/03\/20 10:00.*3 份作答/
     })
   ).toBeVisible()
-  await batchListbox.getByRole('checkbox', { name: /批次 2/ }).check()
+  await batchGroup.getByRole('checkbox', { name: /批次 2/ }).check()
   await expectSummary(3, '5.0', '10')
   await expect(page.getByRole('button', { name: '批次筛选' })).toContainText('批次：1 个已选')
   await expect(chipBar).toContainText('批次：批次 2')
   await expect(page.locator('table tbody tr')).toHaveCount(3)
   await expect(page.getByRole('button', { name: '清除批次选择' })).toBeVisible()
   await takeScreenshot('batch-filter.png')
-  await batchListbox.getByRole('checkbox', { name: /批次 1/ }).check()
+  await batchGroup.getByRole('checkbox', { name: /批次 1/ }).check()
   await expectSummary(6, '5.5', '10')
   await expect(chipBar).toContainText('批次：批次 2、批次 1')
   await expect(page.getByRole('button', { name: '批次筛选' })).toContainText('批次：2 个已选')
@@ -388,7 +387,8 @@ test('已结算视图：导入 9 份客观题、结算三个批次并验证筛�
   await expectSummary(9, '5.7', '10')
   await expect(page.getByRole('button', { name: '批次筛选' })).toContainText('全部批次')
   await page.keyboard.press('Escape')
-  await expect(batchListbox).toHaveCount(0)
+  await expect(batchGroup).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '批次筛选' })).toBeFocused()
 
   // 试卷筛选：九年级英语模拟 → 3 份（李华、陈晨、吴敏）
   await page.getByLabel('试卷筛选').selectOption('九年级英语模拟')
