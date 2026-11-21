@@ -7952,8 +7952,8 @@
     },
     {
       "templateId": "4f4c8c1a-9b2a-4d71-8f1e-4a5e8c7d2b63",
-      "version": 6,
-      "releaseHash": "sha256:29f532a3d7afecb4bf26c813511d4a9c8dba8e41aa6135d56efc5c5a292baa2f",
+      "version": 9,
+      "releaseHash": "sha256:c9729220664e29e44ed2eb805e573b82a7f1a561e2b264797fa9fb4c1ab81b58",
       "document": {
         "content": {
           "name": "上海高考英语听力标准题型",
@@ -7962,7 +7962,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214",
+              "interfaceId": "sha256:f311b845c8a99ea77e1565f63f1ce72603c023f1b08d9e21548dcccb878a4957",
               "acceptedVars": [
                 "dialogue_text_1",
                 "stem_1",
@@ -14818,8 +14818,8 @@
     },
     {
       "templateId": "5c2f1d4e-6a7b-4c8d-9e0f-1234567890ab",
-      "version": 4,
-      "releaseHash": "sha256:9bebab7fb6803032d049185b3d27fae8076f2e2ccda5e959491689b71d3dd824",
+      "version": 7,
+      "releaseHash": "sha256:f4e5bd67512494476800cf0a524052b762ce0c12792a5f061e36e2423983da7c",
       "document": {
         "content": {
           "name": "上海高考英语听力 - 短对话专项训练",
@@ -14828,7 +14828,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214",
+              "interfaceId": "sha256:f311b845c8a99ea77e1565f63f1ce72603c023f1b08d9e21548dcccb878a4957",
               "acceptedVars": [
                 "dialogue_text_1",
                 "stem_1",
@@ -18133,8 +18133,8 @@
     },
     {
       "templateId": "6d3e2f5a-7b8c-4d9e-a0f1-2345678901bc",
-      "version": 5,
-      "releaseHash": "sha256:5e09bace92af4a6e5a7256b4fa5037830417b7baf23526db8b0660020b0ffaf8",
+      "version": 8,
+      "releaseHash": "sha256:e1e286bad5463263931e8e2f7cc189747348edd2ef299cbbaf210216bf5e7fb9",
       "document": {
         "content": {
           "name": "上海高考英语听力 - 短文专项训练",
@@ -18143,7 +18143,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214",
+              "interfaceId": "sha256:f311b845c8a99ea77e1565f63f1ce72603c023f1b08d9e21548dcccb878a4957",
               "acceptedVars": [
                 "passage_text_1",
                 "stem_11",
@@ -20772,8 +20772,8 @@
     },
     {
       "templateId": "7e4f3a6b-8c9d-4e0f-a1b2-3456789012cd",
-      "version": 5,
-      "releaseHash": "sha256:748c227d5ea7a30296d1ae9f91f25cbe01ca6a2cf76f82464a139c7dda501fad",
+      "version": 8,
+      "releaseHash": "sha256:49757c65facbdeba2e612ce57698a49382499cbbcbd3e19553f187f5307b60af",
       "document": {
         "content": {
           "name": "上海高考英语听力 - 长对话专项训练",
@@ -20782,7 +20782,7 @@
           "interfaces": [
             {
               "alias": "data",
-              "interfaceId": "sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214",
+              "interfaceId": "sha256:f311b845c8a99ea77e1565f63f1ce72603c023f1b08d9e21548dcccb878a4957",
               "acceptedVars": [
                 "dialogue_long_text",
                 "stem_17",

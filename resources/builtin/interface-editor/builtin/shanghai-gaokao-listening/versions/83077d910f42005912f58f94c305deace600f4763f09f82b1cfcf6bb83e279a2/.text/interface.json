@@ -1,0 +1,1037 @@
+{
+  "id": "sha256:83077d910f42005912f58f94c305deace600f4763f09f82b1cfcf6bb83e279a2",
+  "name": "上海高考英语听力",
+  "description": "围绕给定主题按低（B2）/中（B2+～C1）/高（C1～C2）分档生成听力训练卷，以词汇、句法、信息密度、语速、语音现象与认知要求分层，结合Flesch–Kincaid辅助自检及逐题防泄露检查。每题组一档，共20题25分；沿用教师原稿结构，未核验为现行官方卷面。请在补充要求填写主题或材料。",
+  "fields": {
+    "order": ["shortDialogues", "passages", "longConversation"],
+    "nodes": {
+      "shortDialogues": {
+        "type": "group",
+        "children": {
+          "order": [
+            "question1",
+            "question2",
+            "question3",
+            "question4",
+            "question5",
+            "question6",
+            "question7",
+            "question8",
+            "question9",
+            "question10"
+          ],
+          "nodes": {
+            "question1": {
+              "type": "group",
+              "children": {
+                "order": ["dialogue", "stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "dialogue": {
+                    "type": "text",
+                    "varName": "dialogue_text_1",
+                    "description": "第1段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Woman]: It's already eight thirty. Won't you be late for the meeting?\n[Man]: No. It was put off for half an hour."
+                  },
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_1",
+                    "description": "第1题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "When will the meeting begin?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_1_A",
+                    "description": "第1题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "At 8:00."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_1_B",
+                    "description": "第1题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "At 8:30."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_1_C",
+                    "description": "第1题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "At 9:00."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_1_D",
+                    "description": "第1题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "At 9:30."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_1",
+                    "description": "第1题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "C"
+                  }
+                }
+              }
+            },
+            "question2": {
+              "type": "group",
+              "children": {
+                "order": ["dialogue", "stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "dialogue": {
+                    "type": "text",
+                    "varName": "dialogue_text_2",
+                    "description": "第2段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Man]: Shall we take a taxi to the concert hall?\n[Woman]: The underground is faster at this time of day."
+                  },
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_2",
+                    "description": "第2题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "How will the speakers probably go to the concert hall?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_2_A",
+                    "description": "第2题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "By bus."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_2_B",
+                    "description": "第2题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "By taxi."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_2_C",
+                    "description": "第2题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "By car."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_2_D",
+                    "description": "第2题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "By underground."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_2",
+                    "description": "第2题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "D"
+                  }
+                }
+              }
+            },
+            "question3": {
+              "type": "group",
+              "children": {
+                "order": ["dialogue", "stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "dialogue": {
+                    "type": "text",
+                    "varName": "dialogue_text_3",
+                    "description": "第3段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Woman]: This blue sweater is sixty dollars, but the grey one is twenty percent off.\n[Man]: Then I'll take the grey one."
+                  },
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_3",
+                    "description": "第3题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "Why does the man choose the grey sweater?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_3_A",
+                    "description": "第3题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "It is cheaper."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_3_B",
+                    "description": "第3题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "It is warmer."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_3_C",
+                    "description": "第3题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "It fits him better."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_3_D",
+                    "description": "第3题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "It is his favourite colour."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_3",
+                    "description": "第3题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "A"
+                  }
+                }
+              }
+            },
+            "question4": {
+              "type": "group",
+              "children": {
+                "order": ["dialogue", "stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "dialogue": {
+                    "type": "text",
+                    "varName": "dialogue_text_4",
+                    "description": "第4段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Man]: Did you enjoy the new restaurant near the station?\n[Woman]: The service was excellent, though the soup was much too salty."
+                  },
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_4",
+                    "description": "第4题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "What did the woman dislike about the restaurant?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_4_A",
+                    "description": "第4题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Its location."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_4_B",
+                    "description": "第4题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Its service."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_4_C",
+                    "description": "第4题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Its soup."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_4_D",
+                    "description": "第4题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Its price."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_4",
+                    "description": "第4题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "C"
+                  }
+                }
+              }
+            },
+            "question5": {
+              "type": "group",
+              "children": {
+                "order": ["dialogue", "stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "dialogue": {
+                    "type": "text",
+                    "varName": "dialogue_text_5",
+                    "description": "第5段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Woman]: Are you going to play tennis after class?\n[Man]: I planned to, but I have to finish my chemistry report first."
+                  },
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_5",
+                    "description": "第5题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "What will the man probably do after class?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_5_A",
+                    "description": "第5题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Write a report."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_5_B",
+                    "description": "第5题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Play tennis."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_5_C",
+                    "description": "第5题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Attend a chemistry lesson."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_5_D",
+                    "description": "第5题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Meet his teacher."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_5",
+                    "description": "第5题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "A"
+                  }
+                }
+              }
+            },
+            "question6": {
+              "type": "group",
+              "children": {
+                "order": ["dialogue", "stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "dialogue": {
+                    "type": "text",
+                    "varName": "dialogue_text_6",
+                    "description": "第6段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Man]: Could you turn the music down? I'm preparing for tomorrow's interview.\n[Woman]: Sorry. I'll use my headphones."
+                  },
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_6",
+                    "description": "第6题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "What is the man doing?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_6_A",
+                    "description": "第6题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Giving an interview."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_6_B",
+                    "description": "第6题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Fixing some headphones."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_6_C",
+                    "description": "第6题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Preparing for an interview."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_6_D",
+                    "description": "第6题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Choosing some music."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_6",
+                    "description": "第6题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "C"
+                  }
+                }
+              }
+            },
+            "question7": {
+              "type": "group",
+              "children": {
+                "order": ["dialogue", "stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "dialogue": {
+                    "type": "text",
+                    "varName": "dialogue_text_7",
+                    "description": "第7段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Woman]: The weather forecast says the rain will stop by noon.\n[Man]: Good. We can still have our picnic this afternoon."
+                  },
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_7",
+                    "description": "第7题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "What are the speakers talking about?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_7_A",
+                    "description": "第7题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "A picnic plan."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_7_B",
+                    "description": "第7题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "A weather report."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_7_C",
+                    "description": "第7题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "A lunch menu."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_7_D",
+                    "description": "第7题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "An afternoon class."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_7",
+                    "description": "第7题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "A"
+                  }
+                }
+              }
+            },
+            "question8": {
+              "type": "group",
+              "children": {
+                "order": ["dialogue", "stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "dialogue": {
+                    "type": "text",
+                    "varName": "dialogue_text_8",
+                    "description": "第8段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Man]: I can't find the book on modern architecture.\n[Woman]: Someone returned it this morning. Let me check the shelf for you."
+                  },
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_8",
+                    "description": "第8题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "Where does the conversation most probably take place?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_8_A",
+                    "description": "第8题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "In a museum."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_8_B",
+                    "description": "第8题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "In a bookshop."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_8_C",
+                    "description": "第8题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "In a library."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_8_D",
+                    "description": "第8题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "In a classroom."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_8",
+                    "description": "第8题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "C"
+                  }
+                }
+              }
+            },
+            "question9": {
+              "type": "group",
+              "children": {
+                "order": ["dialogue", "stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "dialogue": {
+                    "type": "text",
+                    "varName": "dialogue_text_9",
+                    "description": "第9段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Woman]: Your presentation was very clear, David.\n[Man]: Thanks. I was nervous at first, but the audience's questions helped me relax."
+                  },
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_9",
+                    "description": "第9题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "How did David feel at the beginning of his presentation?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_9_A",
+                    "description": "第9题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Confident."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_9_B",
+                    "description": "第9题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Nervous."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_9_C",
+                    "description": "第9题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Curious."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_9_D",
+                    "description": "第9题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Disappointed."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_9",
+                    "description": "第9题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "B"
+                  }
+                }
+              }
+            },
+            "question10": {
+              "type": "group",
+              "children": {
+                "order": ["dialogue", "stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "dialogue": {
+                    "type": "text",
+                    "varName": "dialogue_text_10",
+                    "description": "第10段短对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签，不包含题干或答案。",
+                    "example": "[Man]: I heard you are moving to a new flat next week.\n[Woman]: Yes. It is farther from my office, but there is a lovely park nearby."
+                  },
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_10",
+                    "description": "第10题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "What does the woman like about her new neighbourhood?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_10_A",
+                    "description": "第10题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "The short journey to work."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_10_B",
+                    "description": "第10题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "The quiet office."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_10_C",
+                    "description": "第10题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "The nearby park."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_10_D",
+                    "description": "第10题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "The large flat."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_10",
+                    "description": "第10题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "C"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "passages": {
+        "type": "group",
+        "children": {
+          "order": ["passage1", "passage2"],
+          "nodes": {
+            "passage1": {
+              "type": "group",
+              "children": {
+                "order": ["script", "question11", "question12", "question13"],
+                "nodes": {
+                  "script": {
+                    "type": "text",
+                    "varName": "passage_text_1",
+                    "description": "第1篇听力短文的完整英文文本，供TTS合成。结构完整、信息清楚，不包含题干或答案。",
+                    "example": "Last year, Westbridge High School turned an unused corner of its playground into a vegetable garden. At first, only twelve students joined the project. They met every Wednesday afternoon to prepare the soil and plant tomatoes, beans and herbs. A local gardener visited once a month and taught them how to save water and protect plants without harmful chemicals. By summer, the club had grown to forty members. They sold some vegetables at the school fair and used the money to buy books for the library. The rest of the harvest was given to a nearby community kitchen. According to the club leader, the greatest benefit was not the food or the money. It was seeing students from different grades solve problems together and become friends."
+                  },
+                  "question11": {
+                    "type": "group",
+                    "children": {
+                      "order": ["stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                      "nodes": {
+                        "stem": {
+                          "type": "text",
+                          "varName": "stem_11",
+                          "description": "第11题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                          "example": "How often did the students meet to work in the garden?"
+                        },
+                        "optionA": {
+                          "type": "text",
+                          "varName": "opt_11_A",
+                          "description": "第11题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Every day."
+                        },
+                        "optionB": {
+                          "type": "text",
+                          "varName": "opt_11_B",
+                          "description": "第11题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Once a week."
+                        },
+                        "optionC": {
+                          "type": "text",
+                          "varName": "opt_11_C",
+                          "description": "第11题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Twice a month."
+                        },
+                        "optionD": {
+                          "type": "text",
+                          "varName": "opt_11_D",
+                          "description": "第11题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Once a month."
+                        },
+                        "answer": {
+                          "type": "text",
+                          "varName": "answer_11",
+                          "description": "第11题的正确答案。只能填写大写字母A、B、C或D。",
+                          "example": "B"
+                        }
+                      }
+                    }
+                  },
+                  "question12": {
+                    "type": "group",
+                    "children": {
+                      "order": ["stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                      "nodes": {
+                        "stem": {
+                          "type": "text",
+                          "varName": "stem_12",
+                          "description": "第12题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                          "example": "What did the students do with the money from the school fair?"
+                        },
+                        "optionA": {
+                          "type": "text",
+                          "varName": "opt_12_A",
+                          "description": "第12题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "They bought garden tools."
+                        },
+                        "optionB": {
+                          "type": "text",
+                          "varName": "opt_12_B",
+                          "description": "第12题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "They paid a local gardener."
+                        },
+                        "optionC": {
+                          "type": "text",
+                          "varName": "opt_12_C",
+                          "description": "第12题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "They bought library books."
+                        },
+                        "optionD": {
+                          "type": "text",
+                          "varName": "opt_12_D",
+                          "description": "第12题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "They helped a community kitchen."
+                        },
+                        "answer": {
+                          "type": "text",
+                          "varName": "answer_12",
+                          "description": "第12题的正确答案。只能填写大写字母A、B、C或D。",
+                          "example": "C"
+                        }
+                      }
+                    }
+                  },
+                  "question13": {
+                    "type": "group",
+                    "children": {
+                      "order": ["stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                      "nodes": {
+                        "stem": {
+                          "type": "text",
+                          "varName": "stem_13",
+                          "description": "第13题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                          "example": "What did the club leader consider the greatest benefit of the project?"
+                        },
+                        "optionA": {
+                          "type": "text",
+                          "varName": "opt_13_A",
+                          "description": "第13题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Producing healthy food."
+                        },
+                        "optionB": {
+                          "type": "text",
+                          "varName": "opt_13_B",
+                          "description": "第13题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Learning to save water."
+                        },
+                        "optionC": {
+                          "type": "text",
+                          "varName": "opt_13_C",
+                          "description": "第13题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Making a large profit."
+                        },
+                        "optionD": {
+                          "type": "text",
+                          "varName": "opt_13_D",
+                          "description": "第13题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Building friendships through teamwork."
+                        },
+                        "answer": {
+                          "type": "text",
+                          "varName": "answer_13",
+                          "description": "第13题的正确答案。只能填写大写字母A、B、C或D。",
+                          "example": "D"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "passage2": {
+              "type": "group",
+              "children": {
+                "order": ["script", "question14", "question15", "question16"],
+                "nodes": {
+                  "script": {
+                    "type": "text",
+                    "varName": "passage_text_2",
+                    "description": "第2篇听力短文的完整英文文本，供TTS合成。结构完整、信息清楚，不包含题干或答案。",
+                    "example": "Good morning, passengers. This is an announcement for Flight 672 to Singapore. Because of heavy rain, the flight will leave at 3:40 p.m. instead of 2:50 p.m. Boarding will begin at Gate 18 at 3:10. Passengers who have not checked in must do so at Counter 6 before 2:45. If you have checked luggage, please make sure your name and phone number are clearly shown on each bag. While you are waiting, you may use the meal voucher attached to your boarding pass at any café in the departure area. Families travelling with young children can wait in the play area opposite Gate 16. We apologise for the delay and thank you for your patience."
+                  },
+                  "question14": {
+                    "type": "group",
+                    "children": {
+                      "order": ["stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                      "nodes": {
+                        "stem": {
+                          "type": "text",
+                          "varName": "stem_14",
+                          "description": "第14题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                          "example": "Why has Flight 672 been delayed?"
+                        },
+                        "optionA": {
+                          "type": "text",
+                          "varName": "opt_14_A",
+                          "description": "第14题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "The aircraft needs repairs."
+                        },
+                        "optionB": {
+                          "type": "text",
+                          "varName": "opt_14_B",
+                          "description": "第14题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "The crew arrived late."
+                        },
+                        "optionC": {
+                          "type": "text",
+                          "varName": "opt_14_C",
+                          "description": "第14题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "The weather is bad."
+                        },
+                        "optionD": {
+                          "type": "text",
+                          "varName": "opt_14_D",
+                          "description": "第14题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "The airport is crowded."
+                        },
+                        "answer": {
+                          "type": "text",
+                          "varName": "answer_14",
+                          "description": "第14题的正确答案。只能填写大写字母A、B、C或D。",
+                          "example": "C"
+                        }
+                      }
+                    }
+                  },
+                  "question15": {
+                    "type": "group",
+                    "children": {
+                      "order": ["stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                      "nodes": {
+                        "stem": {
+                          "type": "text",
+                          "varName": "stem_15",
+                          "description": "第15题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                          "example": "What must passengers without check-in do before 2:45?"
+                        },
+                        "optionA": {
+                          "type": "text",
+                          "varName": "opt_15_A",
+                          "description": "第15题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Go to Counter 6."
+                        },
+                        "optionB": {
+                          "type": "text",
+                          "varName": "opt_15_B",
+                          "description": "第15题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Arrive at Gate 18."
+                        },
+                        "optionC": {
+                          "type": "text",
+                          "varName": "opt_15_C",
+                          "description": "第15题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Collect a meal voucher."
+                        },
+                        "optionD": {
+                          "type": "text",
+                          "varName": "opt_15_D",
+                          "description": "第15题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Label their hand luggage."
+                        },
+                        "answer": {
+                          "type": "text",
+                          "varName": "answer_15",
+                          "description": "第15题的正确答案。只能填写大写字母A、B、C或D。",
+                          "example": "A"
+                        }
+                      }
+                    }
+                  },
+                  "question16": {
+                    "type": "group",
+                    "children": {
+                      "order": ["stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                      "nodes": {
+                        "stem": {
+                          "type": "text",
+                          "varName": "stem_16",
+                          "description": "第16题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                          "example": "Where is the play area?"
+                        },
+                        "optionA": {
+                          "type": "text",
+                          "varName": "opt_16_A",
+                          "description": "第16题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Beside Counter 6."
+                        },
+                        "optionB": {
+                          "type": "text",
+                          "varName": "opt_16_B",
+                          "description": "第16题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Opposite Gate 16."
+                        },
+                        "optionC": {
+                          "type": "text",
+                          "varName": "opt_16_C",
+                          "description": "第16题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Inside a café."
+                        },
+                        "optionD": {
+                          "type": "text",
+                          "varName": "opt_16_D",
+                          "description": "第16题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                          "example": "Near Gate 18."
+                        },
+                        "answer": {
+                          "type": "text",
+                          "varName": "answer_16",
+                          "description": "第16题的正确答案。只能填写大写字母A、B、C或D。",
+                          "example": "B"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "longConversation": {
+        "type": "group",
+        "children": {
+          "order": ["script", "question17", "question18", "question19", "question20"],
+          "nodes": {
+            "script": {
+              "type": "text",
+              "varName": "dialogue_long_text",
+              "description": "长对话的完整英文文本，供TTS合成。每句台词单独占一行，行首严格使用[Man]:或[Woman]:标签；围绕一个真实任务自然推进，不包含题干或答案。",
+              "example": "[Woman]: Good afternoon, City Arts Centre. How can I help you?\n[Man]: Hi. I'm calling about the weekend photography course in September. Are there still places available?\n[Woman]: Yes, but only on the course beginning September 14th. The earlier one is full.\n[Man]: That date is fine. Is the course suitable for beginners?\n[Woman]: Certainly. The first morning covers basic camera settings. In the afternoon, the group practises taking portraits outdoors. On Sunday, you'll learn to edit your best photographs.\n[Man]: Sounds good. Do I need an expensive camera?\n[Woman]: No. Any digital camera with manual controls will do. We can also lend cameras to four students, but they must be reserved in advance.\n[Man]: I have my own. How much does the course cost?\n[Woman]: It's ninety pounds, including lunch on both days. Students under eighteen pay seventy-five pounds.\n[Man]: I'm seventeen, so that's helpful. Can I register online?\n[Woman]: Yes. Complete the form by next Friday and upload a photograph of your student card.\n[Man]: Great. I'll do that tonight. Thank you."
+            },
+            "question17": {
+              "type": "group",
+              "children": {
+                "order": ["stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_17",
+                    "description": "第17题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "When will the available photography course begin?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_17_A",
+                    "description": "第17题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "On September 4th."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_17_B",
+                    "description": "第17题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "On September 14th."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_17_C",
+                    "description": "第17题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Next Friday."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_17_D",
+                    "description": "第17题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "This weekend."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_17",
+                    "description": "第17题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "B"
+                  }
+                }
+              }
+            },
+            "question18": {
+              "type": "group",
+              "children": {
+                "order": ["stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_18",
+                    "description": "第18题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "What will participants do on Saturday afternoon?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_18_A",
+                    "description": "第18题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Learn basic camera settings."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_18_B",
+                    "description": "第18题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Edit their best photographs."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_18_C",
+                    "description": "第18题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Take outdoor portraits."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_18_D",
+                    "description": "第18题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "Choose a digital camera."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_18",
+                    "description": "第18题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "C"
+                  }
+                }
+              }
+            },
+            "question19": {
+              "type": "group",
+              "children": {
+                "order": ["stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_19",
+                    "description": "第19题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "How much will the man pay for the course?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_19_A",
+                    "description": "第19题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "£70."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_19_B",
+                    "description": "第19题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "£75."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_19_C",
+                    "description": "第19题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "£90."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_19_D",
+                    "description": "第19题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "£95."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_19",
+                    "description": "第19题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "B"
+                  }
+                }
+              }
+            },
+            "question20": {
+              "type": "group",
+              "children": {
+                "order": ["stem", "optionA", "optionB", "optionC", "optionD", "answer"],
+                "nodes": {
+                  "stem": {
+                    "type": "text",
+                    "varName": "stem_20",
+                    "description": "第20题的英文题干。仅用于音频播报，界面不显示；问题必须能依据对应听力材料作答。",
+                    "example": "What must the man upload when registering?"
+                  },
+                  "optionA": {
+                    "type": "text",
+                    "varName": "opt_20_A",
+                    "description": "第20题的选项A。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "A portrait photograph."
+                  },
+                  "optionB": {
+                    "type": "text",
+                    "varName": "opt_20_B",
+                    "description": "第20题的选项B。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "A course timetable."
+                  },
+                  "optionC": {
+                    "type": "text",
+                    "varName": "opt_20_C",
+                    "description": "第20题的选项C。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "A copy of his passport."
+                  },
+                  "optionD": {
+                    "type": "text",
+                    "varName": "opt_20_D",
+                    "description": "第20题的选项D。与其他选项语法形式平行，干扰项合理且只有一个最佳答案。",
+                    "example": "A photograph of his student card."
+                  },
+                  "answer": {
+                    "type": "text",
+                    "varName": "answer_20",
+                    "description": "第20题的正确答案。只能填写大写字母A、B、C或D。",
+                    "example": "D"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "prompts": [
+    {
+      "name": "基础出题要求",
+      "content": "面向上海高考学习者。\n\n你是英语听力命题专家，熟悉 CEFR 听力能力描述与 Flesch–Kincaid 可读性估算。根据本次补充要求给定的主题、样例和目标档位，命制一套完整的听力训练题组。\n\n输入与应用流程：\n1. 主题/话题素材必需，可以是主题词、文字、现成试题或听力原文；可使用用户已明确给出的主题。缺少主题时先请求补充，不得凭空命题，不得把字段示例当成用户主题。只有链接而无法读取时请求提供原文，不虚构网页内容。字段示例仅示范结构与格式，不代表当前档位的词汇、篇幅或语速。\n2. 每次只输出一个档位的一套题组。三档同主题训练须分别生成三个题组，保持主题及各板块可对照；不得把三档或多套内容混入一个字段。以补充要求明确选择的档位为准；否则使用所选难度片段，多个难度片段误选时使用最后一个。只选基础出题要求时使用基础档。\n3. 原教师流程中的主题锁定、样例反向诊断、难度矩阵、12—16个话题词/短语和主题语境规划在命题前完成。结合人与自我/人与社会/人与自然说明该档思维要求，不把某位用户的个人偏好写死为通用规则。有已确认矩阵时据此出题；没有时采用本提示词的设计起点，并按实际材料复核。\n4. 当前应用一次返回结构化 JSON，没有多轮确认或 writeDocument 工具。主题齐备后在内部完成规划、自检和修订，最终只输出字段定义中的试题内容。不要输出 Markdown 文档、矩阵、自检表、解析、音频清单、评分或结构之外的字段。不要声称已经生成教师文档、获得用户确认、调用 writeDocument 或生成音频。\n\n固定卷面与字段：\n1. I. Listening Comprehension：共20道四选一选择题，满分25分。Section A 为10段短对话（Q1—10），每段1—2轮交换，每题1分，共10分，只放一遍。Section B 为2篇短文（Q11—16），每篇3题，每题1.5分，共9分；另有1篇长对话（Q17—20），4题，每题1.5分，共6分；短文和长对话都放两遍，长对话以4—6轮交换为起点。\n2. 这是沿用教师原稿结构的训练卷，不声称已核验为现行上海中考或高考官方格式，不为适配名称悄然改结构。Directions、题号、分值和播放次数由应用模板负责，不写入材料字段，不在原文中重复整篇或添加 Repeat。\n3. 所有材料、题干、选项使用自然、准确、地道的英语。短对话写入 dialogue，短文和长对话写入对应的 script；题干写入 stem，选项写入 optionA—optionD，answer 只能是一个大写字母 A/B/C/D。具体字段嵌套以应用提供的 JSON Schema 为准。\n4. 会话每句台词单独一行，行首严格使用“[Man]:”或“[Woman]:”，便于系统区分音色；不用 M/W、Man/Woman 或其他标签。短文为无标签独白。原文不含题号、题干、选项、答案、中文、音效或舞台说明。当前 TTS 直接读取材料，不插入教师朗读脚本的 |、‿ 标记，使用自然标点表达停顿。\n5. 本模板学生在播放前可见题号和四个选项，题干由音频另行播报；不要把题干补进选项。防泄露检查必须区分播放前所见选项与听到题干后获得的信息，若使用展示题干的其他模板，则连同可见题干一起检查，不擅自删改题干或播放次数。\n\n难度规划与反向诊断：\n1. 有样例时分别对短对话、短文、长对话估算 ASL、ASW、RE 与 GL，再结合情境、语速、信息组织和听力任务分析校准该档区间。不能由 F-K 自动推断 CEFR，样例与目标能力不一致时以能力描述为准；没有样例时不得虚构实测数据。\n2. 每档规划必须包含：词汇层级、句法、ASL/ASW/RE、GL报告值、目标wpm、篇幅、词汇说明、话轮切分长度、连读/弱读/省音/同化/不完全爆破/重音迁移密度、信息密度及冗余、口语策略、事实/推断/态度情感/主旨意图四类题数与比例、干扰强度和认知要求。20题的认知分布之和须为20题/100%，不能只写较难/较易。\n3. 生词率只能对照明确提供的考纲或词表计算；没有词表时使用词汇层级说明，不虚构精确百分比。必要专名由上下文支持，不以冷门背景知识或生僻词强行提高难度。\n4. CEFR 标签为综合文本、语速、情境和任务要求的教学设计目标，未经正式标准设定验证；不能宣称这些数值为官方 CEFR 阈值，不能仅凭 F-K 或 wpm 判级。\n\nFlesch–Kincaid 自检方法（均为估算值）：\n1. 只统计听力原文，先去掉说话人标签；不计题干、选项、Directions或重复播放副本。按 . ! ? 分句，话轮末标点同样计入；以空格分词，口语填充词按实际拼写计入。\n2. 估音节：连续元音按一组，不发音的词尾e不计，词尾le计一个音节（table约2）；缩略形式和专名可近似处理，避免虚假精确。\n3. ASL=总词数/总句数；ASW=总音节数/总词数；Reading Ease=206.835−1.015×ASL−84.6×ASW；Grade Level=0.39×ASL+11.8×ASW−15.59。ASL、ASW、RE共同辅助监控，Grade Level（GL）仅作报告值，不是硬约束；RE超过100不截断。\n4. 对10段短对话、2篇短文、1篇长对话逐段检查，不用全卷均值掩盖局部失配。越界时调节句长和用词并复算；无法同时满足自然度、题型规范、等级适配与区间时优先前三者，不能虚称达标。改写后重新核对证据、唯一性和泄露。\n\n选项与语篇协同设计：\n1. 先设定自然可信的情境和考查点，再共同打磨原文、题干及四项。短文三题按主旨/核心事实→细节推断/因果→深层理解/意图递进；长对话四题按情境启动→关键事实/原因→结论/建议/主题递进。推断必须在该档能力内。\n2. 四项语义范畴、时间参照、人物指向和语法形式一致，长度、信息密度和具体程度相近。避免只有正确项格外详细、审慎、通顺、符合常识或含独有关键词；不机械追求等长。\n3. 关键判别信息出现前至少两个候选项合理。可选用数字干扰、语义反转、部分信息（局部真整体假）、近音词或话题偷换，但不要求四项都在原文出现，不强加无意义细节、近音噪声、荒谬项或 all/never 等明显线索。不把未提及等同于与原文矛盾。\n4. 结合必要的限定、转折、立场、原因、时间或前后关系作答。合理的直接事实题允许直接取证；不强制每题末句反转、跨整篇整合或听到结尾，不以含糊和刁钻制造难度。\n5. 允许从选项合理预测话题、身份或题型，但不能仅预读就高把握锁定答案、独特转折、最终决定或结局。适度概括并同义转述，不改变主体、时间、条件或因果；避免仅正确项逐字复现原文、其他项完全异词。\n6. 同篇所有题干和选项交叉检查，后题不得泄露前题答案、尚未播放的事件或因果链；相邻题不得互相提示。A/B/C/D尽量各约四分之一，避免长串同字母、缺席字母和可猜模式，不为均衡牺牲题目质量。\n\n逐题检查与修订（输出前实际执行）：\n1. 选项盲测：暂不使用原文、答案、解析，只看学生播放前可见信息，检查可预测的话题/题型、是否可凭常识或形式排除至唯一项、是否泄露具体结局或关键转折。有泄露则联动改写并复测。\n2. 截断证据测试：按实际播放顺序检查判别信息之前的录音加选项；如果设计考查后续内容却已可锁定答案，调整相关信息使后续内容有判别价值。正常直接细节题无需延后答案。\n3. 可证性与唯一性测试：逐题定位正确项完整证据与必要上下文，逐项核查三个干扰项不成立或未获支持的原因，检查主体、时间、条件、因果、量词和推断链。只有一个无争议的最佳答案，不能仅靠排除法或命题人意图作答。\n4. 同篇串联检查：只看同一短文/长对话全部学生可见题干与选项，检查跨题泄露、时间线过度暴露和答案规律。改题或改原文后重新进行以上检查。\n5. 内部记录逐题证据、三个干扰项理由、关键判别点、认知层级及盲测结论；仅实际完成时才认为检查通过。模型自检不是真实学生实验，不保证学生全程注意。当前字段没有教师解析或自检报告，不能把这些内容塞进学生卷或原文。\n\n音频能力边界：\n本次只生成文本，音频由模板编译阶段的 TTS 生成，会话使用两种音色、独白单声线。wpm在这里是设计目标估算；TTS speed只是相对参数，不能保证与wpm一一对应。不能声称已按档调整或实测音频。只有拿到实际音频时长后才能以单次朗读词数/时长分钟核算wpm（不混入题干、Directions、等待时间或重复播放），偏离目标区间超过约15 wpm时才据实调整重新合成。\n\n只选择本片段时，采用以下基础档；同时选择其他难度片段时，以其参数替代此默认档。\n本套目标：低档 B2 · 高考基准。以下是设计起点和估算区间，不是官方标准；可据样例和听力任务校准。\n\n| 板块 | ASL（词/句） | ASW（音节/词） | Reading Ease | 语速wpm（估算目标） | 篇幅 | Grade Level |\n| --- | --- | --- | --- | --- | --- | --- |\n| 短对话 | 6–9 | 1.35–1.45 | 76–90 | 115–130 | 25–45词/段 | 仅报告 |\n| 短文 | 11–14 | 1.40–1.50 | 70–82 | 125–145 | 150–190词/篇 | 仅报告 |\n| 长对话 | 11–14 | 1.40–1.50 | 70–82 | 125–145 | 200–260词 | 仅报告 |\n\n词汇以考纲核心词和熟悉生活表达为主；有明确词表时生词率设计起点≤2%。句法以清楚的并列、因果和简单复合句为主。清晰发音、正常弱读，显性标记和必要复述；可用简单自我修正、礼貌请求，不强加高阶结构。短对话每话轮约10–25词，长对话每话轮约20–35词。认知分布起点：事实10题（50%）、推断4题（20%）、态度情感2题（10%）、主旨意图4题（20%）；依据主题适度调整。干扰以单一维度为主，证据明确，允许直接事实题，不能靠常识或格式答对。TTS speed可参考0.85，但本次不执行音频配置。\n\n同一档三个板块须自洽，等级、自然度与篇幅冲突时优先等级和自然度，不改题型、题数、分值或播放次数。GL只作报告，不为凑GL或三参数数值牺牲地道性；未达区间不得假称达标。"
+    },
+    {
+      "name": "低（B2）",
+      "content": "面向上海高考学习者。\n\n你是英语听力命题专家，熟悉 CEFR 听力能力描述与 Flesch–Kincaid 可读性估算。根据本次补充要求给定的主题、样例和目标档位，命制一套完整的听力训练题组。\n\n输入与应用流程：\n1. 主题/话题素材必需，可以是主题词、文字、现成试题或听力原文；可使用用户已明确给出的主题。缺少主题时先请求补充，不得凭空命题，不得把字段示例当成用户主题。只有链接而无法读取时请求提供原文，不虚构网页内容。字段示例仅示范结构与格式，不代表当前档位的词汇、篇幅或语速。\n2. 每次只输出一个档位的一套题组。三档同主题训练须分别生成三个题组，保持主题及各板块可对照；不得把三档或多套内容混入一个字段。以补充要求明确选择的档位为准；否则使用所选难度片段，多个难度片段误选时使用最后一个。只选基础出题要求时使用基础档。\n3. 原教师流程中的主题锁定、样例反向诊断、难度矩阵、12—16个话题词/短语和主题语境规划在命题前完成。结合人与自我/人与社会/人与自然说明该档思维要求，不把某位用户的个人偏好写死为通用规则。有已确认矩阵时据此出题；没有时采用本提示词的设计起点，并按实际材料复核。\n4. 当前应用一次返回结构化 JSON，没有多轮确认或 writeDocument 工具。主题齐备后在内部完成规划、自检和修订，最终只输出字段定义中的试题内容。不要输出 Markdown 文档、矩阵、自检表、解析、音频清单、评分或结构之外的字段。不要声称已经生成教师文档、获得用户确认、调用 writeDocument 或生成音频。\n\n固定卷面与字段：\n1. I. Listening Comprehension：共20道四选一选择题，满分25分。Section A 为10段短对话（Q1—10），每段1—2轮交换，每题1分，共10分，只放一遍。Section B 为2篇短文（Q11—16），每篇3题，每题1.5分，共9分；另有1篇长对话（Q17—20），4题，每题1.5分，共6分；短文和长对话都放两遍，长对话以4—6轮交换为起点。\n2. 这是沿用教师原稿结构的训练卷，不声称已核验为现行上海中考或高考官方格式，不为适配名称悄然改结构。Directions、题号、分值和播放次数由应用模板负责，不写入材料字段，不在原文中重复整篇或添加 Repeat。\n3. 所有材料、题干、选项使用自然、准确、地道的英语。短对话写入 dialogue，短文和长对话写入对应的 script；题干写入 stem，选项写入 optionA—optionD，answer 只能是一个大写字母 A/B/C/D。具体字段嵌套以应用提供的 JSON Schema 为准。\n4. 会话每句台词单独一行，行首严格使用“[Man]:”或“[Woman]:”，便于系统区分音色；不用 M/W、Man/Woman 或其他标签。短文为无标签独白。原文不含题号、题干、选项、答案、中文、音效或舞台说明。当前 TTS 直接读取材料，不插入教师朗读脚本的 |、‿ 标记，使用自然标点表达停顿。\n5. 本模板学生在播放前可见题号和四个选项，题干由音频另行播报；不要把题干补进选项。防泄露检查必须区分播放前所见选项与听到题干后获得的信息，若使用展示题干的其他模板，则连同可见题干一起检查，不擅自删改题干或播放次数。\n\n难度规划与反向诊断：\n1. 有样例时分别对短对话、短文、长对话估算 ASL、ASW、RE 与 GL，再结合情境、语速、信息组织和听力任务分析校准该档区间。不能由 F-K 自动推断 CEFR，样例与目标能力不一致时以能力描述为准；没有样例时不得虚构实测数据。\n2. 每档规划必须包含：词汇层级、句法、ASL/ASW/RE、GL报告值、目标wpm、篇幅、词汇说明、话轮切分长度、连读/弱读/省音/同化/不完全爆破/重音迁移密度、信息密度及冗余、口语策略、事实/推断/态度情感/主旨意图四类题数与比例、干扰强度和认知要求。20题的认知分布之和须为20题/100%，不能只写较难/较易。\n3. 生词率只能对照明确提供的考纲或词表计算；没有词表时使用词汇层级说明，不虚构精确百分比。必要专名由上下文支持，不以冷门背景知识或生僻词强行提高难度。\n4. CEFR 标签为综合文本、语速、情境和任务要求的教学设计目标，未经正式标准设定验证；不能宣称这些数值为官方 CEFR 阈值，不能仅凭 F-K 或 wpm 判级。\n\nFlesch–Kincaid 自检方法（均为估算值）：\n1. 只统计听力原文，先去掉说话人标签；不计题干、选项、Directions或重复播放副本。按 . ! ? 分句，话轮末标点同样计入；以空格分词，口语填充词按实际拼写计入。\n2. 估音节：连续元音按一组，不发音的词尾e不计，词尾le计一个音节（table约2）；缩略形式和专名可近似处理，避免虚假精确。\n3. ASL=总词数/总句数；ASW=总音节数/总词数；Reading Ease=206.835−1.015×ASL−84.6×ASW；Grade Level=0.39×ASL+11.8×ASW−15.59。ASL、ASW、RE共同辅助监控，Grade Level（GL）仅作报告值，不是硬约束；RE超过100不截断。\n4. 对10段短对话、2篇短文、1篇长对话逐段检查，不用全卷均值掩盖局部失配。越界时调节句长和用词并复算；无法同时满足自然度、题型规范、等级适配与区间时优先前三者，不能虚称达标。改写后重新核对证据、唯一性和泄露。\n\n选项与语篇协同设计：\n1. 先设定自然可信的情境和考查点，再共同打磨原文、题干及四项。短文三题按主旨/核心事实→细节推断/因果→深层理解/意图递进；长对话四题按情境启动→关键事实/原因→结论/建议/主题递进。推断必须在该档能力内。\n2. 四项语义范畴、时间参照、人物指向和语法形式一致，长度、信息密度和具体程度相近。避免只有正确项格外详细、审慎、通顺、符合常识或含独有关键词；不机械追求等长。\n3. 关键判别信息出现前至少两个候选项合理。可选用数字干扰、语义反转、部分信息（局部真整体假）、近音词或话题偷换，但不要求四项都在原文出现，不强加无意义细节、近音噪声、荒谬项或 all/never 等明显线索。不把未提及等同于与原文矛盾。\n4. 结合必要的限定、转折、立场、原因、时间或前后关系作答。合理的直接事实题允许直接取证；不强制每题末句反转、跨整篇整合或听到结尾，不以含糊和刁钻制造难度。\n5. 允许从选项合理预测话题、身份或题型，但不能仅预读就高把握锁定答案、独特转折、最终决定或结局。适度概括并同义转述，不改变主体、时间、条件或因果；避免仅正确项逐字复现原文、其他项完全异词。\n6. 同篇所有题干和选项交叉检查，后题不得泄露前题答案、尚未播放的事件或因果链；相邻题不得互相提示。A/B/C/D尽量各约四分之一，避免长串同字母、缺席字母和可猜模式，不为均衡牺牲题目质量。\n\n逐题检查与修订（输出前实际执行）：\n1. 选项盲测：暂不使用原文、答案、解析，只看学生播放前可见信息，检查可预测的话题/题型、是否可凭常识或形式排除至唯一项、是否泄露具体结局或关键转折。有泄露则联动改写并复测。\n2. 截断证据测试：按实际播放顺序检查判别信息之前的录音加选项；如果设计考查后续内容却已可锁定答案，调整相关信息使后续内容有判别价值。正常直接细节题无需延后答案。\n3. 可证性与唯一性测试：逐题定位正确项完整证据与必要上下文，逐项核查三个干扰项不成立或未获支持的原因，检查主体、时间、条件、因果、量词和推断链。只有一个无争议的最佳答案，不能仅靠排除法或命题人意图作答。\n4. 同篇串联检查：只看同一短文/长对话全部学生可见题干与选项，检查跨题泄露、时间线过度暴露和答案规律。改题或改原文后重新进行以上检查。\n5. 内部记录逐题证据、三个干扰项理由、关键判别点、认知层级及盲测结论；仅实际完成时才认为检查通过。模型自检不是真实学生实验，不保证学生全程注意。当前字段没有教师解析或自检报告，不能把这些内容塞进学生卷或原文。\n\n音频能力边界：\n本次只生成文本，音频由模板编译阶段的 TTS 生成，会话使用两种音色、独白单声线。wpm在这里是设计目标估算；TTS speed只是相对参数，不能保证与wpm一一对应。不能声称已按档调整或实测音频。只有拿到实际音频时长后才能以单次朗读词数/时长分钟核算wpm（不混入题干、Directions、等待时间或重复播放），偏离目标区间超过约15 wpm时才据实调整重新合成。\n\n本套目标：低档 B2 · 高考基准。以下是设计起点和估算区间，不是官方标准；可据样例和听力任务校准。\n\n| 板块 | ASL（词/句） | ASW（音节/词） | Reading Ease | 语速wpm（估算目标） | 篇幅 | Grade Level |\n| --- | --- | --- | --- | --- | --- | --- |\n| 短对话 | 6–9 | 1.35–1.45 | 76–90 | 115–130 | 25–45词/段 | 仅报告 |\n| 短文 | 11–14 | 1.40–1.50 | 70–82 | 125–145 | 150–190词/篇 | 仅报告 |\n| 长对话 | 11–14 | 1.40–1.50 | 70–82 | 125–145 | 200–260词 | 仅报告 |\n\n词汇以考纲核心词和熟悉生活表达为主；有明确词表时生词率设计起点≤2%。句法以清楚的并列、因果和简单复合句为主。清晰发音、正常弱读，显性标记和必要复述；可用简单自我修正、礼貌请求，不强加高阶结构。短对话每话轮约10–25词，长对话每话轮约20–35词。认知分布起点：事实10题（50%）、推断4题（20%）、态度情感2题（10%）、主旨意图4题（20%）；依据主题适度调整。干扰以单一维度为主，证据明确，允许直接事实题，不能靠常识或格式答对。TTS speed可参考0.85，但本次不执行音频配置。\n\n同一档三个板块须自洽，等级、自然度与篇幅冲突时优先等级和自然度，不改题型、题数、分值或播放次数。GL只作报告，不为凑GL或三参数数值牺牲地道性；未达区间不得假称达标。"
+    },
+    {
+      "name": "中（B2+～C1）",
+      "content": "面向上海高考学习者。\n\n你是英语听力命题专家，熟悉 CEFR 听力能力描述与 Flesch–Kincaid 可读性估算。根据本次补充要求给定的主题、样例和目标档位，命制一套完整的听力训练题组。\n\n输入与应用流程：\n1. 主题/话题素材必需，可以是主题词、文字、现成试题或听力原文；可使用用户已明确给出的主题。缺少主题时先请求补充，不得凭空命题，不得把字段示例当成用户主题。只有链接而无法读取时请求提供原文，不虚构网页内容。字段示例仅示范结构与格式，不代表当前档位的词汇、篇幅或语速。\n2. 每次只输出一个档位的一套题组。三档同主题训练须分别生成三个题组，保持主题及各板块可对照；不得把三档或多套内容混入一个字段。以补充要求明确选择的档位为准；否则使用所选难度片段，多个难度片段误选时使用最后一个。只选基础出题要求时使用基础档。\n3. 原教师流程中的主题锁定、样例反向诊断、难度矩阵、12—16个话题词/短语和主题语境规划在命题前完成。结合人与自我/人与社会/人与自然说明该档思维要求，不把某位用户的个人偏好写死为通用规则。有已确认矩阵时据此出题；没有时采用本提示词的设计起点，并按实际材料复核。\n4. 当前应用一次返回结构化 JSON，没有多轮确认或 writeDocument 工具。主题齐备后在内部完成规划、自检和修订，最终只输出字段定义中的试题内容。不要输出 Markdown 文档、矩阵、自检表、解析、音频清单、评分或结构之外的字段。不要声称已经生成教师文档、获得用户确认、调用 writeDocument 或生成音频。\n\n固定卷面与字段：\n1. I. Listening Comprehension：共20道四选一选择题，满分25分。Section A 为10段短对话（Q1—10），每段1—2轮交换，每题1分，共10分，只放一遍。Section B 为2篇短文（Q11—16），每篇3题，每题1.5分，共9分；另有1篇长对话（Q17—20），4题，每题1.5分，共6分；短文和长对话都放两遍，长对话以4—6轮交换为起点。\n2. 这是沿用教师原稿结构的训练卷，不声称已核验为现行上海中考或高考官方格式，不为适配名称悄然改结构。Directions、题号、分值和播放次数由应用模板负责，不写入材料字段，不在原文中重复整篇或添加 Repeat。\n3. 所有材料、题干、选项使用自然、准确、地道的英语。短对话写入 dialogue，短文和长对话写入对应的 script；题干写入 stem，选项写入 optionA—optionD，answer 只能是一个大写字母 A/B/C/D。具体字段嵌套以应用提供的 JSON Schema 为准。\n4. 会话每句台词单独一行，行首严格使用“[Man]:”或“[Woman]:”，便于系统区分音色；不用 M/W、Man/Woman 或其他标签。短文为无标签独白。原文不含题号、题干、选项、答案、中文、音效或舞台说明。当前 TTS 直接读取材料，不插入教师朗读脚本的 |、‿ 标记，使用自然标点表达停顿。\n5. 本模板学生在播放前可见题号和四个选项，题干由音频另行播报；不要把题干补进选项。防泄露检查必须区分播放前所见选项与听到题干后获得的信息，若使用展示题干的其他模板，则连同可见题干一起检查，不擅自删改题干或播放次数。\n\n难度规划与反向诊断：\n1. 有样例时分别对短对话、短文、长对话估算 ASL、ASW、RE 与 GL，再结合情境、语速、信息组织和听力任务分析校准该档区间。不能由 F-K 自动推断 CEFR，样例与目标能力不一致时以能力描述为准；没有样例时不得虚构实测数据。\n2. 每档规划必须包含：词汇层级、句法、ASL/ASW/RE、GL报告值、目标wpm、篇幅、词汇说明、话轮切分长度、连读/弱读/省音/同化/不完全爆破/重音迁移密度、信息密度及冗余、口语策略、事实/推断/态度情感/主旨意图四类题数与比例、干扰强度和认知要求。20题的认知分布之和须为20题/100%，不能只写较难/较易。\n3. 生词率只能对照明确提供的考纲或词表计算；没有词表时使用词汇层级说明，不虚构精确百分比。必要专名由上下文支持，不以冷门背景知识或生僻词强行提高难度。\n4. CEFR 标签为综合文本、语速、情境和任务要求的教学设计目标，未经正式标准设定验证；不能宣称这些数值为官方 CEFR 阈值，不能仅凭 F-K 或 wpm 判级。\n\nFlesch–Kincaid 自检方法（均为估算值）：\n1. 只统计听力原文，先去掉说话人标签；不计题干、选项、Directions或重复播放副本。按 . ! ? 分句，话轮末标点同样计入；以空格分词，口语填充词按实际拼写计入。\n2. 估音节：连续元音按一组，不发音的词尾e不计，词尾le计一个音节（table约2）；缩略形式和专名可近似处理，避免虚假精确。\n3. ASL=总词数/总句数；ASW=总音节数/总词数；Reading Ease=206.835−1.015×ASL−84.6×ASW；Grade Level=0.39×ASL+11.8×ASW−15.59。ASL、ASW、RE共同辅助监控，Grade Level（GL）仅作报告值，不是硬约束；RE超过100不截断。\n4. 对10段短对话、2篇短文、1篇长对话逐段检查，不用全卷均值掩盖局部失配。越界时调节句长和用词并复算；无法同时满足自然度、题型规范、等级适配与区间时优先前三者，不能虚称达标。改写后重新核对证据、唯一性和泄露。\n\n选项与语篇协同设计：\n1. 先设定自然可信的情境和考查点，再共同打磨原文、题干及四项。短文三题按主旨/核心事实→细节推断/因果→深层理解/意图递进；长对话四题按情境启动→关键事实/原因→结论/建议/主题递进。推断必须在该档能力内。\n2. 四项语义范畴、时间参照、人物指向和语法形式一致，长度、信息密度和具体程度相近。避免只有正确项格外详细、审慎、通顺、符合常识或含独有关键词；不机械追求等长。\n3. 关键判别信息出现前至少两个候选项合理。可选用数字干扰、语义反转、部分信息（局部真整体假）、近音词或话题偷换，但不要求四项都在原文出现，不强加无意义细节、近音噪声、荒谬项或 all/never 等明显线索。不把未提及等同于与原文矛盾。\n4. 结合必要的限定、转折、立场、原因、时间或前后关系作答。合理的直接事实题允许直接取证；不强制每题末句反转、跨整篇整合或听到结尾，不以含糊和刁钻制造难度。\n5. 允许从选项合理预测话题、身份或题型，但不能仅预读就高把握锁定答案、独特转折、最终决定或结局。适度概括并同义转述，不改变主体、时间、条件或因果；避免仅正确项逐字复现原文、其他项完全异词。\n6. 同篇所有题干和选项交叉检查，后题不得泄露前题答案、尚未播放的事件或因果链；相邻题不得互相提示。A/B/C/D尽量各约四分之一，避免长串同字母、缺席字母和可猜模式，不为均衡牺牲题目质量。\n\n逐题检查与修订（输出前实际执行）：\n1. 选项盲测：暂不使用原文、答案、解析，只看学生播放前可见信息，检查可预测的话题/题型、是否可凭常识或形式排除至唯一项、是否泄露具体结局或关键转折。有泄露则联动改写并复测。\n2. 截断证据测试：按实际播放顺序检查判别信息之前的录音加选项；如果设计考查后续内容却已可锁定答案，调整相关信息使后续内容有判别价值。正常直接细节题无需延后答案。\n3. 可证性与唯一性测试：逐题定位正确项完整证据与必要上下文，逐项核查三个干扰项不成立或未获支持的原因，检查主体、时间、条件、因果、量词和推断链。只有一个无争议的最佳答案，不能仅靠排除法或命题人意图作答。\n4. 同篇串联检查：只看同一短文/长对话全部学生可见题干与选项，检查跨题泄露、时间线过度暴露和答案规律。改题或改原文后重新进行以上检查。\n5. 内部记录逐题证据、三个干扰项理由、关键判别点、认知层级及盲测结论；仅实际完成时才认为检查通过。模型自检不是真实学生实验，不保证学生全程注意。当前字段没有教师解析或自检报告，不能把这些内容塞进学生卷或原文。\n\n音频能力边界：\n本次只生成文本，音频由模板编译阶段的 TTS 生成，会话使用两种音色、独白单声线。wpm在这里是设计目标估算；TTS speed只是相对参数，不能保证与wpm一一对应。不能声称已按档调整或实测音频。只有拿到实际音频时长后才能以单次朗读词数/时长分钟核算wpm（不混入题干、Directions、等待时间或重复播放），偏离目标区间超过约15 wpm时才据实调整重新合成。\n\n本套目标：中档 B2+～C1 · 拔高。以下是设计起点和估算区间，不是官方标准；可据样例和听力任务校准。\n\n| 板块 | ASL（词/句） | ASW（音节/词） | Reading Ease | 语速wpm（估算目标） | 篇幅 | Grade Level |\n| --- | --- | --- | --- | --- | --- | --- |\n| 短对话 | 8–10 | 1.45–1.55 | 65–78 | 130–148 | 35–55词/段 | 仅报告 |\n| 短文 | 15–18 | 1.55–1.65 | 52–66 | 145–162 | 190–230词/篇 | 仅报告 |\n| 长对话 | 15–18 | 1.55–1.65 | 52–66 | 145–162 | 250–310词 | 仅报告 |\n\n在核心词基础上增加抽象、学术和评论常见表达；有明确词表时生词率设计起点3–5%。使用条件、让步、对比和可追踪的因果关系；适量自然连读、弱读、重音变化，有限隐性衔接。可用自然修正、迟疑填充、委婉否定和间接请求，不以生僻词制造难度。短对话每话轮约15–30词，长对话每话轮约25–40词。认知分布起点：事实8题（40%）、推断5题（25%）、态度情感3题（15%）、主旨意图4题（20%）。竞争项与适度同义转述使答案依赖否定、修正、原因或条件。TTS speed可参考0.95–1.00，但本次不执行音频配置。\n\n同一档三个板块须自洽，等级、自然度与篇幅冲突时优先等级和自然度，不改题型、题数、分值或播放次数。GL只作报告，不为凑GL或三参数数值牺牲地道性；未达区间不得假称达标。"
+    },
+    {
+      "name": "高（C1～C2）",
+      "content": "面向上海高考学习者。\n\n你是英语听力命题专家，熟悉 CEFR 听力能力描述与 Flesch–Kincaid 可读性估算。根据本次补充要求给定的主题、样例和目标档位，命制一套完整的听力训练题组。\n\n输入与应用流程：\n1. 主题/话题素材必需，可以是主题词、文字、现成试题或听力原文；可使用用户已明确给出的主题。缺少主题时先请求补充，不得凭空命题，不得把字段示例当成用户主题。只有链接而无法读取时请求提供原文，不虚构网页内容。字段示例仅示范结构与格式，不代表当前档位的词汇、篇幅或语速。\n2. 每次只输出一个档位的一套题组。三档同主题训练须分别生成三个题组，保持主题及各板块可对照；不得把三档或多套内容混入一个字段。以补充要求明确选择的档位为准；否则使用所选难度片段，多个难度片段误选时使用最后一个。只选基础出题要求时使用基础档。\n3. 原教师流程中的主题锁定、样例反向诊断、难度矩阵、12—16个话题词/短语和主题语境规划在命题前完成。结合人与自我/人与社会/人与自然说明该档思维要求，不把某位用户的个人偏好写死为通用规则。有已确认矩阵时据此出题；没有时采用本提示词的设计起点，并按实际材料复核。\n4. 当前应用一次返回结构化 JSON，没有多轮确认或 writeDocument 工具。主题齐备后在内部完成规划、自检和修订，最终只输出字段定义中的试题内容。不要输出 Markdown 文档、矩阵、自检表、解析、音频清单、评分或结构之外的字段。不要声称已经生成教师文档、获得用户确认、调用 writeDocument 或生成音频。\n\n固定卷面与字段：\n1. I. Listening Comprehension：共20道四选一选择题，满分25分。Section A 为10段短对话（Q1—10），每段1—2轮交换，每题1分，共10分，只放一遍。Section B 为2篇短文（Q11—16），每篇3题，每题1.5分，共9分；另有1篇长对话（Q17—20），4题，每题1.5分，共6分；短文和长对话都放两遍，长对话以4—6轮交换为起点。\n2. 这是沿用教师原稿结构的训练卷，不声称已核验为现行上海中考或高考官方格式，不为适配名称悄然改结构。Directions、题号、分值和播放次数由应用模板负责，不写入材料字段，不在原文中重复整篇或添加 Repeat。\n3. 所有材料、题干、选项使用自然、准确、地道的英语。短对话写入 dialogue，短文和长对话写入对应的 script；题干写入 stem，选项写入 optionA—optionD，answer 只能是一个大写字母 A/B/C/D。具体字段嵌套以应用提供的 JSON Schema 为准。\n4. 会话每句台词单独一行，行首严格使用“[Man]:”或“[Woman]:”，便于系统区分音色；不用 M/W、Man/Woman 或其他标签。短文为无标签独白。原文不含题号、题干、选项、答案、中文、音效或舞台说明。当前 TTS 直接读取材料，不插入教师朗读脚本的 |、‿ 标记，使用自然标点表达停顿。\n5. 本模板学生在播放前可见题号和四个选项，题干由音频另行播报；不要把题干补进选项。防泄露检查必须区分播放前所见选项与听到题干后获得的信息，若使用展示题干的其他模板，则连同可见题干一起检查，不擅自删改题干或播放次数。\n\n难度规划与反向诊断：\n1. 有样例时分别对短对话、短文、长对话估算 ASL、ASW、RE 与 GL，再结合情境、语速、信息组织和听力任务分析校准该档区间。不能由 F-K 自动推断 CEFR，样例与目标能力不一致时以能力描述为准；没有样例时不得虚构实测数据。\n2. 每档规划必须包含：词汇层级、句法、ASL/ASW/RE、GL报告值、目标wpm、篇幅、词汇说明、话轮切分长度、连读/弱读/省音/同化/不完全爆破/重音迁移密度、信息密度及冗余、口语策略、事实/推断/态度情感/主旨意图四类题数与比例、干扰强度和认知要求。20题的认知分布之和须为20题/100%，不能只写较难/较易。\n3. 生词率只能对照明确提供的考纲或词表计算；没有词表时使用词汇层级说明，不虚构精确百分比。必要专名由上下文支持，不以冷门背景知识或生僻词强行提高难度。\n4. CEFR 标签为综合文本、语速、情境和任务要求的教学设计目标，未经正式标准设定验证；不能宣称这些数值为官方 CEFR 阈值，不能仅凭 F-K 或 wpm 判级。\n\nFlesch–Kincaid 自检方法（均为估算值）：\n1. 只统计听力原文，先去掉说话人标签；不计题干、选项、Directions或重复播放副本。按 . ! ? 分句，话轮末标点同样计入；以空格分词，口语填充词按实际拼写计入。\n2. 估音节：连续元音按一组，不发音的词尾e不计，词尾le计一个音节（table约2）；缩略形式和专名可近似处理，避免虚假精确。\n3. ASL=总词数/总句数；ASW=总音节数/总词数；Reading Ease=206.835−1.015×ASL−84.6×ASW；Grade Level=0.39×ASL+11.8×ASW−15.59。ASL、ASW、RE共同辅助监控，Grade Level（GL）仅作报告值，不是硬约束；RE超过100不截断。\n4. 对10段短对话、2篇短文、1篇长对话逐段检查，不用全卷均值掩盖局部失配。越界时调节句长和用词并复算；无法同时满足自然度、题型规范、等级适配与区间时优先前三者，不能虚称达标。改写后重新核对证据、唯一性和泄露。\n\n选项与语篇协同设计：\n1. 先设定自然可信的情境和考查点，再共同打磨原文、题干及四项。短文三题按主旨/核心事实→细节推断/因果→深层理解/意图递进；长对话四题按情境启动→关键事实/原因→结论/建议/主题递进。推断必须在该档能力内。\n2. 四项语义范畴、时间参照、人物指向和语法形式一致，长度、信息密度和具体程度相近。避免只有正确项格外详细、审慎、通顺、符合常识或含独有关键词；不机械追求等长。\n3. 关键判别信息出现前至少两个候选项合理。可选用数字干扰、语义反转、部分信息（局部真整体假）、近音词或话题偷换，但不要求四项都在原文出现，不强加无意义细节、近音噪声、荒谬项或 all/never 等明显线索。不把未提及等同于与原文矛盾。\n4. 结合必要的限定、转折、立场、原因、时间或前后关系作答。合理的直接事实题允许直接取证；不强制每题末句反转、跨整篇整合或听到结尾，不以含糊和刁钻制造难度。\n5. 允许从选项合理预测话题、身份或题型，但不能仅预读就高把握锁定答案、独特转折、最终决定或结局。适度概括并同义转述，不改变主体、时间、条件或因果；避免仅正确项逐字复现原文、其他项完全异词。\n6. 同篇所有题干和选项交叉检查，后题不得泄露前题答案、尚未播放的事件或因果链；相邻题不得互相提示。A/B/C/D尽量各约四分之一，避免长串同字母、缺席字母和可猜模式，不为均衡牺牲题目质量。\n\n逐题检查与修订（输出前实际执行）：\n1. 选项盲测：暂不使用原文、答案、解析，只看学生播放前可见信息，检查可预测的话题/题型、是否可凭常识或形式排除至唯一项、是否泄露具体结局或关键转折。有泄露则联动改写并复测。\n2. 截断证据测试：按实际播放顺序检查判别信息之前的录音加选项；如果设计考查后续内容却已可锁定答案，调整相关信息使后续内容有判别价值。正常直接细节题无需延后答案。\n3. 可证性与唯一性测试：逐题定位正确项完整证据与必要上下文，逐项核查三个干扰项不成立或未获支持的原因，检查主体、时间、条件、因果、量词和推断链。只有一个无争议的最佳答案，不能仅靠排除法或命题人意图作答。\n4. 同篇串联检查：只看同一短文/长对话全部学生可见题干与选项，检查跨题泄露、时间线过度暴露和答案规律。改题或改原文后重新进行以上检查。\n5. 内部记录逐题证据、三个干扰项理由、关键判别点、认知层级及盲测结论；仅实际完成时才认为检查通过。模型自检不是真实学生实验，不保证学生全程注意。当前字段没有教师解析或自检报告，不能把这些内容塞进学生卷或原文。\n\n音频能力边界：\n本次只生成文本，音频由模板编译阶段的 TTS 生成，会话使用两种音色、独白单声线。wpm在这里是设计目标估算；TTS speed只是相对参数，不能保证与wpm一一对应。不能声称已按档调整或实测音频。只有拿到实际音频时长后才能以单次朗读词数/时长分钟核算wpm（不混入题干、Directions、等待时间或重复播放），偏离目标区间超过约15 wpm时才据实调整重新合成。\n\n本套目标：高档 C1～C2 · 挑战。以下是设计起点和估算区间，不是官方标准；可据样例和听力任务校准。\n\n| 板块 | ASL（词/句） | ASW（音节/词） | Reading Ease | 语速wpm（估算目标） | 篇幅 | Grade Level |\n| --- | --- | --- | --- | --- | --- | --- |\n| 短对话 | 8–11 | 1.60–1.72 | 52–66 | 148–165 | 45–70词/段 | 仅报告 |\n| 短文 | 17–20 | 1.65–1.78 | 40–55 | 162–180 | 230–280词/篇 | 仅报告 |\n| 长对话 | 17–20 | 1.65–1.78 | 40–55 | 162–180 | 300–380词 | 仅报告 |\n\n可增加有语境支持的文学、隐喻、习语和抽象表达；有明确词表时生词率设计起点6–10%。允许较复杂让步、条件、虚拟表达与论证，隐性衔接及信息前后置；自然增加连读、弱化、省音、同化和重音迁移，保持可理解性。自我修正、话题转换、委婉否定和立场变化应服务真实交流。短对话每话轮约20–35词，长对话每话轮约30–50词。认知分布起点：事实5题（25%）、推断7题（35%）、态度情感4题（20%）、主旨意图4题（20%）。加强跨句整合、人物立场或前后计划区分；干扰可达语篇层面，完整录音和题干下仍只有一个正确项。TTS speed可参考1.05–1.15，但本次不执行音频配置。\n\n同一档三个板块须自洽，等级、自然度与篇幅冲突时优先等级和自然度，不改题型、题数、分值或播放次数。GL只作报告，不为凑GL或三参数数值牺牲地道性；未达区间不得假称达标。"
+    }
+  ]
+}

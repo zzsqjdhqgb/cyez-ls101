@@ -1271,6 +1271,20 @@ test('IE-16 installs all bundled Shanghai Interfaces on first launch', async () 
   await expect(page.getByRole('button', { name: '新建题组' })).toBeVisible()
   await page.getByRole('tab', { name: '题型定义' }).click()
   await expect(page.getByText('sentence1', { exact: true })).toBeVisible()
+
+  await page.getByRole('link', { name: '题型库' }).click()
+  await page.getByRole('button', { name: '上海高考英语听力', exact: true }).click()
+  await page.getByRole('tab', { name: '题型定义' }).click()
+  for (const level of [
+    'A1（中考难度）',
+    'A2（中考难度）',
+    'B1（中考难度）',
+    '低（B2）',
+    '中（B2+～C1）',
+    '高（C1～C2）'
+  ]) {
+    await expect(page.getByText(level, { exact: true })).toBeVisible()
+  }
 })
 
 test('IE-17 manages a bundled instance and copies the builtin to a draft', async () => {

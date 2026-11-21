@@ -20,19 +20,19 @@ const LISTENING_BLOCK_TEMPLATES = [
   {
     templateId: '5c2f1d4e-6a7b-4c8d-9e0f-1234567890ab',
     name: '上海高考英语听力 - 短对话专项训练',
-    version: 4,
+    version: 7,
     questionCounts: [5, 5]
   },
   {
     templateId: '6d3e2f5a-7b8c-4d9e-a0f1-2345678901bc',
     name: '上海高考英语听力 - 短文专项训练',
-    version: 5,
+    version: 8,
     questionCounts: [3, 3]
   },
   {
     templateId: '7e4f3a6b-8c9d-4e0f-a1b2-3456789012cd',
     name: '上海高考英语听力 - 长对话专项训练',
-    version: 5,
+    version: 8,
     questionCounts: [4]
   }
 ] as const
@@ -167,8 +167,8 @@ describe('内置 Template 启动初始化', () => {
 
     expect(await repository.getActiveBuiltinTemplate(LISTENING_TEMPLATE.templateId)).toMatchObject({
       templateId: LISTENING_TEMPLATE.templateId,
-      version: 6,
-      releaseHash: 'sha256:29f532a3d7afecb4bf26c813511d4a9c8dba8e41aa6135d56efc5c5a292baa2f',
+      version: 9,
+      releaseHash: 'sha256:c9729220664e29e44ed2eb805e573b82a7f1a561e2b264797fa9fb4c1ab81b58',
       document: {
         content: {
           name: LISTENING_TEMPLATE.name,
@@ -177,7 +177,7 @@ describe('内置 Template 启动初始化', () => {
             {
               alias: 'data',
               interfaceId:
-                'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
+                'sha256:f311b845c8a99ea77e1565f63f1ce72603c023f1b08d9e21548dcccb878a4957',
               acceptedVars: expect.arrayContaining([
                 'dialogue_text_1',
                 'passage_text_1',
@@ -228,7 +228,7 @@ describe('内置 Template 启动初始化', () => {
               {
                 alias: 'data',
                 interfaceId:
-                  'sha256:e08597b8145e6c0a35f4d4e90a415a860f1ef5667685a4ddac1e030981447214',
+                  'sha256:f311b845c8a99ea77e1565f63f1ce72603c023f1b08d9e21548dcccb878a4957',
                 acceptedVars: expect.any(Array)
               }
             ],
