@@ -50,7 +50,7 @@
 | 入网         | `.lsjoin` 是 JWS compact（header 仅 `alg`/`typ`/`kid`）；服务端按**整文件字节相等**校验，payload 内的 `enrollmentSecret` 并不单独校验；默认有效期 600 s，按服务端时间判断                                        |
 | 凭据         | 教师 `t.<32B base64url>`，8 h，仅存 `sha256(token)`；学生 `d.<deviceId>.<43 字符 base64url>`，服务端仅存 `sha256(secret)`                                                                                        |
 | 心跳/租约    | 心跳 5 s，20 s 判定离线；任务租约 30 s，每 5 s 续约                                                                                                                                                              |
-| 许可         | `packages/license/src/index.ts` 的 `INVITATION_CODE_HASH` 与 `LICENSE_EXPIRES_AT = 2026-10-01T15:59:59.999Z`                                                                                                     |
+| 许可         | `packages/license/src/index.ts` 的 `INVITATION_CODE_HASH` 与 `LICENSE_EXPIRES_AT = 2027-03-31T15:59:59.999Z`                                                                                                     |
 | 卸载         | `teacher.nsh` **没有** `customUnInstall`：卸载教师客户端保留服务程序与业务数据；服务卸载只能经教师端的"卸载服务"（`manageLocalService('uninstall')`）                                                            |
 
 ## 3. 硬约束
@@ -78,7 +78,7 @@ harness 必须在第一步断言版本，不满足时立即停下并提示准备
 - 邀请码只放在 `infra/windows-vm/config.local.json`（已 gitignore）。`validateConfig` 只逐个校验已知键、不拒绝未知键，因此新增 `InvitationCode` 无需改代码。
 - 服务端激活走标准输入：`server.cjs activate --data-dir …` 从 stdin 读 JSON，码**不出现在命令行**。
 - 学生端按产品设计走 `LabStudent.exe --activate <code>`，码必然在 argv 中；因此必须补充扫描，断言邀请码、管理密码与一次性证明没有出现在日志、`last-command-results.json`、`acceptance.log` 与宿主机结果 JSON 中。
-- `LICENSE_EXPIRES_AT` 为 2026-10-01。harness 在激活前先断言 guest 时钟落在有效期内，否则以专用错误码停下——否则一台时钟不对的 VM 会被误报成产品缺陷。
+- `LICENSE_EXPIRES_AT` 为 2027-03-31。harness 在激活前先断言 guest 时钟落在有效期内，否则以专用错误码停下——否则一台时钟不对的 VM 会被误报成产品缺陷。
 
 ### 3.4 没有局域网发现协议
 
@@ -297,7 +297,7 @@ scripts/lab/build-test-driver.mjs # 把两个驱动打成单文件，VM 内无�
 
 1. **命名管道 DACL**：若提权 Administrator 无法连接服务以虚拟账户创建的管道，教师端"本机服务"整链在 Windows 上不可用。S6 会首先暴露这一点。
 2. **静默安装失败时的 NSIS 对话框（2026-09-19 已确认，同轮已修）**：`teacher.nsh` 在服务安装失败时调用 `MessageBox` 后 `Abort`，而 `MessageBox` 会阻塞到有人点击——无人值守安装因此永久挂起，`stdout`/`stderr` 全空，现场只有"超时"。M4 连续两轮被它拦下（先是用例前置条件错误，后是 U2 那次**本该被拒绝**的安装），每次都烧掉 900 秒。修法就是文档里原先写的 `IfSilent` 分支：静默模式下不弹框，改为 `DetailPrint` 写上退出码与 nsExec 捕获到的输出、`SetErrorLevel 2`，并同样 `Abort`；交互模式保留对话框。`scripts/__tests__/windows-vm.test.js` 钉住"静默分支不得含 MessageBox、Abort 在两种模式下都执行、nsExec 的输出被使用而不是丢弃"。这条修复是 M4 能跑完的前提：U2/U3/U4 都包含预期失败的安装或卸载动作。
-3. **许可证到期**：2026-10-01 之后所有依赖许可的用例都会失败。H3 先做时钟门禁，但到期后需要新的邀请码或新的许可规则。
+3. **许可证到期**：2027-03-31 之后所有依赖许可的用例都会失败。H3 先做时钟门禁，但到期后需要新的邀请码或新的许可规则。
 4. **单次 TLS 握手的代价**：每个请求新建连接，40 台设备的 5 s 心跳约等于每秒 8 次握手。N11 用于量化，若在 Windows 上出现端口耗尽，属于需要产品层面决策的发现，而不是测试问题。
 5. **`lab:test:integration` 不构建服务端**：该套件中教师端的 `localService` 指向的 `out/lab-server` 是悬空的，因此现有集成测并未覆盖服务端。本方案不依赖该套件，但这条事实应记录在结论里。
 

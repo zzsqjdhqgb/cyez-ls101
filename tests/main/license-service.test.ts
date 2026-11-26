@@ -2,7 +2,11 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { LicenseService, hashInvitationCode } from '../../src/main/license-service'
+import {
+  LICENSE_EXPIRES_AT,
+  LicenseService,
+  hashInvitationCode
+} from '../../src/main/license-service'
 
 const directories: string[] = []
 const invitationCode = 'Invite-1234'
@@ -77,6 +81,32 @@ describe('LicenseService', () => {
       activated: false,
       reason: 'expired',
       status: { state: 'expired', expiresAt }
+    })
+  })
+
+  it('defaults to the March 2027 deadline in China Standard Time', async () => {
+    const storagePath = await createStoragePath()
+    const deadline = '2027-03-31T15:59:59.999Z'
+    expect(LICENSE_EXPIRES_AT).toBe(deadline)
+
+    let now = new Date(deadline)
+    const service = new LicenseService({ storagePath, expectedCodeHash, now: () => now })
+
+    await expect(service.activate(invitationCode)).resolves.toMatchObject({
+      activated: true,
+      status: { state: 'active', expiresAt: deadline }
+    })
+    await expect(service.getStatus()).resolves.toMatchObject({
+      state: 'active',
+      expiresAt: deadline
+    })
+
+    now = new Date('2027-03-31T16:00:00.000Z')
+    await expect(service.getStatus()).resolves.toEqual({ state: 'expired', expiresAt: deadline })
+    await expect(service.activate(invitationCode)).resolves.toEqual({
+      activated: false,
+      reason: 'expired',
+      status: { state: 'expired', expiresAt: deadline }
     })
   })
 
